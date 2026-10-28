@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <ItemGroup>
+        <ProjectReference Include="..\Sentinel.Runtime.Infrastructure\Sentinel.Runtime.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\Sentinel.ServiceDefaults\src\Sentinel.ServiceDefaults\Sentinel.ServiceDefaults.csproj" />
+    </ItemGroup>
+
+</Project>
