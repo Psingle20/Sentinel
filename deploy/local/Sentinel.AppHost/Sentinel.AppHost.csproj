@@ -1,0 +1,32 @@
+<Project Sdk="Aspire.AppHost.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <UserSecretsId>5d6f3a2e-8c41-4f7b-9e0a-3b2c1d4e5f60</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.JavaScript" />
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+        <PackageReference Include="Aspire.Hosting.Redis" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\services\Sentinel.Api\src\Sentinel.Api.Host\Sentinel.Api.Host.csproj" />
+        <ProjectReference Include="..\..\..\services\Sentinel.Ingestion\src\Sentinel.Ingestion.Host\Sentinel.Ingestion.Host.csproj" />
+        <ProjectReference Include="..\..\..\services\Sentinel.Runtime\src\Sentinel.Runtime.Host\Sentinel.Runtime.Host.csproj" />
+        <ProjectReference Include="..\..\..\services\Sentinel.AgentWorker\src\Sentinel.AgentWorker.Host\Sentinel.AgentWorker.Host.csproj" />
+        <ProjectReference Include="..\..\..\services\Sentinel.Executor\src\Sentinel.Executor.Host\Sentinel.Executor.Host.csproj" />
+    </ItemGroup>
+
+    <!-- The reference system is orchestrated here but never referenced by Sentinel's services (ADR-011). -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\reference-system\services\Reference.Checkout\Reference.Checkout.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\services\Reference.Orders\Reference.Orders.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\services\Reference.ReportingWorker\Reference.ReportingWorker.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\deploy\redis-exporter\Reference.RedisExporter\Reference.RedisExporter.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\deploy-controller\Reference.DeployController\Reference.DeployController.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\scenarios\Reference.Scenarios\Reference.Scenarios.csproj" />
+    </ItemGroup>
+
+</Project>
