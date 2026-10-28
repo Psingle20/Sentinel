@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsAspireSharedProject>true</IsAspireSharedProject>
+        <Description>Sentinel host conventions: OpenTelemetry, service discovery, HTTP resilience, health endpoints and the shared database and messaging wiring.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+        <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.csproj" />
+        <ProjectReference Include="..\..\..\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure.Redis\CleanArchitecture.BuildingBlocks.Infrastructure.Redis.csproj" />
+        <ProjectReference Include="..\..\..\Sentinel.Contracts\src\Sentinel.Contracts\Sentinel.Contracts.csproj" />
+    </ItemGroup>
+
+</Project>
