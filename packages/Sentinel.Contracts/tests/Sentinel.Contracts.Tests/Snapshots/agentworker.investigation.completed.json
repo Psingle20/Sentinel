@@ -1,0 +1,64 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+  "agentExecutionId": "0192f0c4-0000-7000-8000-000000000009",
+  "outcome": "completed",
+  "evidence": [
+    {
+      "evidenceId": "0192f0c4-0000-7000-8000-000000000005",
+      "statement": "checkout-service Redis client connections grew from 40 to 9,800 after v2.4.1 deployed.",
+      "direction": "supports",
+      "strength": 0.9,
+      "sourceObservationIds": [
+        "prometheus:redis:connected-clients:checkout:1793093100"
+      ],
+      "hypothesisIds": [
+        "0192f0c4-0000-7000-8000-000000000003"
+      ],
+      "eventTimeRange": {
+        "from": "2026-10-28T08:59:00+00:00",
+        "to": "2026-10-28T09:05:00+00:00"
+      },
+      "toolCallId": "call_metric_range_01",
+      "independenceGroup": "redis-connections"
+    }
+  ],
+  "hypotheses": [
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+      "statement": "checkout-service v2.4.1 introduced a Redis connection leak.",
+      "causalChain": [
+        "deployment v2.4.1",
+        "connection leak",
+        "Redis saturation",
+        "checkout latency",
+        "SLO burn"
+      ],
+      "suspectedServiceId": "checkout-service",
+      "suspectedChangeObservationId": "deploy-controller:checkout-service:v2.4.1",
+      "supportingEvidenceIds": [
+        "0192f0c4-0000-7000-8000-000000000005"
+      ],
+      "contradictingEvidenceIds": []
+    },
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+      "statement": "A traffic spike saturated Redis.",
+      "causalChain": [
+        "traffic spike",
+        "Redis saturation",
+        "SLO burn"
+      ],
+      "supportingEvidenceIds": [],
+      "contradictingEvidenceIds": []
+    }
+  ],
+  "model": {
+    "provider": "meta",
+    "model": "muse-spark",
+    "promptVersion": "investigator-v1"
+  },
+  "completedAt": "2026-10-28T09:07:00+00:00"
+}

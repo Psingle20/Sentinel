@@ -1,0 +1,15 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+  "role": "metrics",
+  "acceptedEvidence": 4,
+  "rejectedEvidence": 1,
+  "hypothesisKeys": [
+    "change:deploy-controller:deployment:d1:started",
+    "redis-saturation:reporting-worker"
+  ],
+  "updatedAt": "2026-10-28T09:07:00+00:00",
+  "streamVersion": 5
+}

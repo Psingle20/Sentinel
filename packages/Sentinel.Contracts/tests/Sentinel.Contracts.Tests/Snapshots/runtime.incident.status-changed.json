@@ -1,0 +1,9 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "status": "awaitingApproval",
+  "reason": "Rollback plan requires approval.",
+  "changedAt": "2026-10-28T09:08:00+00:00",
+  "streamVersion": 6
+}

@@ -1,0 +1,22 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "planId": "0192f0c4-0000-7000-8000-000000000006",
+  "outcome": "recovered",
+  "measurements": [
+    {
+      "criterion": {
+        "serviceId": "checkout-service",
+        "metricName": "slo_burn_rate",
+        "comparison": "lessThan",
+        "threshold": 1
+      },
+      "observedValue": 0.4,
+      "met": true
+    }
+  ],
+  "observedThrough": "2026-10-28T09:11:30+00:00",
+  "evaluatedAt": "2026-10-28T09:11:36+00:00",
+  "streamVersion": 10
+}

@@ -1,0 +1,20 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+  "affectedServiceId": "checkout-service",
+  "relatedServiceIds": [
+    "order-service"
+  ],
+  "objective": "Determine the most likely cause of checkout-service SLO burn.",
+  "observationWindow": {
+    "from": "2026-10-28T08:50:00+00:00",
+    "to": "2026-10-28T09:05:00+00:00"
+  },
+  "budget": {
+    "maxToolCalls": 20,
+    "maxModelTokens": 40000,
+    "timeout": "00:02:00"
+  }
+}

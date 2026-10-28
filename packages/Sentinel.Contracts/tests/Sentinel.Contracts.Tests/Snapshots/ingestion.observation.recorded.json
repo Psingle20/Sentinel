@@ -1,0 +1,21 @@
+{
+  "observation": {
+    "kind": "metric",
+    "metricName": "slo_burn_rate",
+    "value": 14.8,
+    "labels": {
+      "slo": "checkout-success"
+    },
+    "aggregation": "rate",
+    "window": "00:05:00",
+    "observationId": "prometheus:checkout:slo-burn-rate:1793093100",
+    "tenantId": "acme",
+    "environmentId": "reference",
+    "serviceId": "checkout-service",
+    "sourceProvider": "prometheus",
+    "sourceResource": "slo:checkout_success:burn_rate5m",
+    "eventTime": "2026-10-28T09:05:00+00:00",
+    "ingestTime": "2026-10-28T09:05:02+00:00",
+    "attributes": {}
+  }
+}

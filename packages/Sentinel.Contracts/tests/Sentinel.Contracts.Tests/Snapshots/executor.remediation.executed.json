@@ -1,0 +1,10 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "planId": "0192f0c4-0000-7000-8000-000000000006",
+  "planVersion": 1,
+  "outcome": "actionVerified",
+  "detail": "checkout-service is serving v2.4.0.",
+  "completedAt": "2026-10-28T09:10:00+00:00"
+}

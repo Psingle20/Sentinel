@@ -1,0 +1,16 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "affectedServiceId": "checkout-service",
+  "title": "checkout-service SLO burn",
+  "severity": "critical",
+  "openedAt": "2026-10-28T09:05:00+00:00",
+  "triggerObservationIds": [
+    "prometheus:checkout:slo-burn-rate:1793093100"
+  ],
+  "linkedDeploymentObservationIds": [
+    "deploy-controller:checkout-service:v2.4.1"
+  ],
+  "streamVersion": 1
+}

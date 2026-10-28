@@ -1,0 +1,11 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "planId": "0192f0c4-0000-7000-8000-000000000006",
+  "planVersion": 1,
+  "planHash": "sha256:6f1c2b9e4d7a3f0e8b5c1a9d2e4f6a8b0c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f",
+  "attestation": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFwcHJvdmFsLTEifQ.eyJwbGFuIjoic2FtcGxlIn0.c2lnbmF0dXJl",
+  "approverId": "responder@example.test",
+  "approvedAt": "2026-10-28T09:09:00+00:00"
+}

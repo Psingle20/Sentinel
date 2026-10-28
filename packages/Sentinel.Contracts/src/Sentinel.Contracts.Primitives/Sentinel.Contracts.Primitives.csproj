@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Dependency-free strongly typed identifiers shared by every Sentinel service, including domain modules.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Sentinel.Contracts.Primitives.Tests" />
+    </ItemGroup>
+
+</Project>

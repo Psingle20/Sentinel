@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Sentinel's integration message and cross-service request contracts: data shapes only, schema-versioned (ADR-012).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Sentinel.Contracts.Primitives\Sentinel.Contracts.Primitives.csproj" />
+    </ItemGroup>
+
+</Project>
