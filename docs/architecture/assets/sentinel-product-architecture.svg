@@ -1,0 +1,446 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="1600" viewBox="0 0 3000 1600" role="img" aria-labelledby="title desc">
+  <title id="title">Sentinel product architecture</title>
+  <desc id="desc">A layered architecture diagram showing Sentinel's observation pipeline, durable incident runtime, AI evidence reasoning, governed remediation, verification, memory, operator experience, and platform foundations.</desc>
+
+  <defs>
+    <linearGradient id="header" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="0.58" stop-color="#10253f"/>
+      <stop offset="1" stop-color="#15324a"/>
+    </linearGradient>
+    <linearGradient id="brandMark" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <linearGradient id="runtimeBand" x1="0" x2="1">
+      <stop offset="0" stop-color="#eff6ff"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="reasonBand" x1="0" x2="1">
+      <stop offset="0" stop-color="#f5f3ff"/>
+      <stop offset="1" stop-color="#faf5ff"/>
+    </linearGradient>
+    <linearGradient id="actionBand" x1="0" x2="1">
+      <stop offset="0" stop-color="#ecfdf5"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <style>
+      .title { font: 800 42px 'Segoe UI', Arial, sans-serif; letter-spacing: 4px; fill: #f8fafc; }
+      .subtitle { font: 400 20px 'Segoe UI', Arial, sans-serif; fill: #cbd5e1; }
+      .eyebrow { font: 700 13px 'Segoe UI', Arial, sans-serif; letter-spacing: 2px; fill: #0f766e; }
+      .band-title { font: 800 22px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .band-note { font: 400 15px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .card-title { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .card-text { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .mini-title { font: 700 15px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .mini-text { font: 400 13px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .label { font: 700 12px 'Segoe UI', Arial, sans-serif; letter-spacing: 1px; fill: #475569; }
+      .flow-label { font: 700 12px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .white-title { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #fff; }
+      .white-text { font: 400 13px 'Segoe UI', Arial, sans-serif; fill: #dbeafe; }
+      .flow { fill: none; stroke: #334155; stroke-width: 3; marker-end: url(#arrow); }
+      .flow-blue { fill: none; stroke: #2563eb; stroke-width: 3; marker-end: url(#arrowBlue); }
+      .flow-green { fill: none; stroke: #059669; stroke-width: 3; marker-end: url(#arrowGreen); }
+      .dashed { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 9 8; marker-end: url(#arrow); }
+      .control-link { fill: none; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 5 7; }
+    </style>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="3000" height="1600" fill="#f8fafc"/>
+  <rect x="0" y="0" width="3000" height="152" fill="url(#header)"/>
+  <rect x="0" y="152" width="3000" height="6" fill="url(#brandMark)"/>
+
+  <!-- Wordmark -->
+  <g transform="translate(58 36)">
+    <path d="M42 2 79 16v29c0 26-15 48-37 59C20 93 5 71 5 45V16Z" fill="none" stroke="url(#brandMark)" stroke-width="6"/>
+    <circle cx="42" cy="45" r="19" fill="none" stroke="#7dd3fc" stroke-width="4"/>
+    <path d="M42 24v21l15 10" fill="none" stroke="#5eead4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="42" cy="45" r="5" fill="#f8fafc"/>
+  </g>
+  <text x="164" y="72" class="title">SENTINEL</text>
+  <text x="164" y="108" class="subtitle">Evidence-driven incident intelligence • governed recovery • measurable outcomes</text>
+
+  <g transform="translate(2302 36)">
+    <rect width="630" height="78" rx="16" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="24" y="29" font-family="Segoe UI, Arial" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7dd3fc">REFERENCE STACK</text>
+    <g transform="translate(24 42)">
+      <rect width="145" height="24" rx="12" fill="#0b5cff"/><text x="72.5" y="17" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">META MODELS</text>
+      <rect x="155" width="130" height="24" rx="12" fill="#5b21b6"/><text x="220" y="17" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">ORLEANS</text>
+      <rect x="295" width="150" height="24" rx="12" fill="#7c3aed"/><text x="370" y="17" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">OPENTELEMETRY</text>
+      <rect x="455" width="126" height="24" rx="12" fill="#047857"/><text x="518" y="17" text-anchor="middle" font-family="Segoe UI, Arial" font-size="12" font-weight="700" fill="#fff">POLICY AS CODE</text>
+    </g>
+  </g>
+
+  <!-- External inputs -->
+  <g transform="translate(52 211)" filter="url(#shadow)">
+    <rect width="255" height="1036" rx="22" fill="#0f2138"/>
+    <text x="24" y="38" font-family="Segoe UI, Arial" font-size="13" font-weight="700" letter-spacing="1.8" fill="#7dd3fc">EXTERNAL SIGNALS</text>
+    <text x="24" y="70" class="white-title">Production systems</text>
+    <text x="24" y="93" class="white-text">Untrusted operational input</text>
+    <g transform="translate(20 124)">
+      <rect width="215" height="112" rx="14" fill="#17314f" stroke="#2d4d6d"/>
+      <circle cx="30" cy="31" r="15" fill="#2563eb"/><path d="M22 31h16M30 23v16" stroke="#fff" stroke-width="2"/>
+      <text x="55" y="35" class="white-title">Telemetry</text>
+      <text x="20" y="70" class="white-text">Logs • metrics • traces</text>
+      <text x="20" y="91" class="white-text">profiles • SLO signals</text>
+    </g>
+    <g transform="translate(20 254)">
+      <rect width="215" height="112" rx="14" fill="#17314f" stroke="#2d4d6d"/>
+      <circle cx="30" cy="31" r="15" fill="#7c3aed"/><path d="M22 28h16M22 34h11" stroke="#fff" stroke-width="2"/>
+      <text x="55" y="35" class="white-title">Change events</text>
+      <text x="20" y="70" class="white-text">Deployments • flags</text>
+      <text x="20" y="91" class="white-text">config • infrastructure</text>
+    </g>
+    <g transform="translate(20 384)">
+      <rect width="215" height="112" rx="14" fill="#17314f" stroke="#2d4d6d"/>
+      <circle cx="30" cy="31" r="15" fill="#0891b2"/><path d="M22 31h16M25 25l-5 6 5 6M35 25l5 6-5 6" stroke="#fff" stroke-width="2" fill="none"/>
+      <text x="55" y="35" class="white-title">Topology</text>
+      <text x="20" y="70" class="white-text">Services • dependencies</text>
+      <text x="20" y="91" class="white-text">owners • blast radius</text>
+    </g>
+    <g transform="translate(20 514)">
+      <rect width="215" height="112" rx="14" fill="#17314f" stroke="#2d4d6d"/>
+      <circle cx="30" cy="31" r="15" fill="#ea580c"/><path d="M22 24h16v14H22zM26 20v4M34 20v4" stroke="#fff" stroke-width="2" fill="none"/>
+      <text x="55" y="35" class="white-title">Knowledge</text>
+      <text x="20" y="70" class="white-text">Runbooks • incidents</text>
+      <text x="20" y="91" class="white-text">docs • service context</text>
+    </g>
+    <g transform="translate(20 666)">
+      <rect width="215" height="130" rx="14" fill="#0b1728" stroke="#334155" stroke-dasharray="6 5"/>
+      <text x="20" y="32" class="white-title">Provider-neutral</text>
+      <text x="20" y="60" class="white-text">Each external system is</text>
+      <text x="20" y="81" class="white-text">translated at the edge into</text>
+      <text x="20" y="102" class="white-text">canonical observations.</text>
+    </g>
+    <g transform="translate(20 827)">
+      <text x="0" y="0" font-family="Segoe UI, Arial" font-size="12" font-weight="700" letter-spacing="1.4" fill="#5eead4">TRUST BOUNDARY</text>
+      <line x1="0" y1="14" x2="215" y2="14" stroke="#2dd4bf" stroke-width="2" stroke-dasharray="5 5"/>
+      <text x="0" y="43" class="white-text">Prompt injection controls</text>
+      <text x="0" y="65" class="white-text">schema validation</text>
+      <text x="0" y="87" class="white-text">provenance preservation</text>
+    </g>
+  </g>
+
+  <!-- Control plane -->
+  <g transform="translate(343 184)" filter="url(#softShadow)">
+    <rect width="2205" height="130" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect width="2205" height="42" rx="20" fill="#e2e8f0"/>
+    <rect y="24" width="2205" height="18" fill="#e2e8f0"/>
+    <text x="24" y="28" class="eyebrow">SENTINEL.API • CONTROL PLANE</text>
+    <text x="24" y="75" class="band-title">Product context and governance</text>
+    <text x="24" y="101" class="band-note">Tenant-scoped configuration enriches the runtime; it never bypasses policy or execution boundaries.</text>
+    <g transform="translate(760 60)">
+      <rect width="250" height="48" rx="12" fill="#f8fafc" stroke="#cbd5e1"/><text x="125" y="30" text-anchor="middle" class="mini-title">Service catalog + owners</text>
+      <rect x="268" width="235" height="48" rx="12" fill="#f8fafc" stroke="#cbd5e1"/><text x="385.5" y="30" text-anchor="middle" class="mini-title">SLOs + topology</text>
+      <rect x="521" width="260" height="48" rx="12" fill="#f8fafc" stroke="#cbd5e1"/><text x="651" y="30" text-anchor="middle" class="mini-title">Provider registry</text>
+      <rect x="799" width="290" height="48" rx="12" fill="#fff7ed" stroke="#fdba74"/><text x="944" y="30" text-anchor="middle" class="mini-title">Policy + capabilities</text>
+      <rect x="1107" width="300" height="48" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/><text x="1257" y="30" text-anchor="middle" class="mini-title">Agent + model configuration</text>
+    </g>
+  </g>
+
+  <!-- Runtime band -->
+  <g transform="translate(343 345)">
+    <rect width="2205" height="324" rx="22" fill="url(#runtimeBand)" stroke="#bfdbfe" stroke-width="2"/>
+    <text x="24" y="35" class="eyebrow" fill="#1d4ed8">01 • SENTINEL.INGESTION → SENTINEL.RUNTIME</text>
+    <text x="24" y="66" class="band-title">Canonical event pipeline and durable incident ownership</text>
+    <text x="24" y="91" class="band-note">Event time, deduplication, correlation, and workflow state convert noisy signals into a coherent incident.</text>
+
+    <g transform="translate(24 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="164" rx="16" fill="#fff" stroke="#93c5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#dbeafe"/><path d="M25 36h18M34 27v18" stroke="#2563eb" stroke-width="2"/>
+      <text x="62" y="41" class="card-title">Provider adapters</text>
+      <text x="22" y="78" class="card-text">Observability • deployment</text>
+      <text x="22" y="100" class="card-text">knowledge • notification</text>
+      <rect x="22" y="120" width="210" height="25" rx="12" fill="#eff6ff"/><text x="127" y="137" text-anchor="middle" class="label" fill="#1d4ed8">REPLACEABLE INTEGRATIONS</text>
+    </g>
+    <g transform="translate(382 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="164" rx="16" fill="#fff" stroke="#93c5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#dbeafe"/><path d="M25 30h18M25 36h13M25 42h8" stroke="#2563eb" stroke-width="2"/>
+      <text x="62" y="41" class="card-title">Normalize + event time</text>
+      <text x="22" y="78" class="card-text">Canonical observations</text>
+      <text x="22" y="100" class="card-text">watermarks • late events</text>
+      <rect x="22" y="120" width="167" height="25" rx="12" fill="#eff6ff"/><text x="105" y="137" text-anchor="middle" class="label" fill="#1d4ed8">SCHEMA VERSIONED</text>
+    </g>
+    <g transform="translate(740 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="164" rx="16" fill="#fff" stroke="#93c5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#dbeafe"/><path d="M25 31h18M25 37h18M25 43h18" stroke="#2563eb" stroke-width="2"/>
+      <text x="62" y="41" class="card-title">Durable event bus</text>
+      <text x="22" y="78" class="card-text">Outbox / inbox • retries</text>
+      <text x="22" y="100" class="card-text">DLQ • backpressure</text>
+      <rect x="22" y="120" width="126" height="25" rx="12" fill="#eff6ff"/><text x="85" y="137" text-anchor="middle" class="label" fill="#1d4ed8">AT-LEAST-ONCE</text>
+    </g>
+    <g transform="translate(1098 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="164" rx="16" fill="#fff" stroke="#93c5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#dbeafe"/><circle cx="34" cy="36" r="8" fill="none" stroke="#2563eb" stroke-width="2"/><path d="M34 23v5M34 44v5M21 36h5M42 36h5" stroke="#2563eb" stroke-width="2"/>
+      <text x="62" y="41" class="card-title">Incident correlation</text>
+      <text x="22" y="78" class="card-text">SLO impact • topology</text>
+      <text x="22" y="100" class="card-text">change proximity • windows</text>
+      <rect x="22" y="120" width="136" height="25" rx="12" fill="#eff6ff"/><text x="90" y="137" text-anchor="middle" class="label" fill="#1d4ed8">CAUSAL CONTEXT</text>
+    </g>
+    <g transform="translate(1456 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="164" rx="16" fill="#fff" stroke="#818cf8" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#e0e7ff"/><path d="M25 29h18v14H25zM29 25h10" stroke="#4f46e5" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Incident runtime</text>
+      <text x="22" y="78" class="card-text">Orleans grains • ownership</text>
+      <text x="22" y="100" class="card-text">event-sourced decisions</text>
+      <rect x="22" y="120" width="140" height="25" rx="12" fill="#eef2ff"/><text x="92" y="137" text-anchor="middle" class="label" fill="#4338ca">SINGLE WRITER</text>
+    </g>
+    <g transform="translate(1814 121)">
+      <g filter="url(#softShadow)"><rect width="367" height="164" rx="16" fill="#fff" stroke="#818cf8" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#e0e7ff"/><path d="M25 36h7l4-8 6 16 5-8h7" stroke="#4f46e5" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Durable workflow</text>
+      <text x="22" y="78" class="card-text">Timeouts • checkpoints • compensation</text>
+      <text x="22" y="100" class="card-text">idempotent step execution</text>
+      <rect x="22" y="120" width="174" height="25" rx="12" fill="#eef2ff"/><text x="109" y="137" text-anchor="middle" class="label" fill="#4338ca">SAGA ORCHESTRATION</text>
+    </g>
+  </g>
+
+  <!-- Runtime flow -->
+  <path d="M307 465H367" class="flow-blue"/>
+  <path d="M685 548H725" class="flow-blue"/>
+  <path d="M1043 548H1083" class="flow-blue"/>
+  <path d="M1401 548H1441" class="flow-blue"/>
+  <path d="M1759 548H1799" class="flow-blue"/>
+  <path d="M2117 548H2157" class="flow-blue"/>
+
+  <!-- Reasoning band -->
+  <g transform="translate(343 697)">
+    <rect width="2205" height="330" rx="22" fill="url(#reasonBand)" stroke="#ddd6fe" stroke-width="2"/>
+    <text x="24" y="35" class="eyebrow" fill="#6d28d9">02 • SENTINEL.AGENTWORKER ↔ SENTINEL.RUNTIME</text>
+    <text x="24" y="66" class="band-title">Evidence blackboard with adversarial, inspectable reasoning</text>
+    <text x="24" y="91" class="band-note">Models use typed tools and structured contracts; evidence remains authoritative, attributable, and challengeable.</text>
+
+    <g transform="translate(24 122)">
+      <g filter="url(#softShadow)"><rect width="318" height="170" rx="16" fill="#fff" stroke="#c4b5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ede9fe"/><path d="M26 42c0-8 16-8 16 0M34 33a5 5 0 1 0 0-10 5 5 0 0 0 0 10M46 31h9M50.5 26.5v9" stroke="#7c3aed" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Specialist agents</text>
+      <text x="22" y="78" class="card-text">Logs • metrics • traces • deploys</text>
+      <text x="22" y="100" class="card-text">topology • knowledge • verifier</text>
+      <rect x="22" y="126" width="182" height="25" rx="12" fill="#f5f3ff"/><text x="113" y="143" text-anchor="middle" class="label" fill="#6d28d9">TYPED TOOL ACCESS</text>
+    </g>
+    <g transform="translate(382 122)">
+      <g filter="url(#softShadow)"><rect width="318" height="170" rx="16" fill="#fff" stroke="#60a5fa" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#dbeafe"/><path d="M24 38c5-13 15-13 20 0 5 13 15 13 20 0" transform="scale(.72) translate(13 13)" stroke="#2563eb" stroke-width="3" fill="none"/>
+      <text x="62" y="41" class="card-title">Meta Model API</text>
+      <text x="22" y="78" class="card-text">Muse Spark • Wonder-class models</text>
+      <text x="22" y="100" class="card-text">structured output • bounded context</text>
+      <rect x="22" y="126" width="186" height="25" rx="12" fill="#eff6ff"/><text x="115" y="143" text-anchor="middle" class="label" fill="#1d4ed8">UNTRUSTED PROPOSALS</text>
+    </g>
+    <g transform="translate(740 122)">
+      <g filter="url(#softShadow)"><rect width="318" height="170" rx="16" fill="#fff" stroke="#c4b5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ede9fe"/><path d="M25 27h18v18H25zM29 31h10M29 36h10M29 41h6" stroke="#7c3aed" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Evidence blackboard</text>
+      <text x="22" y="78" class="card-text">Source • time range • tool call</text>
+      <text x="22" y="100" class="card-text">supporting + contradicting evidence</text>
+      <rect x="22" y="126" width="141" height="25" rx="12" fill="#f5f3ff"/><text x="92" y="143" text-anchor="middle" class="label" fill="#6d28d9">PROVENANCE</text>
+    </g>
+    <g transform="translate(1098 122)">
+      <g filter="url(#softShadow)"><rect width="318" height="170" rx="16" fill="#fff" stroke="#c4b5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ede9fe"/><path d="M24 43 34 25l10 18M28 36h12" stroke="#7c3aed" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Hypothesis engine</text>
+      <text x="22" y="78" class="card-text">Competing explanations</text>
+      <text x="22" y="100" class="card-text">causal graph • confidence updates</text>
+      <rect x="22" y="126" width="167" height="25" rx="12" fill="#f5f3ff"/><text x="105" y="143" text-anchor="middle" class="label" fill="#6d28d9">CALIBRATED BELIEF</text>
+    </g>
+    <g transform="translate(1456 122)">
+      <g filter="url(#softShadow)"><rect width="318" height="170" rx="16" fill="#fff" stroke="#f59e0b" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#fef3c7"/><path d="m25 28 18 16M43 28 25 44" stroke="#d97706" stroke-width="2"/>
+      <text x="62" y="41" class="card-title">Adversarial challenge</text>
+      <text x="22" y="78" class="card-text">Attempt falsification</text>
+      <text x="22" y="100" class="card-text">surface gaps • request new evidence</text>
+      <rect x="22" y="126" width="133" height="25" rx="12" fill="#fffbeb"/><text x="88" y="143" text-anchor="middle" class="label" fill="#b45309">RED TEAM PASS</text>
+    </g>
+    <g transform="translate(1814 122)">
+      <g filter="url(#softShadow)"><rect width="367" height="170" rx="16" fill="#fff" stroke="#c4b5fd" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ede9fe"/><path d="m25 35 6 6 13-15" stroke="#7c3aed" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <text x="62" y="41" class="card-title">Consensus engine</text>
+      <text x="22" y="78" class="card-text">Evidence-weighted decision record</text>
+      <text x="22" y="100" class="card-text">confidence • dissent • abstention</text>
+      <rect x="22" y="126" width="178" height="25" rx="12" fill="#f5f3ff"/><text x="111" y="143" text-anchor="middle" class="label" fill="#6d28d9">EXPLAINABLE OUTPUT</text>
+    </g>
+  </g>
+
+  <!-- Reasoning flow and model loop -->
+  <path d="M2180 630v50H330v224h37" class="flow"/>
+  <text x="2195" y="687" class="flow-label">dispatch investigation</text>
+  <path d="M685 904H725" class="flow"/>
+  <path d="M1043 904H1083" class="flow"/>
+  <path d="M1401 904H1441" class="flow"/>
+  <path d="M1759 904H1799" class="flow"/>
+  <path d="M2117 904H2157" class="flow"/>
+  <path d="M884 818v-45H526v45" class="dashed"/>
+  <text x="575" y="761" class="flow-label">tool calls + structured inference</text>
+
+  <!-- Governed action band -->
+  <g transform="translate(343 1056)">
+    <rect width="2205" height="311" rx="22" fill="url(#actionBand)" stroke="#a7f3d0" stroke-width="2"/>
+    <text x="24" y="35" class="eyebrow" fill="#047857">03 • SENTINEL.RUNTIME → SENTINEL.EXECUTOR</text>
+    <text x="24" y="66" class="band-title">Policy-gated remediation with measured recovery</text>
+    <text x="24" y="91" class="band-note">No agent holds production credentials. The broker executes only constrained, approved capabilities and verifies the outcome.</text>
+
+    <g transform="translate(24 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="153" rx="16" fill="#fff" stroke="#6ee7b7" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#d1fae5"/><path d="M25 29h18v14H25zM29 33h10M29 38h7" stroke="#059669" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Remediation planner</text>
+      <text x="22" y="78" class="card-text">Typed plan • preconditions</text>
+      <text x="22" y="100" class="card-text">risk • rollback • expected signals</text>
+      <rect x="22" y="116" width="136" height="23" rx="11" fill="#ecfdf5"/><text x="90" y="132" text-anchor="middle" class="label" fill="#047857">PROPOSAL ONLY</text>
+    </g>
+    <g transform="translate(382 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="153" rx="16" fill="#fff" stroke="#fb923c" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ffedd5"/><path d="M34 24 45 29v9c0 8-5 14-11 17-6-3-11-9-11-17v-9Z" stroke="#ea580c" stroke-width="2" fill="none"/><path d="m29 38 4 4 7-8" stroke="#ea580c" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Policy + approval</text>
+      <text x="22" y="78" class="card-text">Risk tiers • blast radius</text>
+      <text x="22" y="100" class="card-text">human gate • capability token</text>
+      <rect x="22" y="116" width="159" height="23" rx="11" fill="#fff7ed"/><text x="101" y="132" text-anchor="middle" class="label" fill="#c2410c">SECURITY BOUNDARY</text>
+    </g>
+    <g transform="translate(740 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="153" rx="16" fill="#fff" stroke="#fb923c" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#ffedd5"/><path d="M24 35h20M35 25l10 10-10 10" stroke="#ea580c" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Execution broker</text>
+      <text x="22" y="78" class="card-text">Scoped credentials • fencing</text>
+      <text x="22" y="100" class="card-text">idempotency • complete audit</text>
+      <rect x="22" y="116" width="154" height="23" rx="11" fill="#fff7ed"/><text x="99" y="132" text-anchor="middle" class="label" fill="#c2410c">SOLE EXECUTOR</text>
+    </g>
+    <g transform="translate(1098 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="153" rx="16" fill="#fff" stroke="#6ee7b7" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#d1fae5"/><path d="M25 28h18v16H25zM30 33h8M30 38h8" stroke="#059669" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Action adapters</text>
+      <text x="22" y="78" class="card-text">Rollback • scale • flag</text>
+      <text x="22" y="100" class="card-text">restart • isolate • notify</text>
+      <rect x="22" y="116" width="136" height="23" rx="11" fill="#ecfdf5"/><text x="90" y="132" text-anchor="middle" class="label" fill="#047857">CONSTRAINED</text>
+    </g>
+    <g transform="translate(1456 121)">
+      <g filter="url(#softShadow)"><rect width="318" height="153" rx="16" fill="#fff" stroke="#6ee7b7" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#d1fae5"/><path d="M24 40h6l4-10 5 14 5-9h8" stroke="#059669" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Recovery verification</text>
+      <text x="22" y="78" class="card-text">SLO • latency • errors • health</text>
+      <text x="22" y="100" class="card-text">success, rollback, or reopen</text>
+      <rect x="22" y="116" width="164" height="23" rx="11" fill="#ecfdf5"/><text x="104" y="132" text-anchor="middle" class="label" fill="#047857">MEASURED OUTCOME</text>
+    </g>
+    <g transform="translate(1814 121)">
+      <g filter="url(#softShadow)"><rect width="367" height="153" rx="16" fill="#fff" stroke="#6ee7b7" stroke-width="2"/></g>
+      <circle cx="34" cy="36" r="18" fill="#d1fae5"/><path d="M25 28h18v16H25zM29 24h10M29 33h10M29 38h7" stroke="#059669" stroke-width="2" fill="none"/>
+      <text x="62" y="41" class="card-title">Incident memory + replay</text>
+      <text x="22" y="78" class="card-text">Decisions • evidence • outcomes</text>
+      <text x="22" y="100" class="card-text">evaluation fixtures • simulation</text>
+      <rect x="22" y="116" width="175" height="23" rx="11" fill="#ecfdf5"/><text x="109" y="132" text-anchor="middle" class="label" fill="#047857">LEARN + REPRODUCE</text>
+    </g>
+  </g>
+
+  <!-- Action flow and feedback -->
+  <path d="M2180 999v45H330v208h37" class="flow-green"/>
+  <text x="2195" y="1025" class="flow-label">approved diagnosis</text>
+  <path d="M685 1252H725" class="flow-green"/>
+  <path d="M1043 1252H1083" class="flow-green"/>
+  <path d="M1401 1252H1441" class="flow-green"/>
+  <path d="M1759 1252H1799" class="flow-green"/>
+  <path d="M2117 1252H2157" class="flow-green"/>
+  <path d="M1958 1177v-155H2570V515H2117" class="dashed"/>
+  <text x="2090" y="1015" class="flow-label">failed verification reopens incident</text>
+
+  <!-- Operator experience -->
+  <g transform="translate(2608 346)" filter="url(#shadow)">
+    <rect width="340" height="681" rx="22" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect width="340" height="88" rx="22" fill="#132a44"/>
+    <rect y="66" width="340" height="22" fill="#132a44"/>
+    <text x="24" y="34" font-family="Segoe UI, Arial" font-size="12" font-weight="700" letter-spacing="1.5" fill="#7dd3fc">OPERATOR EXPERIENCE</text>
+    <text x="24" y="63" class="white-title">Sentinel.Web + Sentinel.Api</text>
+    <g transform="translate(22 112)">
+      <rect width="296" height="90" rx="14" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="18" y="30" class="mini-title">Live incident timeline</text>
+      <text x="18" y="55" class="mini-text">Signals, events, ownership, state</text>
+      <text x="18" y="75" class="mini-text">and workflow progress</text>
+    </g>
+    <g transform="translate(22 220)">
+      <rect width="296" height="90" rx="14" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="18" y="30" class="mini-title">Evidence + causal graph</text>
+      <text x="18" y="55" class="mini-text">Provenance, contradictions,</text>
+      <text x="18" y="75" class="mini-text">confidence and dissent</text>
+    </g>
+    <g transform="translate(22 328)">
+      <rect width="296" height="90" rx="14" fill="#fff7ed" stroke="#fdba74"/>
+      <text x="18" y="30" class="mini-title">Approval workspace</text>
+      <text x="18" y="55" class="mini-text">Risk, blast radius, plan,</text>
+      <text x="18" y="75" class="mini-text">rollback and capability scope</text>
+    </g>
+    <g transform="translate(22 436)">
+      <rect width="296" height="90" rx="14" fill="#ecfdf5" stroke="#6ee7b7"/>
+      <text x="18" y="30" class="mini-title">Recovery + replay</text>
+      <text x="18" y="55" class="mini-text">Verification results, audit</text>
+      <text x="18" y="75" class="mini-text">record and deterministic replay</text>
+    </g>
+    <g transform="translate(22 552)">
+      <circle cx="26" cy="26" r="26" fill="#e0f2fe"/><circle cx="26" cy="20" r="8" fill="none" stroke="#0284c7" stroke-width="2"/><path d="M12 46c2-12 26-12 28 0" fill="none" stroke="#0284c7" stroke-width="2"/>
+      <text x="67" y="22" class="mini-title">Incident responders</text>
+      <text x="67" y="44" class="mini-text">Observe • decide • approve</text>
+      <text x="67" y="64" class="mini-text">and override</text>
+    </g>
+  </g>
+
+  <!-- UI links -->
+  <path d="M2608 545h-84" class="dashed"/>
+  <path d="M2608 904h-84" class="dashed"/>
+  <path d="M2778 1027v13H884v137" class="dashed"/>
+  <text x="2646" y="1034" class="flow-label">human approval</text>
+
+  <!-- Foundations -->
+  <g transform="translate(52 1403)">
+    <rect width="2896" height="143" rx="22" fill="#0f172a"/>
+    <text x="24" y="31" font-family="Segoe UI, Arial" font-size="12" font-weight="700" letter-spacing="1.7" fill="#5eead4">PLATFORM + DATA FOUNDATIONS</text>
+    <g transform="translate(24 48)">
+      <rect width="285" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="18" y="28" class="white-title">Event store + projections</text>
+      <text x="18" y="51" class="white-text">Incident streams • CQRS views</text>
+      <rect x="304" width="285" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="322" y="28" class="white-title">Evidence + decision store</text>
+      <text x="322" y="51" class="white-text">Provenance • immutable audit</text>
+      <rect x="608" width="285" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="626" y="28" class="white-title">Operational state</text>
+      <text x="626" y="51" class="white-text">Workflow • leases • dedupe</text>
+      <rect x="912" width="285" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="930" y="28" class="white-title">OpenTelemetry</text>
+      <text x="930" y="51" class="white-text">Metrics • traces • AI telemetry</text>
+      <rect x="1216" width="285" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="1234" y="28" class="white-title">Security + privacy</text>
+      <text x="1234" y="51" class="white-text">Tenant isolation • encryption</text>
+      <rect x="1520" width="400" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="1538" y="28" class="white-title">Resilience</text>
+      <text x="1538" y="51" class="white-text">Bulkheads • breakers • rate limits • cells</text>
+      <rect x="1939" width="909" height="70" rx="14" fill="#17243a" stroke="#334155"/>
+      <text x="1957" y="28" class="white-title">Scale + causality</text>
+      <text x="1957" y="51" class="white-text">Partitions • fencing • logical time • CRDT-safe shared state</text>
+    </g>
+  </g>
+
+  <!-- Foundation links -->
+  <path d="M1637 669v25" class="control-link"/>
+  <path d="M884 1367v36" class="control-link"/>
+  <path d="M1279 1367v36" class="control-link"/>
+  <path d="M1637 1367v36" class="control-link"/>
+  <path d="M1996 1367v36" class="control-link"/>
+
+  <!-- Legend -->
+  <g transform="translate(52 1566)">
+    <line x1="0" y1="0" x2="42" y2="0" class="flow"/><text x="56" y="5" class="mini-text">Primary flow</text>
+    <line x1="166" y1="0" x2="208" y2="0" class="dashed"/><text x="222" y="5" class="mini-text">Control / feedback</text>
+    <rect x="397" y="-10" width="26" height="18" rx="4" fill="#fff7ed" stroke="#fb923c"/><text x="436" y="5" class="mini-text">Privileged trust boundary</text>
+    <text x="2858" y="5" text-anchor="end" class="mini-text">Five production-shaped services • one vertical incident path before service breadth</text>
+  </g>
+</svg>
