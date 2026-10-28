@@ -1,0 +1,17 @@
+{
+  "scenarioId": "S2",
+  "kind": "confounder",
+  "recordedAt": "2026-10-28T15:17:43.8739689+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "reporting-worker batch saturated Redis connections",
+  "expectedRemediation": "pause-batch reporting-worker (suggestion-only)",
+  "sentinelDecision": "abstained",
+  "sentinelIncidentStatus": "Escalated",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame checkout-service",
+  "baselinePlan": "rollback checkout-service",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": false
+}

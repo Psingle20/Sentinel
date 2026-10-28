@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "cf576228-89d3-4e50-a211-e73c439d1f3d",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\ingle\\workspace\\projects\\sentinel\\artifacts\\archify\\sentinel-system-architecture-20261021-001526\\candidate.json",
+  "output": "C:\\Users\\ingle\\workspace\\projects\\sentinel\\artifacts\\archify\\sentinel-system-architecture-20261021-001526\\sentinel-system-architecture.html",
+  "specification": {
+    "sha256": "5eef11d2516b5a0b32a031b1ca5f7e452bb62148dabb1c0929781de3ebf8e6fa",
+    "bytes": 7394
+  },
+  "artifact": {
+    "sha256": "20fdcc25db6194b8625e65e7350715f2aacb5870c6486ddb491165450dffecb8",
+    "bytes": 791028
+  }
+}

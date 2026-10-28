@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Sentinel Product Architecture",
+    "locale": "en",
+    "output": "sentinel-system-architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "production", "type": "external", "label": "Production Systems", "sublabel": "Logs · metrics · traces · deploys", "pos": [20, 160], "size": [170, 72] },
+    { "id": "providers", "type": "cloud", "label": "Provider Adapters", "sublabel": "Telemetry · topology · changes", "pos": [300, 160], "size": [180, 72] },
+    { "id": "normalize", "type": "backend", "label": "Normalize + Event Time", "sublabel": "Canonical observations · watermarks", "pos": [560, 160], "size": [190, 72] },
+    { "id": "eventbus", "type": "messagebus", "label": "Durable Event Bus", "sublabel": "Backpressure · replay · DLQ", "pos": [870, 160], "size": [180, 72] },
+    { "id": "correlation", "type": "backend", "label": "Incident Correlation", "sublabel": "SLO burn · topology · changes", "pos": [870, 360], "size": [180, 72] },
+    { "id": "incident", "type": "backend", "label": "Incident Runtime", "sublabel": "Orleans grains · event-sourced state", "pos": [600, 360], "size": [180, 72] },
+    { "id": "workflow", "type": "backend", "label": "Durable Workflow", "sublabel": "Retries · timers · compensation", "pos": [320, 360], "size": [180, 72] },
+    { "id": "control", "type": "backend", "label": "Control Plane", "sublabel": "Catalog · SLOs · tenants · providers", "pos": [600, 20], "size": [200, 72] },
+    { "id": "agents", "type": "backend", "label": "Specialist Agents", "sublabel": "Logs · metrics · traces · deploys", "pos": [20, 360], "size": [180, 72] },
+    { "id": "meta", "type": "external", "label": "Meta Model API", "sublabel": "Muse Spark · Muse Wonder", "pos": [300, 500], "size": [170, 72] },
+    { "id": "evidence", "type": "database", "label": "Evidence Blackboard", "sublabel": "Provenance · causal graph", "pos": [20, 600], "size": [180, 72] },
+    { "id": "reasoning", "type": "backend", "label": "Hypothesis + Challenge", "sublabel": "Generate · falsify · calibrate", "pos": [300, 600], "size": [180, 72] },
+    { "id": "consensus", "type": "backend", "label": "Consensus Engine", "sublabel": "Reliability · independence · coherence", "pos": [570, 600], "size": [180, 72] },
+    { "id": "planner", "type": "backend", "label": "Remediation Planner", "sublabel": "Typed plan · validation · rollback", "pos": [850, 600], "size": [180, 72] },
+    { "id": "policy", "type": "security", "label": "Policy + Approval Gate", "sublabel": "Capabilities · risk · human control", "pos": [850, 840], "size": [180, 72] },
+    { "id": "broker", "type": "security", "label": "Execution Broker", "sublabel": "Idempotency · fencing · audit", "pos": [570, 840], "size": [180, 72] },
+    { "id": "actions", "type": "cloud", "label": "Action Adapters", "sublabel": "Rollback · restart · traffic shift", "pos": [300, 840], "size": [180, 72] },
+    { "id": "verify", "type": "backend", "label": "Recovery Verification", "sublabel": "SLO · errors · latency · saturation", "pos": [20, 840], "size": [180, 72] },
+    { "id": "state", "type": "database", "label": "Incident Memory + Replay", "sublabel": "Events · projections · postmortems", "pos": [20, 1080], "size": [190, 72] },
+    { "id": "ui", "type": "frontend", "label": "Sentinel UI + API", "sublabel": "Timeline · evidence · approvals", "pos": [350, 1080], "size": [190, 72] },
+    { "id": "responders", "type": "external", "label": "Incident Responders", "sublabel": "Inspect · approve · override", "pos": [760, 1080], "size": [180, 72] }
+  ],
+  "boundaries": [
+    { "kind": "security-group", "label": "Privileged Action Boundary", "wraps": ["policy", "broker", "actions"], "pad": 16 }
+  ],
+  "connections": [
+    { "id": "collect", "from": "production", "to": "providers", "label": "collect / query", "variant": "emphasis" },
+    { "id": "translate", "from": "providers", "to": "normalize", "label": "translate" },
+    { "id": "publish", "from": "normalize", "to": "eventbus", "label": "publish canonical" },
+    { "id": "stream", "from": "eventbus", "to": "correlation", "label": "stream" },
+    { "id": "open-incident", "from": "correlation", "to": "incident", "label": "open / update" },
+    { "id": "start-workflow", "from": "incident", "to": "workflow", "label": "start / resume" },
+    { "id": "fan-out", "from": "workflow", "to": "agents", "label": "fan out" },
+    { "id": "model-loop", "from": "agents", "to": "meta", "label": "reasoning API", "variant": "dashed", "fromSide": "right", "toSide": "left", "via": [[250, 396], [250, 536]], "labelAt": [238, 475] },
+    { "id": "publish-evidence", "from": "agents", "to": "evidence", "label": "publish evidence" },
+    { "id": "test-causes", "from": "evidence", "to": "reasoning", "label": "test causes" },
+    { "id": "score", "from": "reasoning", "to": "consensus", "label": "score" },
+    { "id": "plan", "from": "consensus", "to": "planner", "label": "plan" },
+    { "id": "gate", "from": "planner", "to": "policy", "label": "gate action", "variant": "security" },
+    { "id": "authorize", "from": "policy", "to": "broker", "label": "authorized command", "variant": "security" },
+    { "id": "execute", "from": "broker", "to": "actions", "label": "execute", "variant": "security" },
+    { "id": "observe-result", "from": "actions", "to": "verify", "label": "observe result" },
+    { "id": "record-outcome", "from": "verify", "to": "state", "label": "record outcome" },
+    { "id": "serve-view", "from": "state", "to": "ui", "label": "timeline + read models" },
+    { "id": "operate", "from": "responders", "to": "ui", "label": "operate" },
+    { "id": "approval", "from": "ui", "to": "policy", "label": "approval decision", "variant": "security", "fromSide": "top", "toSide": "bottom", "via": [[445, 1020], [940, 1020]], "labelAt": [700, 1008] },
+    { "id": "runtime-context", "from": "control", "to": "correlation", "label": "catalog + SLO context", "fromSide": "right", "toSide": "right", "via": [[1080, 56], [1080, 396]], "labelAt": [940, 44] },
+    { "id": "verify-reopens", "from": "verify", "to": "incident", "label": "reopen if recovery fails", "variant": "dashed", "fromSide": "left", "toSide": "bottom", "via": [[0, 876], [0, 1220], [1080, 1220], [1080, 500], [690, 500]], "labelAt": [930, 1208] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Evidence-driven reasoning", "items": ["Every conclusion links to observations and tool calls", "Leading hypotheses are actively challenged", "Consensus weights independence, reliability, and contradictions"] },
+    { "dot": "rose", "title": "Safe autonomy", "items": ["Model outputs are untrusted proposals", "Capabilities, risk policy, and approval gate every action", "Recovery is measured from system signals, not API success"] },
+    { "dot": "emerald", "title": "Durability and scale", "items": ["Orleans ownership plus durable workflows", "Event sourcing, CQRS, outbox/inbox, idempotency, and replay", "Backpressure, bulkheads, cells, and tenant isolation support growth"] },
+    { "dot": "violet", "title": "Replaceable integrations", "items": ["Canonical observations isolate telemetry vendors", "Model providers stay behind Sentinel contracts", "Action, notification, knowledge, and deployment adapters remain pluggable"] }
+  ]
+}
