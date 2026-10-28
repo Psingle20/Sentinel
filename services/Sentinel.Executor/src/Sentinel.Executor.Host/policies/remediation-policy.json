@@ -1,0 +1,30 @@
+{
+  "version": "policy-2026.10.2",
+  "defaultMode": "ApprovalRequired",
+  "environmentModes": {
+    "reference": "ApprovalRequired"
+  },
+  "rules": [
+    {
+      "id": "rollback.reference-services",
+      "action": "rollback",
+      "environments": [ "reference" ],
+      "targets": [ "checkout-service", "order-service" ],
+      "maxRisk": "medium",
+      "minConfidence": 0.5,
+      "maxBlastRadius": 2,
+      "grants": "ApprovalRequired"
+    },
+    {
+      "id": "pause-batch.reporting-worker",
+      "action": "pause-batch",
+      "environments": [ "reference" ],
+      "targets": [ "reporting-worker" ],
+      "maxRisk": "low",
+      "minConfidence": 0.5,
+      "maxBlastRadius": 1,
+      "grants": "SuggestionOnly"
+    }
+  ],
+  "freezes": []
+}
