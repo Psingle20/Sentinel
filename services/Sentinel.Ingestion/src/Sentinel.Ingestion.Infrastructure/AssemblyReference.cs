@@ -1,0 +1,8 @@
+using System.Reflection;
+
+namespace Sentinel.Ingestion.Infrastructure;
+
+public static class AssemblyReference
+{
+    public static Assembly Assembly => typeof(AssemblyReference).Assembly;
+}
