@@ -1,0 +1,77 @@
+/*
+ * Foundation tokens: the raw visual scales. Only theme files reference these;
+ * components and screens use semantic tokens instead.
+ *
+ * Each hue has four steps chosen for contrast:
+ *   100  light tint for light-theme backgrounds
+ *   300  bright tone for dark-theme text and icons
+ *   700  deep tone for light-theme text and icons
+ *   900  dark tint for dark-theme backgrounds
+ */
+:root {
+  --palette-neutral-0: oklch(1 0 0);
+  --palette-neutral-50: oklch(0.985 0 0);
+  --palette-neutral-100: oklch(0.97 0 0);
+  --palette-neutral-200: oklch(0.922 0 0);
+  --palette-neutral-400: oklch(0.708 0 0);
+  --palette-neutral-500: oklch(0.556 0 0);
+  --palette-neutral-700: oklch(0.371 0 0);
+  --palette-neutral-800: oklch(0.269 0 0);
+  --palette-neutral-850: oklch(0.205 0 0);
+  --palette-neutral-950: oklch(0.145 0 0);
+
+  --palette-red-100: oklch(0.95 0.03 25);
+  --palette-red-300: oklch(0.82 0.11 25);
+  --palette-red-700: oklch(0.5 0.17 25);
+  --palette-red-900: oklch(0.3 0.08 25);
+
+  --palette-orange-100: oklch(0.95 0.035 55);
+  --palette-orange-300: oklch(0.83 0.12 55);
+  --palette-orange-700: oklch(0.5 0.13 50);
+  --palette-orange-900: oklch(0.3 0.07 50);
+
+  --palette-amber-100: oklch(0.96 0.04 85);
+  --palette-amber-300: oklch(0.86 0.13 85);
+  --palette-amber-700: oklch(0.5 0.1 75);
+  --palette-amber-900: oklch(0.3 0.06 75);
+
+  --palette-green-100: oklch(0.95 0.035 150);
+  --palette-green-300: oklch(0.83 0.13 150);
+  --palette-green-700: oklch(0.47 0.12 150);
+  --palette-green-900: oklch(0.3 0.06 150);
+
+  --palette-teal-100: oklch(0.95 0.03 185);
+  --palette-teal-300: oklch(0.83 0.1 185);
+  --palette-teal-700: oklch(0.47 0.09 185);
+  --palette-teal-900: oklch(0.3 0.05 185);
+
+  --palette-blue-100: oklch(0.95 0.03 255);
+  --palette-blue-300: oklch(0.81 0.1 255);
+  --palette-blue-700: oklch(0.48 0.16 260);
+  --palette-blue-900: oklch(0.3 0.08 260);
+
+  --palette-violet-100: oklch(0.95 0.035 295);
+  --palette-violet-300: oklch(0.81 0.11 295);
+  --palette-violet-700: oklch(0.48 0.17 295);
+  --palette-violet-900: oklch(0.3 0.09 295);
+
+  --palette-fuchsia-100: oklch(0.95 0.035 330);
+  --palette-fuchsia-300: oklch(0.82 0.12 330);
+  --palette-fuchsia-700: oklch(0.48 0.17 330);
+  --palette-fuchsia-900: oklch(0.3 0.08 330);
+
+  --radius: 0.625rem;
+
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+}
+
+/* Motion never obscures incident state: honour reduced-motion preferences globally. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+}

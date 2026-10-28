@@ -1,0 +1,131 @@
+{
+  "summary": {
+    "tenantId": "acme",
+    "environmentId": "reference",
+    "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+    "affectedServiceId": "checkout-service",
+    "title": "checkout-service slo_burn_rate at 14.8",
+    "severity": "critical",
+    "status": "awaitingApproval",
+    "openedAt": "2026-10-28T09:05:00+00:00",
+    "updatedAt": "2026-10-28T09:07:36+00:00",
+    "streamVersion": 6
+  },
+  "triggerObservationIds": ["prometheus:slo_burn_rate:checkout-service:1793178300"],
+  "linkedDeploymentObservationIds": [
+    "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:started",
+    "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:completed"
+  ],
+  "timeline": [
+    { "streamVersion": 1, "occurredAt": "2026-10-28T09:05:00+00:00", "kind": "incident.detected", "summary": "checkout-service slo_burn_rate at 14.8; 1 recent change(s) correlated." },
+    { "streamVersion": 2, "occurredAt": "2026-10-28T09:05:00+00:00", "kind": "investigation.requested", "summary": "Investigation requested: Determine the most likely cause of checkout-service's slo_burn_rate rising above 2." },
+    { "streamVersion": 3, "occurredAt": "2026-10-28T09:07:30+00:00", "kind": "investigation.reported", "summary": "deterministic-analyst investigation Completed: 2 hypotheses, 2 accepted evidence, 0 rejected." },
+    { "streamVersion": 4, "occurredAt": "2026-10-28T09:07:30+00:00", "kind": "decision.made", "summary": "Diagnosed: The checkout-service v2.4.1 deployment introduced a Redis connection leak." },
+    { "streamVersion": 5, "occurredAt": "2026-10-28T09:07:36+00:00", "kind": "plan.proposed", "summary": "Plan v1 proposed for checkout-service; policy static-2026.10.1: ApprovalRequired." }
+  ],
+  "investigations": [
+    {
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "requestedAt": "2026-10-28T09:05:00+00:00",
+      "agentExecutionId": "0192f0c4-0000-7000-8000-000000000009",
+      "outcome": "completed",
+      "model": { "provider": "sentinel-test-double", "model": "deterministic-analyst", "modelVersion": "1", "promptVersion": "investigator-v1" },
+      "completedAt": "2026-10-28T09:07:30+00:00"
+    }
+  ],
+  "evidence": [
+    {
+      "finding": {
+        "evidenceId": "0192f0c4-0000-7000-8000-000000000005",
+        "statement": "checkout-service Redis connections rose from 4 to 186 between 2026-10-28T09:03:30Z and 2026-10-28T09:04:10Z.",
+        "direction": "supports",
+        "strength": 0.85,
+        "sourceObservationIds": ["prometheus:redis_connections:checkout-service:1793178210", "prometheus:redis_connections:checkout-service:1793178250"],
+        "hypothesisIds": ["0192f0c4-0000-7000-8000-000000000003"],
+        "eventTimeRange": { "from": "2026-10-28T09:03:30+00:00", "to": "2026-10-28T09:04:10+00:00" },
+        "toolCallId": "call_redis_connections",
+        "independenceGroup": "redis-connections:checkout-service"
+      },
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "status": "accepted"
+    },
+    {
+      "finding": {
+        "evidenceId": "0192f0c4-0000-7000-8000-000000000006",
+        "statement": "checkout-service v2.4.1 started at 2026-10-28T09:03:00Z and served from 2026-10-28T09:03:20Z; symptoms began at 2026-10-28T09:04:00Z.",
+        "direction": "supports",
+        "strength": 0.59,
+        "sourceObservationIds": [
+          "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:started",
+          "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:completed"
+        ],
+        "hypothesisIds": ["0192f0c4-0000-7000-8000-000000000003"],
+        "eventTimeRange": { "from": "2026-10-28T09:03:00+00:00", "to": "2026-10-28T09:03:20+00:00" },
+        "toolCallId": "call_deployments",
+        "independenceGroup": "deployment:0192f0c4-0000-7000-8000-0000000000d1"
+      },
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "status": "accepted"
+    }
+  ],
+  "hypotheses": [
+    {
+      "finding": {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+        "statement": "The checkout-service v2.4.1 deployment introduced a Redis connection leak.",
+        "causalChain": ["deploy checkout-service v2.4.1", "Redis connection leak", "Redis saturation", "checkout-service errors", "SLO burn"],
+        "suspectedServiceId": "checkout-service",
+        "suspectedChangeObservationId": "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:started",
+        "supportingEvidenceIds": ["0192f0c4-0000-7000-8000-000000000005", "0192f0c4-0000-7000-8000-000000000006"]
+      },
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "status": "supported"
+    },
+    {
+      "finding": {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+        "statement": "A change in load on checkout-service, not a deployment, caused the symptoms.",
+        "causalChain": ["traffic change", "saturation", "SLO burn"],
+        "suspectedServiceId": "checkout-service"
+      },
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "status": "rejected"
+    }
+  ],
+  "decision": {
+    "decisionId": "0192f0c4-0000-7000-8000-000000000008",
+    "outcome": "diagnosed",
+    "leadingHypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+    "rejectedHypothesisIds": ["0192f0c4-0000-7000-8000-000000000004"],
+    "confidence": 0.72,
+    "evidenceCompleteness": 1,
+    "calibration": "uncalibrated",
+    "rationale": "The checkout-service v2.4.1 deployment introduced a Redis connection leak. It precedes symptom onset and is supported by 4 distinct observations.",
+    "checks": [
+      { "name": "cause-precedes-symptom-onset", "passed": true, "detail": "checkout-service v2.4.1 served from 2026-10-28T09:03:20Z, before symptom onset at 2026-10-28T09:04:00Z." },
+      { "name": "support-cites-two-observations", "passed": true, "detail": "Supporting evidence cites 4 distinct observation(s); 2 are required." }
+    ],
+    "decidedAt": "2026-10-28T09:07:30+00:00"
+  },
+  "plan": {
+    "plan": {
+      "planId": "0192f0c4-0000-7000-8000-000000000006",
+      "planVersion": 1,
+      "planHash": "sha256:6f1c2b9e4d7a3f0e8b5c1a9d2e4f6a8b0c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f",
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+      "actions": [
+        { "kind": "rollback", "actionId": "0192f0c4-0000-7000-8000-000000000007", "targetServiceId": "checkout-service", "fromRevision": "v2.4.1", "toRevision": "v2.4.0" }
+      ],
+      "expectedRecovery": [{ "serviceId": "checkout-service", "metricName": "slo_burn_rate", "comparison": "lessThan", "threshold": 1 }],
+      "observationWindow": "00:01:30",
+      "risk": "medium"
+    },
+    "policyEvaluation": {
+      "decision": "approvalRequired",
+      "policyVersion": "static-2026.10.1",
+      "ruleTrace": ["rollback.reference: rolling back checkout-service by one revision requires approval"],
+      "evaluatedAt": "2026-10-28T09:07:36+00:00"
+    },
+    "status": "awaitingApproval"
+  }
+}

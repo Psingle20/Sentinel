@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Order matters: light defines :root, dark overrides it under the .dark class. */
+@import "../design-system/tokens/foundation.css";
+@import "../design-system/themes/light.css";
+@import "../design-system/themes/dark.css";
+@import "../design-system/tokens/theme.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

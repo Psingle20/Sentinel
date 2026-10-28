@@ -1,0 +1,66 @@
+/* Light theme: must remain complete and accessible, though dark is primary. */
+:root {
+  --surface-canvas: var(--palette-neutral-50);
+  --surface-panel: var(--palette-neutral-0);
+  --text-primary: var(--palette-neutral-950);
+  --text-muted: var(--palette-neutral-500);
+  --border-subtle: var(--palette-neutral-200);
+
+  --incident-critical: var(--palette-red-700);
+  --incident-critical-subtle: var(--palette-red-100);
+  --incident-warning: var(--palette-amber-700);
+  --incident-warning-subtle: var(--palette-amber-100);
+  --incident-stable: var(--palette-green-700);
+  --incident-stable-subtle: var(--palette-green-100);
+
+  --evidence-supporting: var(--palette-teal-700);
+  --evidence-supporting-subtle: var(--palette-teal-100);
+  --evidence-contradicting: var(--palette-fuchsia-700);
+  --evidence-contradicting-subtle: var(--palette-fuchsia-100);
+  --evidence-neutral: var(--palette-neutral-700);
+  --evidence-neutral-subtle: var(--palette-neutral-100);
+
+  --hypothesis-leading: var(--palette-violet-700);
+  --hypothesis-leading-subtle: var(--palette-violet-100);
+  --approval-required: var(--palette-orange-700);
+  --approval-required-subtle: var(--palette-orange-100);
+  --action-executing: var(--palette-blue-700);
+  --action-executing-subtle: var(--palette-blue-100);
+  --recovery-improving: var(--palette-green-700);
+  --recovery-improving-subtle: var(--palette-green-100);
+  --recovery-failed: var(--palette-red-700);
+  --recovery-failed-subtle: var(--palette-red-100);
+
+  /* shadcn/ui recipe variables, resolved through Sentinel semantics. */
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-panel);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-panel);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--palette-neutral-850);
+  --primary-foreground: var(--palette-neutral-50);
+  --secondary: var(--palette-neutral-100);
+  --secondary-foreground: var(--palette-neutral-850);
+  --muted: var(--palette-neutral-100);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--palette-neutral-100);
+  --accent-foreground: var(--palette-neutral-850);
+  --destructive: var(--incident-critical);
+  --border: var(--border-subtle);
+  --input: var(--palette-neutral-200);
+  --ring: var(--palette-neutral-400);
+  --chart-1: var(--palette-blue-700);
+  --chart-2: var(--palette-teal-700);
+  --chart-3: var(--palette-violet-700);
+  --chart-4: var(--palette-amber-700);
+  --chart-5: var(--palette-fuchsia-700);
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--palette-neutral-850);
+  --sidebar-primary-foreground: var(--palette-neutral-50);
+  --sidebar-accent: var(--palette-neutral-100);
+  --sidebar-accent-foreground: var(--palette-neutral-850);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--palette-neutral-400);
+}

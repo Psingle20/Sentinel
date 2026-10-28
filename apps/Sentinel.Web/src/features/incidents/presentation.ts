@@ -1,0 +1,97 @@
+import type { ApprovalStatus } from "@/design-system/domain/approval-state";
+import type { IncidentStatus as BadgeIncidentStatus } from "@/design-system/domain/incident-status-badge";
+import type { RecoveryStatus } from "@/design-system/domain/recovery-state";
+import type {
+  ExecutionOutcome,
+  IncidentStatus,
+  PlanStatus,
+  RecoveryCriterion,
+  RecoveryOutcome,
+  RemediationAction,
+} from "@/lib/api/contracts";
+
+// Maps Api's contract values onto the design system's presentation vocabulary.
+
+export function incidentStatus(status: IncidentStatus): BadgeIncidentStatus {
+  return status === "awaitingApproval" ? "awaiting-approval" : status;
+}
+
+export function approvalStatus(status: PlanStatus): ApprovalStatus {
+  switch (status) {
+    case "awaitingApproval":
+      return "required";
+    case "rejected":
+      return "rejected";
+    case "suggestionOnly":
+    case "denied":
+      return "not-required";
+    case "superseded":
+      return "expired";
+    default:
+      return "approved";
+  }
+}
+
+export function recoveryStatus(outcome: RecoveryOutcome): RecoveryStatus {
+  return outcome === "compensationRequired" ? "compensation-required" : outcome;
+}
+
+const executionLabels: Record<ExecutionOutcome, string> = {
+  rejected: "Rejected by Executor",
+  aborted: "Aborted before any change",
+  actionVerified: "Action verified at the target",
+  failed: "Failed",
+  outcomeUnknown: "Outcome unknown, reconciling",
+  compensated: "Compensated",
+  compensationFailed: "Compensation failed",
+};
+
+export function executionLabel(outcome: ExecutionOutcome | undefined): string {
+  return outcome ? executionLabels[outcome] : "Executing";
+}
+
+export function describeAction(action: RemediationAction): string {
+  return `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
+}
+
+const comparisons: Record<RecoveryCriterion["comparison"], string> = {
+  lessThan: "<",
+  lessThanOrEqual: "≤",
+  greaterThan: ">",
+  greaterThanOrEqual: "≥",
+};
+
+export function describeCriterion(criterion: RecoveryCriterion): string {
+  return `${criterion.serviceId} ${criterion.metricName} ${comparisons[criterion.comparison]} ${criterion.threshold}`;
+}
+
+const timeFormat = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZone: "UTC",
+});
+
+const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZone: "UTC",
+});
+
+// Event times render in UTC, so every responder reads the same timeline.
+export function formatTime(value: string): string {
+  return `${timeFormat.format(new Date(value))} UTC`;
+}
+
+export function formatDateTime(value: string): string {
+  return `${dateTimeFormat.format(new Date(value))} UTC`;
+}
+
+export function percent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}

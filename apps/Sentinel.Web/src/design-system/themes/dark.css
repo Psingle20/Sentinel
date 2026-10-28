@@ -1,0 +1,69 @@
+/*
+ * Dark is the primary operational theme. The root layout sets the `dark` class
+ * by default; light.css applies when it is absent.
+ */
+.dark {
+  --surface-canvas: var(--palette-neutral-950);
+  --surface-panel: var(--palette-neutral-850);
+  --text-primary: var(--palette-neutral-50);
+  --text-muted: var(--palette-neutral-400);
+  --border-subtle: oklch(1 0 0 / 10%);
+
+  --incident-critical: var(--palette-red-300);
+  --incident-critical-subtle: var(--palette-red-900);
+  --incident-warning: var(--palette-amber-300);
+  --incident-warning-subtle: var(--palette-amber-900);
+  --incident-stable: var(--palette-green-300);
+  --incident-stable-subtle: var(--palette-green-900);
+
+  --evidence-supporting: var(--palette-teal-300);
+  --evidence-supporting-subtle: var(--palette-teal-900);
+  --evidence-contradicting: var(--palette-fuchsia-300);
+  --evidence-contradicting-subtle: var(--palette-fuchsia-900);
+  --evidence-neutral: var(--palette-neutral-400);
+  --evidence-neutral-subtle: var(--palette-neutral-800);
+
+  --hypothesis-leading: var(--palette-violet-300);
+  --hypothesis-leading-subtle: var(--palette-violet-900);
+  --approval-required: var(--palette-orange-300);
+  --approval-required-subtle: var(--palette-orange-900);
+  --action-executing: var(--palette-blue-300);
+  --action-executing-subtle: var(--palette-blue-900);
+  --recovery-improving: var(--palette-green-300);
+  --recovery-improving-subtle: var(--palette-green-900);
+  --recovery-failed: var(--palette-red-300);
+  --recovery-failed-subtle: var(--palette-red-900);
+
+  /* shadcn/ui recipe variables, resolved through Sentinel semantics. */
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-panel);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-panel);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--palette-neutral-200);
+  --primary-foreground: var(--palette-neutral-850);
+  --secondary: var(--palette-neutral-800);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--palette-neutral-800);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--palette-neutral-800);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--incident-critical);
+  --border: var(--border-subtle);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--palette-neutral-500);
+  --chart-1: var(--palette-blue-300);
+  --chart-2: var(--palette-teal-300);
+  --chart-3: var(--palette-violet-300);
+  --chart-4: var(--palette-amber-300);
+  --chart-5: var(--palette-fuchsia-300);
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--palette-blue-700);
+  --sidebar-primary-foreground: var(--palette-neutral-50);
+  --sidebar-accent: var(--palette-neutral-800);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--palette-neutral-500);
+}

@@ -1,0 +1,88 @@
+/*
+ * Exposes semantic tokens as Tailwind utilities, for example `bg-surface-panel`,
+ * `text-incident-critical` and `bg-evidence-supporting-subtle`.
+ *
+ * Tailwind's default palette is removed so feature code cannot use raw colors
+ * such as `bg-red-500`; every color utility resolves to a Sentinel token.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-black: oklch(0 0 0);
+  --color-white: oklch(1 0 0);
+
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-panel: var(--surface-panel);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-incident-critical: var(--incident-critical);
+  --color-incident-critical-subtle: var(--incident-critical-subtle);
+  --color-incident-warning: var(--incident-warning);
+  --color-incident-warning-subtle: var(--incident-warning-subtle);
+  --color-incident-stable: var(--incident-stable);
+  --color-incident-stable-subtle: var(--incident-stable-subtle);
+  --color-evidence-supporting: var(--evidence-supporting);
+  --color-evidence-supporting-subtle: var(--evidence-supporting-subtle);
+  --color-evidence-contradicting: var(--evidence-contradicting);
+  --color-evidence-contradicting-subtle: var(--evidence-contradicting-subtle);
+  --color-evidence-neutral: var(--evidence-neutral);
+  --color-evidence-neutral-subtle: var(--evidence-neutral-subtle);
+  --color-hypothesis-leading: var(--hypothesis-leading);
+  --color-hypothesis-leading-subtle: var(--hypothesis-leading-subtle);
+  --color-approval-required: var(--approval-required);
+  --color-approval-required-subtle: var(--approval-required-subtle);
+  --color-action-executing: var(--action-executing);
+  --color-action-executing-subtle: var(--action-executing-subtle);
+  --color-recovery-improving: var(--recovery-improving);
+  --color-recovery-improving-subtle: var(--recovery-improving-subtle);
+  --color-recovery-failed: var(--recovery-failed);
+  --color-recovery-failed-subtle: var(--recovery-failed-subtle);
+
+  /* shadcn/ui recipe colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
