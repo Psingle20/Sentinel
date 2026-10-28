@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql</RootNamespace>
+        <AnalysisMode>Default</AnalysisMode>
+        <NoWarn>$(NoWarn);S2326</NoWarn>
+        <PackageId>CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql</PackageId>
+        <Description>PostgreSQL outbox, inbox and unit of work for the building-blocks messaging layer.</Description>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Npgsql" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CleanArchitecture.BuildingBlocks.Infrastructure\CleanArchitecture.BuildingBlocks.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

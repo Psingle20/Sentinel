@@ -1,0 +1,8 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.IPostgresTransaction
+CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.IPostgresTransaction.GetTransactionAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Npgsql.NpgsqlTransaction!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.PostgresDataSourceExtensions
+CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.PostgresMessagingExtensions
+const CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.PostgresDataSourceExtensions.HealthCheckName = "postgres" -> string!
+static CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.PostgresDataSourceExtensions.AddPostgresDataSource(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString, params string![]! healthCheckTags) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.PostgresMessagingExtensions.AddPostgresStorage(this CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder! builder) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!

@@ -1,0 +1,7 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.BuildingBlocksServiceCollectionExtensions
+CleanArchitecture.BuildingBlocks.IDependencyModule
+CleanArchitecture.BuildingBlocks.IDependencyModule.RegisterServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
+CleanArchitecture.BuildingBlocks.Messaging.ValidationFailureMapper
+static CleanArchitecture.BuildingBlocks.BuildingBlocksServiceCollectionExtensions.AddBuildingBlocks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params System.Reflection.Assembly![]! assemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static CleanArchitecture.BuildingBlocks.Messaging.ValidationFailureMapper.ToValidationError(FluentValidation.Results.ValidationResult! result) -> CleanArchitecture.BuildingBlocks.ValidationError!

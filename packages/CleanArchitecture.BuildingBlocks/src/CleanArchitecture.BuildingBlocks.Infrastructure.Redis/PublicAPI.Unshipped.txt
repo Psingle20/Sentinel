@@ -1,0 +1,50 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.<Clone>$() -> CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.ConsumerGroup.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.ConsumerGroup.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.DeadLetter(string! EntryId, string! Stream, System.Guid? MessageId, string? MessageType, string! Reason, string! ConsumerGroup, string! SourceEntryId, System.DateTimeOffset? FailedAt) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Deconstruct(out string! EntryId, out string! Stream, out System.Guid? MessageId, out string? MessageType, out string! Reason, out string! ConsumerGroup, out string! SourceEntryId, out System.DateTimeOffset? FailedAt) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.EntryId.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.EntryId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Equals(CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter? other) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.FailedAt.get -> System.DateTimeOffset?
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.FailedAt.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.MessageId.get -> System.Guid?
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.MessageId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.MessageType.get -> string?
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.MessageType.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Reason.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Reason.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.SourceEntryId.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.SourceEntryId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Stream.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Stream.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisConnectionExtensions
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisDeadLetters
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisDeadLetters.ListAsync(string! stream, int count) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter!>!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisDeadLetters.RedisDeadLetters(StackExchange.Redis.IConnectionMultiplexer! redis) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisDeadLetters.ReplayAsync(string! stream, string! entryId) -> System.Threading.Tasks.Task<bool>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsExtensions
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.BatchSize.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.BatchSize.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ClaimIdleTime.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ClaimIdleTime.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ConsumerName.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ConsumerName.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxDeliveries.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxDeliveries.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxStreamLength.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxStreamLength.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.PollInterval.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.PollInterval.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.RedisStreamsOptions() -> void
+const CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisConnectionExtensions.HealthCheckName = "redis" -> string!
+override CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.ToString() -> string!
+static CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter? left, CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter? left, CleanArchitecture.BuildingBlocks.Infrastructure.Redis.DeadLetter? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisConnectionExtensions.AddRedisConnection(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! connectionString, params string![]! healthCheckTags) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsExtensions.AddRedisStreams(this CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder! builder, System.Action<CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions!>? configure = null) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!

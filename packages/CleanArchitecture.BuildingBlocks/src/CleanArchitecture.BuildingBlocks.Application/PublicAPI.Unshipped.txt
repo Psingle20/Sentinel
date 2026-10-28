@@ -1,0 +1,37 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.IDomainEventHandler<T>
+CleanArchitecture.BuildingBlocks.IDomainEventHandler<T>.Handle(T domainEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Integration.IOutbox
+CleanArchitecture.BuildingBlocks.Integration.IOutbox.Enqueue<TMessage>(TMessage! message, CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? metadata = null) -> void
+CleanArchitecture.BuildingBlocks.Integration.IUnitOfWork
+CleanArchitecture.BuildingBlocks.Integration.IUnitOfWork.CommitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.<Clone>$() -> CleanArchitecture.BuildingBlocks.Integration.MessageMetadata!
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.CausationId.get -> string?
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.CausationId.init -> void
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.CorrelationId.get -> string?
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.CorrelationId.init -> void
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.Deconstruct(out string? CorrelationId, out string? CausationId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Headers) -> void
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.Equals(CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? other) -> bool
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.Headers.init -> void
+CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.MessageMetadata(string? CorrelationId = null, string? CausationId = null, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? Headers = null) -> void
+CleanArchitecture.BuildingBlocks.Messaging.ICommand
+CleanArchitecture.BuildingBlocks.Messaging.ICommand<TResponse>
+CleanArchitecture.BuildingBlocks.Messaging.ICommandDispatcher
+CleanArchitecture.BuildingBlocks.Messaging.ICommandDispatcher.Dispatch(CleanArchitecture.BuildingBlocks.Messaging.ICommand! command, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Messaging.ICommandDispatcher.Dispatch<TResult>(CleanArchitecture.BuildingBlocks.Messaging.ICommand<TResult>! command, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!
+CleanArchitecture.BuildingBlocks.Messaging.ICommandHandler<TCommand, TResponse>
+CleanArchitecture.BuildingBlocks.Messaging.ICommandHandler<TCommand, TResponse>.Handle(TCommand command, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResponse>!>!
+CleanArchitecture.BuildingBlocks.Messaging.ICommandHandler<TCommand>
+CleanArchitecture.BuildingBlocks.Messaging.ICommandHandler<TCommand>.Handle(TCommand command, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Messaging.IQuery<TResponse>
+CleanArchitecture.BuildingBlocks.Messaging.IQueryDispatcher
+CleanArchitecture.BuildingBlocks.Messaging.IQueryDispatcher.Dispatch<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IQuery<TResult>! query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!
+CleanArchitecture.BuildingBlocks.Messaging.IQueryHandler<TQuery, TResponse>
+CleanArchitecture.BuildingBlocks.Messaging.IQueryHandler<TQuery, TResponse>.Handle(TQuery query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResponse>!>!
+override CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.ToString() -> string!
+static CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.operator !=(CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? left, CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? right) -> bool
+static CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.operator ==(CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? left, CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? right) -> bool

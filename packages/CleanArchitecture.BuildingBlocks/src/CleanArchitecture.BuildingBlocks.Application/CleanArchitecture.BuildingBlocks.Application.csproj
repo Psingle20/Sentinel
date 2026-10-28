@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>CleanArchitecture.BuildingBlocks</RootNamespace>
+        <AnalysisMode>Default</AnalysisMode>
+        <NoWarn>$(NoWarn);S2326</NoWarn>
+        <PackageId>CleanArchitecture.BuildingBlocks.Application</PackageId>
+        <Description>In-process application use-case contracts: commands, queries, handlers and dispatchers.</Description>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="CleanArchitecture.BuildingBlocks.Hosting" />
+        <InternalsVisibleTo Include="CleanArchitecture.BuildingBlocks.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CleanArchitecture.BuildingBlocks.Core\CleanArchitecture.BuildingBlocks.Core.csproj" />
+    </ItemGroup>
+
+</Project>

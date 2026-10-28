@@ -1,0 +1,130 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IInboundMessageProcessor
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IInboundMessageProcessor.ProcessAsync(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! envelope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IInboxStore
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IInboxStore.TryRecordAsync(string! consumer, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! envelope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IIntegrationMessageHandler<TMessage>
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IIntegrationMessageHandler<TMessage>.HandleAsync(TMessage! message, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! envelope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessageContextAccessor
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessageContextAccessor.Current.get -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope?
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessagePublisher
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessagePublisher.PublishAsync(string! stream, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! envelope, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessagingStoreInitializer
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IMessagingStoreInitializer.InitializeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IOutboxStore
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IOutboxStore.ClaimDueAsync(int batchSize, System.TimeSpan lease, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord!>!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IOutboxStore.GetOldestPendingAgeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.TimeSpan?>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IOutboxStore.MarkFailedAsync(System.Guid messageId, System.TimeSpan retryAfter, string! error, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IOutboxStore.MarkPublishedAsync(System.Guid messageId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IPendingOutbox
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.IPendingOutbox.DequeuePending() -> System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.<Clone>$() -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.CausationId.get -> string?
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.CausationId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.CorrelationId.get -> string?
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.CorrelationId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Deconstruct(out System.Guid MessageId, out string! MessageType, out int SchemaVersion, out System.DateTimeOffset OccurredAt, out string! Producer, out string? CorrelationId, out string? CausationId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers, out string! Payload) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Equals(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope? other) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Headers.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.MessageEnvelope(System.Guid MessageId, string! MessageType, int SchemaVersion, System.DateTimeOffset OccurredAt, string! Producer, string? CorrelationId, string? CausationId, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Headers, string! Payload) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.MessageId.get -> System.Guid
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.MessageId.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.MessageType.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.MessageType.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.OccurredAt.get -> System.DateTimeOffset
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.OccurredAt.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Payload.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Payload.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Producer.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Producer.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.SchemaVersion.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.SchemaVersion.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.<Clone>$() -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.ClrType.get -> System.Type!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.ClrType.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.Deconstruct(out System.Type! ClrType, out string! MessageType, out int SchemaVersion, out string! Stream) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.Equals(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? other) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.MessageRegistration(System.Type! ClrType, string! MessageType, int SchemaVersion, string! Stream) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.MessageType.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.MessageType.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.SchemaVersion.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.SchemaVersion.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.Stream.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.Stream.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageTypeRegistry
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageTypeRegistry.Get(System.Type! clrType) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageTypeRegistry.MessageTypeRegistry() -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageTypeRegistry.TryGet(string! messageType, int schemaVersion, out CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? registration) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Consumes<TMessage, THandler>(string! messageType, int schemaVersion, string! stream) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Produces<TMessage>(string! messageType, int schemaVersion, string! stream) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.MessagingOptions() -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.ServiceName.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.ServiceName.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingServiceCollectionExtensions
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.BatchSize.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.BatchSize.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.ClaimLease.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.ClaimLease.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.InitialRetryDelay.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.InitialRetryDelay.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.LagThreshold.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.LagThreshold.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.MaxRetryDelay.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.MaxRetryDelay.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.OutboxOptions() -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.PollInterval.get -> System.TimeSpan
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions.PollInterval.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.<Clone>$() -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Attempts.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Attempts.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Deconstruct(out CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! Envelope, out string! Stream, out int Attempts) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Envelope.get -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Envelope.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Equals(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? other) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.OutboxRecord(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope! Envelope, string! Stream, int Attempts = 0) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Stream.get -> string!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Stream.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome.Duplicate = 1 -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome.Failed = 2 -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome.Processed = 0 -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome.Rejected = 3 -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.<Clone>$() -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult!
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Deconstruct(out CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome Outcome, out string? Reason) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Equals(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? other) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Outcome.get -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Outcome.init -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.ProcessingResult(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingOutcome Outcome, string? Reason = null) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Reason.get -> string?
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Reason.init -> void
+const CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingServiceCollectionExtensions.OutboxHealthCheckName = "outbox-lag" -> string!
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.ToString() -> string!
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.ToString() -> string!
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.ToString() -> string!
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.ToString() -> string!
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageEnvelope? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessageRegistration? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingServiceCollectionExtensions.AddMessaging(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName, System.Action<CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxOptions!>? configureOutbox = null) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? right) -> bool
+static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? right) -> bool

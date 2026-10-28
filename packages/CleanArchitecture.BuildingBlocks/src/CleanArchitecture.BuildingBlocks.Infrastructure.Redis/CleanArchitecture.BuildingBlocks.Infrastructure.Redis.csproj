@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>CleanArchitecture.BuildingBlocks.Infrastructure.Redis</RootNamespace>
+        <AnalysisMode>Default</AnalysisMode>
+        <NoWarn>$(NoWarn);S2326</NoWarn>
+        <PackageId>CleanArchitecture.BuildingBlocks.Infrastructure.Redis</PackageId>
+        <Description>Redis Streams transport for the building-blocks messaging layer.</Description>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="CleanArchitecture.BuildingBlocks.Infrastructure.Tests" />
+        <InternalsVisibleTo Include="CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="StackExchange.Redis" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CleanArchitecture.BuildingBlocks.Infrastructure\CleanArchitecture.BuildingBlocks.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

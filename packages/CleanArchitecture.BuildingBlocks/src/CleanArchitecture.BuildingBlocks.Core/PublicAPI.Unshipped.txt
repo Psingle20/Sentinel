@@ -1,0 +1,62 @@
+#nullable enable
+CleanArchitecture.BuildingBlocks.Entity
+CleanArchitecture.BuildingBlocks.Entity.DequeueDomainEvents() -> System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.IDomainEvent!>!
+CleanArchitecture.BuildingBlocks.Entity.DomainEvents.get -> System.Collections.Generic.IReadOnlyCollection<CleanArchitecture.BuildingBlocks.IDomainEvent!>!
+CleanArchitecture.BuildingBlocks.Entity.Entity() -> void
+CleanArchitecture.BuildingBlocks.Entity.Raise(CleanArchitecture.BuildingBlocks.IDomainEvent! domainEvent) -> void
+CleanArchitecture.BuildingBlocks.Error
+CleanArchitecture.BuildingBlocks.Error.Code.get -> string!
+CleanArchitecture.BuildingBlocks.Error.Description.get -> string!
+CleanArchitecture.BuildingBlocks.Error.Error(CleanArchitecture.BuildingBlocks.Error! original) -> void
+CleanArchitecture.BuildingBlocks.Error.Error(string! code, string! description, CleanArchitecture.BuildingBlocks.ErrorType type) -> void
+CleanArchitecture.BuildingBlocks.Error.Type.get -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType.Conflict = 4 -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType.Failure = 0 -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType.NotFound = 3 -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType.Problem = 2 -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.ErrorType.Validation = 1 -> CleanArchitecture.BuildingBlocks.ErrorType
+CleanArchitecture.BuildingBlocks.IDateTimeProvider
+CleanArchitecture.BuildingBlocks.IDateTimeProvider.UtcNow.get -> System.DateTimeOffset
+CleanArchitecture.BuildingBlocks.IDomainEvent
+CleanArchitecture.BuildingBlocks.Result
+CleanArchitecture.BuildingBlocks.Result.Error.get -> CleanArchitecture.BuildingBlocks.Error!
+CleanArchitecture.BuildingBlocks.Result.IsFailure.get -> bool
+CleanArchitecture.BuildingBlocks.Result.IsSuccess.get -> bool
+CleanArchitecture.BuildingBlocks.Result.Result(bool isSuccess, CleanArchitecture.BuildingBlocks.Error! error) -> void
+CleanArchitecture.BuildingBlocks.Result<TValue>
+CleanArchitecture.BuildingBlocks.Result<TValue>.Result(TValue? value, bool isSuccess, CleanArchitecture.BuildingBlocks.Error! error) -> void
+CleanArchitecture.BuildingBlocks.Result<TValue>.Value.get -> TValue
+CleanArchitecture.BuildingBlocks.ValidationError
+CleanArchitecture.BuildingBlocks.ValidationError.Equals(CleanArchitecture.BuildingBlocks.ValidationError? other) -> bool
+CleanArchitecture.BuildingBlocks.ValidationError.Errors.get -> CleanArchitecture.BuildingBlocks.Error![]!
+CleanArchitecture.BuildingBlocks.ValidationError.ValidationError(CleanArchitecture.BuildingBlocks.Error![]! errors) -> void
+override CleanArchitecture.BuildingBlocks.Error.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Error.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Error.ToString() -> string!
+override CleanArchitecture.BuildingBlocks.ValidationError.<Clone>$() -> CleanArchitecture.BuildingBlocks.ValidationError!
+override CleanArchitecture.BuildingBlocks.ValidationError.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.ValidationError.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.ValidationError.ToString() -> string!
+override sealed CleanArchitecture.BuildingBlocks.ValidationError.Equals(CleanArchitecture.BuildingBlocks.Error? other) -> bool
+static CleanArchitecture.BuildingBlocks.Error.Conflict(string! code, string! description) -> CleanArchitecture.BuildingBlocks.Error!
+static CleanArchitecture.BuildingBlocks.Error.Failure(string! code, string! description) -> CleanArchitecture.BuildingBlocks.Error!
+static CleanArchitecture.BuildingBlocks.Error.NotFound(string! code, string! description) -> CleanArchitecture.BuildingBlocks.Error!
+static CleanArchitecture.BuildingBlocks.Error.operator !=(CleanArchitecture.BuildingBlocks.Error? left, CleanArchitecture.BuildingBlocks.Error? right) -> bool
+static CleanArchitecture.BuildingBlocks.Error.operator ==(CleanArchitecture.BuildingBlocks.Error? left, CleanArchitecture.BuildingBlocks.Error? right) -> bool
+static CleanArchitecture.BuildingBlocks.Error.Problem(string! code, string! description) -> CleanArchitecture.BuildingBlocks.Error!
+static CleanArchitecture.BuildingBlocks.Result.Failure(CleanArchitecture.BuildingBlocks.Error! error) -> CleanArchitecture.BuildingBlocks.Result!
+static CleanArchitecture.BuildingBlocks.Result.Failure<TValue>(CleanArchitecture.BuildingBlocks.Error! error) -> CleanArchitecture.BuildingBlocks.Result<TValue>!
+static CleanArchitecture.BuildingBlocks.Result.Success() -> CleanArchitecture.BuildingBlocks.Result!
+static CleanArchitecture.BuildingBlocks.Result.Success<TValue>(TValue value) -> CleanArchitecture.BuildingBlocks.Result<TValue>!
+static CleanArchitecture.BuildingBlocks.Result<TValue>.implicit operator CleanArchitecture.BuildingBlocks.Result<TValue>!(TValue? value) -> CleanArchitecture.BuildingBlocks.Result<TValue>!
+static CleanArchitecture.BuildingBlocks.Result<TValue>.ValidationFailure(CleanArchitecture.BuildingBlocks.Error! error) -> CleanArchitecture.BuildingBlocks.Result<TValue>!
+static CleanArchitecture.BuildingBlocks.ValidationError.FromResults(System.Collections.Generic.IEnumerable<CleanArchitecture.BuildingBlocks.Result!>! results) -> CleanArchitecture.BuildingBlocks.ValidationError!
+static CleanArchitecture.BuildingBlocks.ValidationError.operator !=(CleanArchitecture.BuildingBlocks.ValidationError? left, CleanArchitecture.BuildingBlocks.ValidationError? right) -> bool
+static CleanArchitecture.BuildingBlocks.ValidationError.operator ==(CleanArchitecture.BuildingBlocks.ValidationError? left, CleanArchitecture.BuildingBlocks.ValidationError? right) -> bool
+static readonly CleanArchitecture.BuildingBlocks.Error.None -> CleanArchitecture.BuildingBlocks.Error!
+static readonly CleanArchitecture.BuildingBlocks.Error.NullValue -> CleanArchitecture.BuildingBlocks.Error!
+virtual CleanArchitecture.BuildingBlocks.Error.<Clone>$() -> CleanArchitecture.BuildingBlocks.Error!
+virtual CleanArchitecture.BuildingBlocks.Error.EqualityContract.get -> System.Type!
+virtual CleanArchitecture.BuildingBlocks.Error.Equals(CleanArchitecture.BuildingBlocks.Error? other) -> bool
+virtual CleanArchitecture.BuildingBlocks.Error.PrintMembers(System.Text.StringBuilder! builder) -> bool
