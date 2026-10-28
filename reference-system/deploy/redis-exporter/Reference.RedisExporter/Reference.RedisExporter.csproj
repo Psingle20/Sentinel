@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Exports the reference Redis's client connections, grouped by client name, as metrics.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\services\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+</Project>

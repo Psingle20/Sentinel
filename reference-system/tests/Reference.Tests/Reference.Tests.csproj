@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);CA2000;CA1861;S2699</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="Testcontainers.Redis" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\services\Reference.Checkout\Reference.Checkout.csproj" />
+        <ProjectReference Include="..\..\services\Reference.Orders\Reference.Orders.csproj" />
+        <ProjectReference Include="..\..\services\Reference.ReportingWorker\Reference.ReportingWorker.csproj" />
+        <ProjectReference Include="..\..\deploy\redis-exporter\Reference.RedisExporter\Reference.RedisExporter.csproj" />
+        <ProjectReference Include="..\..\deploy-controller\Reference.DeployController\Reference.DeployController.csproj" />
+        <ProjectReference Include="..\..\scenarios\Reference.Scenarios\Reference.Scenarios.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\scenarios\manifests\*.json" LinkBase="manifests" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>

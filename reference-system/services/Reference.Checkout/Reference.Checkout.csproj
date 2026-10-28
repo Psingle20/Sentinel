@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Reference checkout-service. Revision v2.4.1 leaks Redis connections (scenario S1).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+</Project>

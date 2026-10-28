@@ -1,0 +1,55 @@
+{
+  "id": "S0",
+  "slug": "healthy-noise",
+  "version": 1,
+  "kind": "control",
+  "description": "Seeded traffic with normal latency noise, a configuration change and a benign order-service deployment. No fault is injected.",
+  "affectedService": "checkout-service",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 180,
+  "steps": [
+    { "atSeconds": 0, "action": "configChange", "service": "order-service", "configurationDiff": "logging.level.Orders: Information -> Debug", "role": "noise" },
+    { "atSeconds": 30, "action": "deploy", "service": "order-service", "version": "v1.7.1", "rolloutSeconds": 20, "role": "noise" }
+  ],
+  "cause": null,
+  "confounders": [],
+  "detection": {
+    "expectIncident": false,
+    "service": "checkout-service",
+    "metric": "slo_burn_rate",
+    "threshold": 2.0,
+    "withinSeconds": 180
+  },
+  "expectedObservations": [
+    {
+      "description": "Checkout SLO burn rate stays below 1 throughout.",
+      "query": "slo:checkout_success:burn_rate1m",
+      "expectation": "below",
+      "threshold": 1.0,
+      "fromSeconds": 0,
+      "withinSeconds": 180
+    }
+  ],
+  "discriminatingSignals": [],
+  "noise": {
+    "trafficRequestsPerSecond": 10,
+    "seed": 1000,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 0,
+    "notes": "Deployments and configuration changes occur without any symptom; a detector that opens an incident here is wrong."
+  },
+  "hypotheses": null,
+  "remediation": {
+    "permitted": [],
+    "falseRemediations": [ { "action": "rollback", "service": "order-service" }, { "action": "rollback", "service": "checkout-service" } ]
+  },
+  "baseline": {
+    "outcome": "noIncident",
+    "service": null,
+    "fromVersion": null,
+    "toVersion": null,
+    "correct": true
+  },
+  "recovery": null
+}

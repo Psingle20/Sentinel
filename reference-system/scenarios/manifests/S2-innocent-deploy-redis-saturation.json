@@ -1,0 +1,116 @@
+{
+  "id": "S2",
+  "slug": "innocent-deploy-redis-saturation",
+  "version": 1,
+  "kind": "confounder",
+  "description": "A reporting-worker batch opens Redis connections until Redis nearly reaches maxclients. A benign checkout-service v2.4.2 deployment starts 55 s later with a 45 s rollout; checkout's pooled connections cannot be replaced, checkout fails and its SLO burns before the deployment completes.",
+  "affectedService": "checkout-service",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 240,
+  "steps": [
+    { "atSeconds": 0, "action": "startBatch", "service": "reporting-worker", "targetConnections": 195, "connectionsPerSecond": 3, "role": "cause" },
+    { "atSeconds": 55, "action": "deploy", "service": "checkout-service", "version": "v2.4.2", "rolloutSeconds": 45, "role": "confounder" }
+  ],
+  "cause": {
+    "description": "reporting-worker batch saturates the shared Redis.",
+    "service": "reporting-worker",
+    "change": "reporting-worker batch start",
+    "activationSeconds": 0
+  },
+  "confounders": [
+    { "description": "Benign checkout-service v2.4.2 deployment, serving only from 100 s.", "service": "checkout-service", "change": "deploy checkout-service v2.4.2", "atSeconds": 55, "servingFromSeconds": 100 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "checkout-service",
+    "metric": "slo_burn_rate",
+    "threshold": 2.0,
+    "withinSeconds": 150
+  },
+  "expectedObservations": [
+    {
+      "description": "reporting-worker's Redis connections climb toward maxclients.",
+      "query": "sum(reference_redis_clients{client_name=\"reporting-worker\"})",
+      "expectation": "above",
+      "threshold": 150,
+      "fromSeconds": 0,
+      "withinSeconds": 75
+    },
+    {
+      "description": "Checkout Redis errors appear.",
+      "query": "sum(rate(reference_checkout_redis_errors_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    },
+    {
+      "description": "Checkout SLO burn rate crosses the detection threshold.",
+      "query": "slo:checkout_success:burn_rate1m",
+      "expectation": "above",
+      "threshold": 2.0,
+      "fromSeconds": 0,
+      "withinSeconds": 150
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Redis connections grouped by client name: reporting-worker rises sharply.",
+      "query": "sum(reference_redis_clients{client_name=\"reporting-worker\"})",
+      "expectation": "above",
+      "threshold": 150,
+      "fromSeconds": 0,
+      "withinSeconds": 75
+    },
+    {
+      "description": "checkout-service's pool does not grow.",
+      "query": "max_over_time(sum(reference_redis_clients{client_name=\"checkout-service\"})[3m:5s])",
+      "expectation": "below",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 150
+    },
+    {
+      "description": "Checkout errors begin before the v2.4.2 deployment completes at 100 s.",
+      "query": "sum(rate(reference_checkout_redis_errors_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 95
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 10,
+    "seed": 1002,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The batch ramps at a fixed rate; the moment checkout's pool first fails depends on which slot expires first, within its 5 s lifetime."
+  },
+  "hypotheses": {
+    "leading": { "service": "reporting-worker", "cause": "reporting-worker batch saturated Redis connections" },
+    "rejected": [
+      { "service": "checkout-service", "cause": "checkout-service v2.4.2 deployment" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "pause-batch", "service": "reporting-worker", "mode": "suggestion-only" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "checkout-service" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "checkout-service",
+    "fromVersion": "v2.4.2",
+    "toVersion": "v2.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "stop the reporting-worker batch",
+    "criteria": [
+      { "description": "Checkout SLO burn rate below 1.", "query": "slo:checkout_success:burn_rate1m", "comparison": "lessThan", "threshold": 1.0 },
+      { "description": "reporting-worker releases its connections.", "query": "sum(reference_redis_clients{client_name=\"reporting-worker\"})", "comparison": "lessThan", "threshold": 10 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Reference deploy controller: deploys and rolls back reference service revisions and publishes deployment events. Target of Sentinel's rollback adapter.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\services\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+</Project>

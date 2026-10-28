@@ -1,0 +1,117 @@
+{
+  "id": "S3",
+  "slug": "reversed-dependency-regression",
+  "version": 1,
+  "kind": "confounder",
+  "description": "order-service v1.8.0 ships a lookup that slows as it serves. A benign checkout-service v2.4.3 deployment follows 2 min later. Once order-service exceeds checkout's 600 ms attempt timeout, checkout retries, fails and its SLO burns.",
+  "affectedService": "checkout-service",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 300,
+  "steps": [
+    { "atSeconds": 0, "action": "deploy", "service": "order-service", "version": "v1.8.0", "rolloutSeconds": 20, "role": "cause" },
+    { "atSeconds": 120, "action": "deploy", "service": "checkout-service", "version": "v2.4.3", "rolloutSeconds": 20, "role": "confounder" }
+  ],
+  "cause": {
+    "description": "Deployment of order-service v1.8.0 with a lookup whose latency grows by 4 ms per second served.",
+    "service": "order-service",
+    "change": "deploy order-service v1.8.0",
+    "activationSeconds": 20
+  },
+  "confounders": [
+    { "description": "Benign checkout-service v2.4.3 deployment, the most recent change before symptoms.", "service": "checkout-service", "change": "deploy checkout-service v2.4.3", "atSeconds": 120, "servingFromSeconds": 140 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "checkout-service",
+    "metric": "slo_burn_rate",
+    "threshold": 2.0,
+    "withinSeconds": 240
+  },
+  "expectedObservations": [
+    {
+      "description": "order-service p95 latency rises from the moment v1.8.0 serves.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))",
+      "expectation": "above",
+      "threshold": 0.3,
+      "fromSeconds": 20,
+      "withinSeconds": 130
+    },
+    {
+      "description": "Checkout retries order-service calls.",
+      "query": "sum(rate(reference_checkout_order_retries_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 120,
+      "withinSeconds": 240
+    },
+    {
+      "description": "Checkout SLO burn rate crosses the detection threshold.",
+      "query": "slo:checkout_success:burn_rate1m",
+      "expectation": "above",
+      "threshold": 2.0,
+      "fromSeconds": 120,
+      "withinSeconds": 240
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "order-service latency rises before checkout's, and before the checkout deployment.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))",
+      "expectation": "above",
+      "threshold": 0.3,
+      "fromSeconds": 20,
+      "withinSeconds": 120
+    },
+    {
+      "description": "Checkout time is spent waiting on order-service.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_checkout_order_wait_seconds_bucket[1m])))",
+      "expectation": "above",
+      "threshold": 0.5,
+      "fromSeconds": 120,
+      "withinSeconds": 240
+    },
+    {
+      "description": "checkout-service's Redis connections stay flat.",
+      "query": "max_over_time(sum(reference_redis_clients{client_name=\"checkout-service\"})[4m:5s])",
+      "expectation": "below",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 240
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 10,
+    "seed": 1003,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 20,
+    "notes": "Lookup latency varies by 10 percent, so checkout's first timeouts move by a few seconds around 150 s."
+  },
+  "hypotheses": {
+    "leading": { "service": "order-service", "cause": "order-service v1.8.0 latency regression" },
+    "rejected": [
+      { "service": "checkout-service", "cause": "checkout-service v2.4.3 deployment" },
+      { "service": "checkout-service", "cause": "checkout-service Redis connection leak" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "rollback", "service": "order-service", "fromVersion": "v1.8.0", "toVersion": "v1.7.0", "mode": "approval-required" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "checkout-service" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "checkout-service",
+    "fromVersion": "v2.4.3",
+    "toVersion": "v2.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "rollback order-service to v1.7.0",
+    "criteria": [
+      { "description": "Checkout SLO burn rate below 1.", "query": "slo:checkout_success:burn_rate1m", "comparison": "lessThan", "threshold": 1.0 },
+      { "description": "order-service p95 latency below 200 ms.", "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))", "comparison": "lessThan", "threshold": 0.2 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

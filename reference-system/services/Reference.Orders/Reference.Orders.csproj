@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Reference order-service. Revision v1.8.0 ships a query that slows as data grows (scenario S3).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+</Project>

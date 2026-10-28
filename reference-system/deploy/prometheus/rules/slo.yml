@@ -1,0 +1,12 @@
+# Checkout SLO: 99 percent of checkouts succeed within one second. Windows are one minute,
+# compressed from production-typical hours so that scenarios complete in minutes.
+groups:
+  - name: reference-slo
+    interval: 5s
+    rules:
+      - record: slo:checkout_error_ratio:rate1m
+        expr: |
+          sum(rate(reference_checkout_requests_total{outcome!="success"}[1m]))
+          / clamp_min(sum(rate(reference_checkout_requests_total[1m])), 1e-9)
+      - record: slo:checkout_success:burn_rate1m
+        expr: slo:checkout_error_ratio:rate1m / 0.01

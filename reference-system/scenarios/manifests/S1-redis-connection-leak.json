@@ -1,0 +1,114 @@
+{
+  "id": "S1",
+  "slug": "redis-connection-leak",
+  "version": 1,
+  "kind": "golden",
+  "description": "checkout-service v2.4.1 leaks a Redis connection on every second session warm-up. Connections climb until Redis refuses new clients, checkout fails, retries amplify order-service load and the checkout SLO burns.",
+  "affectedService": "checkout-service",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 240,
+  "steps": [
+    { "atSeconds": 0, "action": "deploy", "service": "checkout-service", "version": "v2.4.1", "rolloutSeconds": 20, "role": "cause" }
+  ],
+  "cause": {
+    "description": "Deployment of checkout-service v2.4.1, which leaks Redis connections.",
+    "service": "checkout-service",
+    "change": "deploy checkout-service v2.4.1",
+    "activationSeconds": 20
+  },
+  "confounders": [],
+  "detection": {
+    "expectIncident": true,
+    "service": "checkout-service",
+    "metric": "slo_burn_rate",
+    "threshold": 2.0,
+    "withinSeconds": 120
+  },
+  "expectedObservations": [
+    {
+      "description": "checkout-service's own Redis connections climb after v2.4.1 serves.",
+      "query": "sum(reference_redis_clients{client_name=\"checkout-service\"})",
+      "expectation": "above",
+      "threshold": 100,
+      "fromSeconds": 20,
+      "withinSeconds": 70
+    },
+    {
+      "description": "Checkout Redis errors appear once Redis is saturated.",
+      "query": "sum(rate(reference_checkout_redis_errors_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 20,
+      "withinSeconds": 110
+    },
+    {
+      "description": "Order-service calls are retried.",
+      "query": "sum(rate(reference_checkout_order_retries_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 20,
+      "withinSeconds": 120
+    },
+    {
+      "description": "Checkout SLO burn rate crosses the detection threshold.",
+      "query": "slo:checkout_success:burn_rate1m",
+      "expectation": "above",
+      "threshold": 2.0,
+      "fromSeconds": 20,
+      "withinSeconds": 120
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Redis connections held by checkout-service itself grow after the deployment completes and before symptom onset.",
+      "query": "sum(reference_redis_clients{client_name=\"checkout-service\"})",
+      "expectation": "above",
+      "threshold": 100,
+      "fromSeconds": 20,
+      "withinSeconds": 70
+    },
+    {
+      "description": "No other Redis client grows: reporting-worker stays idle.",
+      "query": "sum(reference_redis_clients{client_name=\"reporting-worker\"}) or vector(0)",
+      "expectation": "below",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 10,
+    "seed": 1001,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 20,
+    "notes": "Request pacing and query latency use seeded jitter. Saturation time varies with request timing by a few seconds."
+  },
+  "hypotheses": {
+    "leading": { "service": "checkout-service", "cause": "checkout-service v2.4.1 introduced a Redis connection leak" },
+    "rejected": [
+      { "service": "order-service", "cause": "order-service regression" },
+      { "service": "reporting-worker", "cause": "another Redis client saturated Redis" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "rollback", "service": "checkout-service", "fromVersion": "v2.4.1", "toVersion": "v2.4.0", "mode": "approval-required" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "order-service" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "checkout-service",
+    "fromVersion": "v2.4.1",
+    "toVersion": "v2.4.0",
+    "correct": true
+  },
+  "recovery": {
+    "restoredBy": "rollback checkout-service to v2.4.0",
+    "criteria": [
+      { "description": "Checkout SLO burn rate below 1.", "query": "slo:checkout_success:burn_rate1m", "comparison": "lessThan", "threshold": 1.0 },
+      { "description": "checkout-service Redis connections back to its pool size.", "query": "sum(reference_redis_clients{client_name=\"checkout-service\"})", "comparison": "lessThan", "threshold": 20 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Reference scenario runner: loads the S0–S3 manifests, generates seeded traffic and drives each scenario's timeline from a clean reset.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\services\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\manifests\*.json" LinkBase="manifests" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+</Project>
