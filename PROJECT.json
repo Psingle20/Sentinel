@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "PROJECT-SENTINEL",
+  "title": "Sentinel",
+  "slug": "sentinel",
+  "kind": "microservices",
+  "status": "active",
+  "created": "2026-10-21",
+  "summary": "An AI-native incident investigation and recovery platform that builds evidence-backed hypotheses, challenges them, proposes policy-governed remediation, and verifies recovery.",
+  "owners": [],
+  "technologies": [
+    ".NET 10",
+    "ASP.NET Core",
+    ".NET Aspire",
+    "PostgreSQL",
+    "Redis Streams",
+    "Temporal",
+    "Meta Model API",
+    "Muse Spark",
+    "Microsoft Orleans",
+    "OpenTelemetry",
+    "Next.js",
+    "React",
+    "TypeScript",
+    "Tailwind CSS",
+    "shadcn/ui",
+    "Radix UI"
+  ],
+  "relatedLearning": [],
+  "commands": {
+    "setup": "powershell -NoProfile -File scripts/check.ps1 -Task setup",
+    "run": "dotnet run --project deploy/local/Sentinel.AppHost",
+    "test": "powershell -NoProfile -File scripts/check.ps1 -Task test",
+    "lint": "powershell -NoProfile -File scripts/check.ps1 -Task lint",
+    "build": "powershell -NoProfile -File scripts/check.ps1 -Task build"
+  }
+}
+

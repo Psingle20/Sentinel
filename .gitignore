@@ -1,0 +1,66 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## NuGet
+*.nupkg
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.rsuser
+*.sln.docstates
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+
+## OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Docker
+docker-compose.override.yml
+
+## Environment
+.env
+*.env.local
+appsettings.Development.json
+
+## Migrations backup
+*.bak
+
+## Exceptions: committed development settings
+# Only synthetic @example.test identities and no secrets; the local golden path needs it.
+!services/Sentinel.Api/src/Sentinel.Api.Host/appsettings.Development.json
+
+## Node
+node_modules/
+
+## Local agent settings
+.claude/settings.local.json
+.codex/*.local.*

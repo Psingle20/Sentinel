@@ -1,0 +1,114 @@
+<Solution>
+  <Folder Name="/deploy/" />
+  <Folder Name="/deploy/local/">
+    <Project Path="deploy/local/Sentinel.AppHost/Sentinel.AppHost.csproj" />
+    <Project Path="deploy/local/Sentinel.EndToEnd.Tests/Sentinel.EndToEnd.Tests.csproj" />
+  </Folder>
+  <Folder Name="/packages/" />
+  <Folder Name="/packages/CleanArchitecture.BuildingBlocks/" />
+  <Folder Name="/packages/CleanArchitecture.BuildingBlocks/src/">
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Application/CleanArchitecture.BuildingBlocks.Application.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Core/CleanArchitecture.BuildingBlocks.Core.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Hosting/CleanArchitecture.BuildingBlocks.Hosting.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql/CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Infrastructure.Redis/CleanArchitecture.BuildingBlocks.Infrastructure.Redis.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/src/CleanArchitecture.BuildingBlocks.Infrastructure/CleanArchitecture.BuildingBlocks.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/packages/CleanArchitecture.BuildingBlocks/tests/">
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests/CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Infrastructure.Tests/CleanArchitecture.BuildingBlocks.Infrastructure.Tests.csproj" />
+    <Project Path="packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Tests/CleanArchitecture.BuildingBlocks.Tests.csproj" />
+  </Folder>
+  <Folder Name="/packages/Sentinel.Contracts/" />
+  <Folder Name="/packages/Sentinel.Contracts/src/">
+    <Project Path="packages/Sentinel.Contracts/src/Sentinel.Contracts.Primitives/Sentinel.Contracts.Primitives.csproj" />
+    <Project Path="packages/Sentinel.Contracts/src/Sentinel.Contracts/Sentinel.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/packages/Sentinel.Contracts/tests/">
+    <Project Path="packages/Sentinel.Contracts/tests/Sentinel.Contracts.Primitives.Tests/Sentinel.Contracts.Primitives.Tests.csproj" />
+    <Project Path="packages/Sentinel.Contracts/tests/Sentinel.Contracts.Tests/Sentinel.Contracts.Tests.csproj" />
+  </Folder>
+  <Folder Name="/packages/Sentinel.ServiceDefaults/" />
+  <Folder Name="/packages/Sentinel.ServiceDefaults/src/">
+    <Project Path="packages/Sentinel.ServiceDefaults/src/Sentinel.ServiceDefaults/Sentinel.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/packages/Sentinel.ServiceDefaults/tests/">
+    <Project Path="packages/Sentinel.ServiceDefaults/tests/Sentinel.ServiceDefaults.Tests/Sentinel.ServiceDefaults.Tests.csproj" />
+  </Folder>
+  <Folder Name="/reference-system/" />
+  <Folder Name="/reference-system/deploy-controller/">
+    <Project Path="reference-system/deploy-controller/Reference.DeployController/Reference.DeployController.csproj" />
+  </Folder>
+  <Folder Name="/reference-system/deploy/" />
+  <Folder Name="/reference-system/deploy/redis-exporter/">
+    <Project Path="reference-system/deploy/redis-exporter/Reference.RedisExporter/Reference.RedisExporter.csproj" />
+  </Folder>
+  <Folder Name="/reference-system/scenarios/">
+    <Project Path="reference-system/scenarios/Reference.Scenarios/Reference.Scenarios.csproj" />
+  </Folder>
+  <Folder Name="/reference-system/services/">
+    <Project Path="reference-system/services/Reference.Checkout/Reference.Checkout.csproj" />
+    <Project Path="reference-system/services/Reference.Common/Reference.Common.csproj" />
+    <Project Path="reference-system/services/Reference.Orders/Reference.Orders.csproj" />
+    <Project Path="reference-system/services/Reference.ReportingWorker/Reference.ReportingWorker.csproj" />
+  </Folder>
+  <Folder Name="/reference-system/tests/">
+    <Project Path="reference-system/tests/Reference.Tests/Reference.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/" />
+  <Folder Name="/services/Sentinel.AgentWorker/" />
+  <Folder Name="/services/Sentinel.AgentWorker/src/">
+    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Sentinel.AgentWorker.Application.csproj" />
+    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Domain/Sentinel.AgentWorker.Domain.csproj" />
+    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/Sentinel.AgentWorker.Host.csproj" />
+    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/Sentinel.AgentWorker.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.AgentWorker/tests/">
+    <Project Path="services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Architecture.Tests/Sentinel.AgentWorker.Architecture.Tests.csproj" />
+    <Project Path="services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/Sentinel.AgentWorker.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Api/" />
+  <Folder Name="/services/Sentinel.Api/src/">
+    <Project Path="services/Sentinel.Api/src/Sentinel.Api.Application/Sentinel.Api.Application.csproj" />
+    <Project Path="services/Sentinel.Api/src/Sentinel.Api.Domain/Sentinel.Api.Domain.csproj" />
+    <Project Path="services/Sentinel.Api/src/Sentinel.Api.Host/Sentinel.Api.Host.csproj" />
+    <Project Path="services/Sentinel.Api/src/Sentinel.Api.Infrastructure/Sentinel.Api.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Api/tests/">
+    <Project Path="services/Sentinel.Api/tests/Sentinel.Api.Architecture.Tests/Sentinel.Api.Architecture.Tests.csproj" />
+    <Project Path="services/Sentinel.Api/tests/Sentinel.Api.Tests/Sentinel.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Executor/" />
+  <Folder Name="/services/Sentinel.Executor/src/">
+    <Project Path="services/Sentinel.Executor/src/Sentinel.Executor.Application/Sentinel.Executor.Application.csproj" />
+    <Project Path="services/Sentinel.Executor/src/Sentinel.Executor.Domain/Sentinel.Executor.Domain.csproj" />
+    <Project Path="services/Sentinel.Executor/src/Sentinel.Executor.Host/Sentinel.Executor.Host.csproj" />
+    <Project Path="services/Sentinel.Executor/src/Sentinel.Executor.Infrastructure/Sentinel.Executor.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Executor/tests/">
+    <Project Path="services/Sentinel.Executor/tests/Sentinel.Executor.Architecture.Tests/Sentinel.Executor.Architecture.Tests.csproj" />
+    <Project Path="services/Sentinel.Executor/tests/Sentinel.Executor.Tests/Sentinel.Executor.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Ingestion/" />
+  <Folder Name="/services/Sentinel.Ingestion/src/">
+    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Sentinel.Ingestion.Application.csproj" />
+    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Sentinel.Ingestion.Domain.csproj" />
+    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/Sentinel.Ingestion.Host.csproj" />
+    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Sentinel.Ingestion.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Ingestion/tests/">
+    <Project Path="services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Architecture.Tests/Sentinel.Ingestion.Architecture.Tests.csproj" />
+    <Project Path="services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/Sentinel.Ingestion.Tests.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Runtime/" />
+  <Folder Name="/services/Sentinel.Runtime/src/">
+    <Project Path="services/Sentinel.Runtime/src/Sentinel.Runtime.Application/Sentinel.Runtime.Application.csproj" />
+    <Project Path="services/Sentinel.Runtime/src/Sentinel.Runtime.Domain/Sentinel.Runtime.Domain.csproj" />
+    <Project Path="services/Sentinel.Runtime/src/Sentinel.Runtime.Host/Sentinel.Runtime.Host.csproj" />
+    <Project Path="services/Sentinel.Runtime/src/Sentinel.Runtime.Infrastructure/Sentinel.Runtime.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/services/Sentinel.Runtime/tests/">
+    <Project Path="services/Sentinel.Runtime/tests/Sentinel.Runtime.Architecture.Tests/Sentinel.Runtime.Architecture.Tests.csproj" />
+    <Project Path="services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/Sentinel.Runtime.Tests.csproj" />
+  </Folder>
+</Solution>

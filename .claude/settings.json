@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "PowerShell(powershell -NoProfile -File .\\.agents\\validate-project.ps1)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-validation.ps1\"",
+            "timeout": 60,
+            "statusMessage": "Validating project and agent configuration"
+          }
+        ]
+      }
+    ]
+  }
+}

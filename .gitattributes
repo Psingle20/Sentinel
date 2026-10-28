@@ -1,0 +1,6 @@
+* text=auto
+
+# .editorconfig requires CRLF for C#; keep Git from converting it.
+*.cs text eol=crlf
+
+*.png binary

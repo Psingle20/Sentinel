@@ -1,0 +1,17 @@
+# Project-scoped Codex defaults. Loaded only when this project is trusted.
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+
+project_doc_max_bytes = 65536
+
+[features]
+hooks = true
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = '''powershell -NoProfile -ExecutionPolicy Bypass -File ".\.agents\validate-project.ps1"'''
+timeout = 30
+statusMessage = "Validating project and agent configuration"
