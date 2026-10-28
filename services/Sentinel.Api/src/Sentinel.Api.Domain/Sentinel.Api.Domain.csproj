@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Core\CleanArchitecture.BuildingBlocks.Core.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\Sentinel.Contracts\src\Sentinel.Contracts.Primitives\Sentinel.Contracts.Primitives.csproj" />
+    </ItemGroup>
+
+</Project>
