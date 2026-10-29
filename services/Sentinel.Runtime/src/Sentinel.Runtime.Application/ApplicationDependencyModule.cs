@@ -32,6 +32,7 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddScoped<IncidentMemoryRecorder>();
         services.AddScoped<IncidentSimilarity>();
         services.AddSingleton<ServiceTopologyCache>();
+        services.AddSingleton<Diagnostics.RuntimeTelemetry>();
 
         // The control-plane document: published versions over the deployment configuration alone.
         services.AddSingleton(provider => new RuntimeDeploymentOptions(() => provider.GetRequiredService<IOptionsFactory<RuntimeOptions>>().Create(RuntimeDeploymentOptions.OptionsName)));

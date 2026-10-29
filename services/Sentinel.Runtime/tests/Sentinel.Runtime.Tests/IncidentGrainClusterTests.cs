@@ -54,6 +54,7 @@ public sealed class IncidentGrainClusterTests : IAsyncLifetime
             services.AddSingleton<ServiceTopologyCache>();
             services.AddSingleton<IIncidentMemoryStore, InMemoryIncidentMemoryStore>();
             services.AddScoped<Sentinel.Runtime.Application.Memory.IncidentMemoryRecorder>();
+            services.AddSingleton<Sentinel.Runtime.Application.Diagnostics.RuntimeTelemetry>();
             services.AddScoped<IncidentCommandExecutor>();
             services.AddScoped<DetectionService>();
             services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

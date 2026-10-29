@@ -26,7 +26,7 @@ namespace Sentinel.Runtime.Application.Incidents;
 /// projection and enqueue the integration messages the events imply, then commit all of it together.
 /// Messages exist only if the events do. Runs in its own scope and unit of work per command.
 /// </summary>
-public sealed class IncidentCommandExecutor(IIncidentStore store, IOutbox outbox, IUnitOfWork unitOfWork, Memory.IncidentMemoryRecorder memory, TimeProvider time, IOptions<RuntimeOptions> options)
+public sealed class IncidentCommandExecutor(IIncidentStore store, IOutbox outbox, IUnitOfWork unitOfWork, Memory.IncidentMemoryRecorder memory, Diagnostics.RuntimeTelemetry telemetry, TimeProvider time, IOptions<RuntimeOptions> options)
 {
     public async Task<(Result<CommandReply> Reply, LoadedIncident? Loaded)> ExecuteAsync(
         IncidentId incidentId,
@@ -80,6 +80,7 @@ public sealed class IncidentCommandExecutor(IIncidentStore store, IOutbox outbox
         RuntimeOptions settings = options.Value;
         IncidentMessages.Enqueue(outbox, incident, appended, before, settings.InvestigationBudget(), settings.DependenciesOf(incident.AffectedServiceId));
         await unitOfWork.CommitAsync(cancellationToken);
+        telemetry.Committed(incident, appended);
         return appended;
     }
 }

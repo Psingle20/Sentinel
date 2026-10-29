@@ -38,6 +38,9 @@ public sealed class Incident : Entity
 
     public DateTimeOffset DetectedAt { get; private set; }
 
+    /// <summary>When the current cycle began: the detection, or the latest reopening. Cycle timings run from here.</summary>
+    public DateTimeOffset CycleStartedAt { get; private set; }
+
     public DateTimeOffset SymptomOnset { get; private set; }
 
     public IReadOnlyList<ObservationId> TriggerObservationIds { get; private set; } = [];
@@ -461,6 +464,7 @@ public sealed class Incident : Entity
                 TriggerObservationIds = detected.TriggerObservationIds;
                 TriggerMetric = detected.TriggerMetric;
                 DetectedAt = detected.OccurredAt;
+                CycleStartedAt = detected.OccurredAt;
                 _changes.AddRange(detected.LinkedChanges);
                 State = IncidentState.Detected;
                 break;
@@ -494,6 +498,7 @@ public sealed class Incident : Entity
                 break;
             case IncidentReopened reopened:
                 Cycle++;
+                CycleStartedAt = reopened.OccurredAt;
                 SymptomOnset = reopened.SymptomOnset;
                 TriggerObservationIds = reopened.TriggerObservationIds;
                 Decision = null;
