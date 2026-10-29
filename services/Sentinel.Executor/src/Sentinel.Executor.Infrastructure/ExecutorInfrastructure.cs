@@ -37,8 +37,10 @@ public static class ExecutorInfrastructure
         services.AddSingleton<IMessagingStoreInitializer, ExecutorSchema>();
         services.AddScoped<IExecutionStore, PostgresExecutionStore>();
         services.AddScoped<IControlStore, PostgresControlStore>();
-        services.AddSingleton<IPolicyStore, FilePolicyStore>();
+        services.AddSingleton<FilePolicyStore>();
+        services.AddScoped<IPolicyStore, VersionedPolicyStore>();
         services.AddScoped<PolicyService>();
+        services.AddScoped<PolicyAdministration>();
         services.AddScoped<AttestationVerifier>();
         services.AddScoped<ExecutionService>();
 
@@ -169,6 +171,13 @@ internal sealed class ExecutorSchema(NpgsqlDataSource dataSource) : IMessagingSt
             expires_at timestamptz not null,
             consumed_at timestamptz,
             record jsonb not null
+        );
+
+        create table if not exists executor.policy_versions (
+            version text primary key,
+            document jsonb not null,
+            author text not null,
+            published_at timestamptz not null
         );
 
         create table if not exists executor.controls (
@@ -366,11 +375,65 @@ internal sealed class PostgresControlStore(IPostgresTransaction transaction, Npg
 }
 
 /// <summary>
+/// The current policy: the newest version published through the control plane (Phase 08), or the
+/// repository's policy file when none has been. Published versions are kept with their author and
+/// never edited, so every evaluation's version can be looked up later.
+/// </summary>
+internal sealed class VersionedPolicyStore(FilePolicyStore seed, NpgsqlDataSource dataSource) : IPolicyStore
+{
+    private const string UniqueViolation = "23505";
+
+    public async Task<PolicyDocument> CurrentAsync(CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand command = dataSource.CreateCommand("select document from executor.policy_versions order by published_at desc limit 1");
+        return await command.ExecuteScalarAsync(cancellationToken) is string json
+            ? JsonSerializer.Deserialize<PolicyDocument>(json, FilePolicyStore.Json)!
+            : seed.Current;
+    }
+
+    public async Task<IReadOnlyList<PolicyVersionInfo>> HistoryAsync(CancellationToken cancellationToken)
+    {
+        await using NpgsqlCommand command = dataSource.CreateCommand("select version, author, published_at from executor.policy_versions order by published_at desc");
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+        var history = new List<PolicyVersionInfo>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            history.Add(new PolicyVersionInfo(reader.GetString(0), reader.GetString(1), await reader.GetFieldValueAsync<DateTimeOffset>(2, cancellationToken), "control-plane"));
+        }
+
+        history.Add(new PolicyVersionInfo(seed.Current.Version, "repository", DateTimeOffset.MinValue, "file"));
+        return history;
+    }
+
+    public async Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        await using NpgsqlCommand command = dataSource.CreateCommand(
+            "insert into executor.policy_versions (version, document, author, published_at) values (@version, @document, @author, @published_at)");
+        command.Parameters.AddWithValue("version", document.Version);
+        command.Parameters.Add(new NpgsqlParameter("document", NpgsqlDbType.Jsonb) { Value = JsonSerializer.Serialize(document, FilePolicyStore.Json) });
+        command.Parameters.AddWithValue("author", author);
+        command.Parameters.AddWithValue("published_at", publishedAt);
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+            return true;
+        }
+        catch (PostgresException exception) when (exception.SqlState == UniqueViolation)
+        {
+            return false;
+        }
+    }
+}
+
+/// <summary>
 /// The remediation policy as code: a JSON document beside the host, versioned in the repository and
 /// reloaded when the file changes, so a policy change needs no rebuild and every evaluation names
 /// the version it used. A document that fails to load keeps the previous one; with none, every action is denied.
+/// It seeds the policy until the control plane publishes a version.
 /// </summary>
-internal sealed class FilePolicyStore(IOptions<ExecutorOptions> options, Microsoft.Extensions.Hosting.IHostEnvironment environment, ILogger<FilePolicyStore> logger) : IPolicyStore
+internal sealed class FilePolicyStore(IOptions<ExecutorOptions> options, Microsoft.Extensions.Hosting.IHostEnvironment environment, ILogger<FilePolicyStore> logger)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
 

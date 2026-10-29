@@ -32,10 +32,21 @@ public interface IExecutionStore
     Task<bool> TryConsumeCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken);
 }
 
-/// <summary>The versioned remediation policy document (policy as code).</summary>
+/// <summary>A published policy version, for the control plane's history.</summary>
+public sealed record PolicyVersionInfo(string Version, string Author, DateTimeOffset PublishedAt, string Source);
+
+/// <summary>
+/// The versioned remediation policy document (policy as code). The repository's policy file is the
+/// seed; versions published through the control plane (Phase 08) take precedence, newest first.
+/// </summary>
 public interface IPolicyStore
 {
-    PolicyDocument Current { get; }
+    Task<PolicyDocument> CurrentAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PolicyVersionInfo>> HistoryAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stores a validated version. False when the version already exists.</summary>
+    Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken);
 }
 
 /// <summary>Operator controls: the emergency stop and per-action disable switches, persisted apart from any model path.</summary>

@@ -47,7 +47,7 @@ public sealed class PolicyService(IPolicyStore policies, IControlStore controls,
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        PolicyDocument policy = policies.Current;
+        PolicyDocument policy = await policies.CurrentAsync(cancellationToken);
         DateTimeOffset now = time.GetUtcNow();
         if (!RemediationPlanHash.Matches(request.Plan))
         {

@@ -27,12 +27,19 @@ app.MapOperatorEndpoints();
 app.MapPost("/v1/policy/evaluations", async (PolicyEvaluationRequest request, PolicyService policy, CancellationToken cancellationToken) =>
     await policy.EvaluateAsync(request, cancellationToken));
 
-// The current policy document, for operators and the control plane.
-app.MapGet("/v1/policy", (IPolicyStore policies) => policies.Current);
+// The current policy document and its history, for operators and the control plane.
+app.MapGet("/v1/policy", async (IPolicyStore policies, CancellationToken cancellationToken) => await policies.CurrentAsync(cancellationToken));
+app.MapGet("/v1/policy/history", async (IPolicyStore policies, CancellationToken cancellationToken) => await policies.HistoryAsync(cancellationToken));
 
-// Operator controls independent of every model and workflow path (ADR-006). Phase 09 puts them behind operator authorization.
+// Operator controls and policy publication, independent of every model and workflow path (ADR-006). Api authorizes the
+// operator; until service-to-service authentication (Phase 09) these exist only where operator endpoints are enabled.
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Sentinel:OperatorEndpoints:Enabled"))
 {
+    app.MapPut("/admin/policy", async (PublishPolicyRequest request, PolicyAdministration administration, CancellationToken cancellationToken) =>
+    {
+        Result<Sentinel.Executor.Domain.Policy.PolicyDocument> published = await administration.PublishAsync(new PublishPolicy(request.Document, request.Author, request.ExpectedVersion), cancellationToken);
+        return published.IsSuccess ? Results.Ok(published.Value) : published.Error.ToProblem();
+    });
     app.MapGet("/admin/controls", async (IControlStore controls, CancellationToken cancellationToken) => await controls.GetAsync(cancellationToken));
     app.MapPost("/admin/controls/emergency-stop", async (ControlChange change, IControlStore controls, IUnitOfWork unitOfWork, CancellationToken cancellationToken) =>
     {

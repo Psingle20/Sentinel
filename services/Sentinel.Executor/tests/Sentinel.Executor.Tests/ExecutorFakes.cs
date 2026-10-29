@@ -287,6 +287,24 @@ internal sealed class FakePolicyStore : IPolicyStore
 {
     public PolicyDocument Current { get; set; } = Reference();
 
+    public List<PolicyVersionInfo> Published { get; } = [];
+
+    public Task<PolicyDocument> CurrentAsync(CancellationToken cancellationToken) => Task.FromResult(Current);
+
+    public Task<IReadOnlyList<PolicyVersionInfo>> HistoryAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<PolicyVersionInfo>>(Published);
+
+    public Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
+    {
+        if (Published.Exists(version => version.Version == document.Version))
+        {
+            return Task.FromResult(false);
+        }
+
+        Published.Add(new PolicyVersionInfo(document.Version, author, publishedAt, "control-plane"));
+        Current = document;
+        return Task.FromResult(true);
+    }
+
     public static PolicyDocument Reference() => new()
     {
         Version = "policy-test",
