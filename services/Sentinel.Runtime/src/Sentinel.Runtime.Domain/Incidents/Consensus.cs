@@ -16,6 +16,11 @@ public static class Consensus
     private const string ChangeKey = "change:";
     private const string RedisSaturationKey = "redis-saturation";
 
+    private static readonly string[] Versions = [ConsensusSettings.AlgorithmV1, ConsensusSettings.AlgorithmV2, ConsensusSettings.AlgorithmV3];
+
+    /// <summary>Whether <paramref name="algorithm"/> names a consensus version this code can decide and replay by.</summary>
+    public static bool IsKnown(string? algorithm) => algorithm is not null && Versions.Contains(algorithm, StringComparer.Ordinal);
+
     public static Decision Decide(Incident incident, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now) =>
         Decide(incident, challenges, settings, decisionId, now, ConsensusSettings.AlgorithmVersion);
 
@@ -25,7 +30,7 @@ public static class Consensus
         ArgumentNullException.ThrowIfNull(incident);
         ArgumentNullException.ThrowIfNull(challenges);
         ArgumentNullException.ThrowIfNull(settings);
-        if (algorithm is not (ConsensusSettings.AlgorithmV1 or ConsensusSettings.AlgorithmVersion))
+        if (!IsKnown(algorithm))
         {
             throw new ArgumentException($"Unknown consensus algorithm '{algorithm}'.", nameof(algorithm));
         }
@@ -36,8 +41,15 @@ public static class Consensus
         double completeness = Completeness(evidence, totalEvidence, settings);
         string inputsHash = InputsHash(hypotheses, evidence, challenges, settings, algorithm);
 
-        HypothesisAssessment[] assessments = [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings))];
-        HypothesisAssessment[] standing = [.. assessments.Where(assessment => !assessment.Falsified).OrderByDescending(assessment => assessment.Score).ThenBy(assessment => assessment.HypothesisId.ToString(), StringComparer.Ordinal)];
+        HypothesisAssessment[] alone = [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings, []))];
+
+        // v3: a standing change claims the Redis saturation investigators blamed on its own service. The saturation is how
+        // the change caused the symptoms, so its evidence counts for the change and it does not compete on its own.
+        Dictionary<HypothesisId, Hypothesis> claimed = algorithm == ConsensusSettings.AlgorithmV3 ? Claimed(hypotheses, alone) : [];
+        HypothesisAssessment[] assessments = claimed.Count == 0
+            ? alone
+            : [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings, [.. hypotheses.Where(other => claimed.TryGetValue(other.HypothesisId, out Hypothesis? change) && change.HypothesisId == hypothesis.HypothesisId)]))];
+        HypothesisAssessment[] standing = [.. assessments.Where(assessment => !assessment.Falsified && !claimed.ContainsKey(assessment.HypothesisId)).OrderByDescending(assessment => assessment.Score).ThenBy(assessment => assessment.HypothesisId.ToString(), StringComparer.Ordinal)];
         HypothesisId[] falsified = [.. assessments.Where(assessment => assessment.Falsified).Select(assessment => assessment.HypothesisId)];
 
         var checks = new List<CheckResult>();
@@ -53,7 +65,7 @@ public static class Consensus
         // v2: an explanation of how the leading change caused the symptoms agrees with it, so it is neither the runner-up nor dissent.
         HypothesisId[] mechanisms = algorithm == ConsensusSettings.AlgorithmV1
             ? []
-            : [.. standing.Skip(1).Where(other => IsMechanismOf(hypotheses.First(hypothesis => hypothesis.HypothesisId == other.HypothesisId), leading)).Select(other => other.HypothesisId)];
+            : [.. standing.Skip(1).Where(other => IsMechanismOf(hypotheses.First(hypothesis => hypothesis.HypothesisId == other.HypothesisId), leading)).Select(other => other.HypothesisId), .. claimed.Keys];
         HypothesisAssessment[] competitors = [.. standing.Skip(1).Where(other => !mechanisms.Contains(other.HypothesisId))];
         HypothesisAssessment? runnerUp = competitors.FirstOrDefault();
 
@@ -106,9 +118,32 @@ public static class Consensus
         && (mechanism == RedisSaturationKey
             || leading.SuspectedServiceId is { } service && mechanism == $"{RedisSaturationKey}:{service}");
 
-    private static HypothesisAssessment Assess(Incident incident, Hypothesis hypothesis, IReadOnlyList<Evidence> evidence, IReadOnlyList<Challenge> challenges, ConsensusSettings settings)
+    /// <summary>
+    /// The saturation hypotheses each standing change claims: Redis saturation blamed on exactly the change's service
+    /// (<c>redis-saturation:&lt;service&gt;</c>), when one standing change, and only one, names that service. Saturation
+    /// with no culprit, or blamed on another service, is not claimed: it may be a different cause.
+    /// </summary>
+    private static Dictionary<HypothesisId, Hypothesis> Claimed(IReadOnlyList<Hypothesis> hypotheses, IReadOnlyList<HypothesisAssessment> assessments)
     {
-        Evidence[] supporting = [.. evidence.Where(item => item.Direction == EvidenceDirection.Supports && Links(item, hypothesis, hypothesis.SupportingEvidenceIds))];
+        bool Stands(Hypothesis hypothesis) => !assessments.First(assessment => assessment.HypothesisId == hypothesis.HypothesisId).Falsified;
+        Hypothesis[] changes = [.. hypotheses.Where(hypothesis => hypothesis.Key is { } key && key.StartsWith(ChangeKey, StringComparison.Ordinal) && hypothesis.SuspectedServiceId is not null && Stands(hypothesis))];
+        var claimed = new Dictionary<HypothesisId, Hypothesis>();
+        foreach (Hypothesis saturation in hypotheses.Where(hypothesis => hypothesis.Key is { } key && key.StartsWith($"{RedisSaturationKey}:", StringComparison.Ordinal) && Stands(hypothesis)))
+        {
+            Hypothesis[] owners = [.. changes.Where(change => saturation.Key == $"{RedisSaturationKey}:{change.SuspectedServiceId}")];
+            if (owners.Length == 1)
+            {
+                claimed[saturation.HypothesisId] = owners[0];
+            }
+        }
+
+        return claimed;
+    }
+
+    private static HypothesisAssessment Assess(Incident incident, Hypothesis hypothesis, IReadOnlyList<Evidence> evidence, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, IReadOnlyList<Hypothesis> claims)
+    {
+        // A claimed mechanism's supporting evidence supports the change that claims it; families still count once.
+        Evidence[] supporting = [.. evidence.Where(item => item.Direction == EvidenceDirection.Supports && (Links(item, hypothesis, hypothesis.SupportingEvidenceIds) || claims.Any(claim => Links(item, claim, claim.SupportingEvidenceIds))))];
         Evidence[] contradicting = [.. evidence.Where(item => item.Direction == EvidenceDirection.Contradicts && Links(item, hypothesis, hypothesis.ContradictingEvidenceIds))];
 
         // Each independence group counts once, at its strongest weighted value.
@@ -121,7 +156,8 @@ public static class Consensus
 
         CheckResult precedence = Precedence(incident, hypothesis, evidence);
         bool precedes = precedence.Passed;
-        string reason = precedes ? "Stands." : $"Fails precedence: {precedence.Detail}";
+        string stands = claims.Count > 0 ? $"Stands, and explains {string.Join(", ", claims.Select(claim => claim.Key))}." : "Stands.";
+        string reason = precedes ? stands : $"Fails precedence: {precedence.Detail}";
         if (falsified)
         {
             reason = $"Falsified: {own.First(challenge => challenge.Verdict == ChallengeVerdict.Falsified).Detail}";

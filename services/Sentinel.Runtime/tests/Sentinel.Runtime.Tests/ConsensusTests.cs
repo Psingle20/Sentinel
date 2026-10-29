@@ -158,8 +158,82 @@ public sealed class ConsensusTests
         decision.Result.ShouldBe(DecisionResult.Abstained);
     }
 
+    [Fact]
+    public void A_standing_change_claims_the_saturation_blamed_on_its_service_even_when_the_saturation_scored_higher()
+    {
+        var saturation = HypothesisId.New();
+        Incident incident = WithStrongSaturation(saturation, "redis-saturation:checkout-service");
+
+        Decision current = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now);
+        Decision v2 = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now, ConsensusSettings.AlgorithmV2);
+
+        current.AlgorithmVersion.ShouldBe(ConsensusSettings.AlgorithmV3);
+        current.Result.ShouldBe(DecisionResult.Diagnosed);
+        current.LeadingHypothesisId.ShouldBe(Lead);
+        current.RejectedHypothesisIds.ShouldNotContain(saturation);
+        current.DissentingHypothesisIds.ShouldNotContain(saturation);
+        HypothesisAssessment change = current.Assessments.Single(assessment => assessment.HypothesisId == Lead);
+        change.IndependentSupport.ShouldBe(4, "the deployment and the saturation's three signals, each family once");
+        change.Reason.ShouldBe("Stands, and explains redis-saturation:checkout-service.");
+        v2.LeadingHypothesisId.ShouldBe(saturation, "v2 let the mechanism outscore the change that caused it, and replays that way");
+    }
+
+    [Theory]
+    [InlineData("redis-saturation")]
+    [InlineData("redis-saturation:reporting-worker")]
+    public void Saturation_with_no_culprit_or_another_culprit_is_not_claimed(string key)
+    {
+        var saturation = HypothesisId.New();
+
+        Decision decision = Consensus.Decide(WithStrongSaturation(saturation, key), [], Settings, DecisionId.New(), Now);
+
+        decision.LeadingHypothesisId.ShouldBe(saturation);
+        decision.Assessments.Single(assessment => assessment.HypothesisId == Lead).IndependentSupport.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Two_standing_changes_to_the_service_leave_its_saturation_unclaimed()
+    {
+        var saturation = HypothesisId.New();
+
+        Decision decision = Consensus.Decide(WithStrongSaturation(saturation, "redis-saturation:checkout-service", secondChange: true), [], Settings, DecisionId.New(), Now);
+
+        decision.LeadingHypothesisId.ShouldBe(saturation, "which change caused it is not settled, so neither claims it");
+    }
+
     private static readonly HypothesisId Lead = HypothesisId.New();
     private static readonly HypothesisId Other = HypothesisId.New();
+
+    /// <summary>
+    /// The leak as live investigators reported it: the change rests on its deployment alone, while the saturation it caused
+    /// is seen in three independent signals and outscores it on its own.
+    /// </summary>
+    private static Incident WithStrongSaturation(HypothesisId saturation, string key, bool secondChange = false)
+    {
+        LinkedChange[] changes = secondChange
+            ? [Deployment("checkout-service", "v2.4.1", "v2.4.0", 0, 20, "d1"), Deployment("checkout-service", "v2.4.2", "v2.4.1", 25, 30, "d5")]
+            : [Deployment("checkout-service", "v2.4.1", "v2.4.0", 0, 20, "d1")];
+        (Incident incident, InvestigationId investigation) = Detected(60, changes);
+        var second = HypothesisId.New();
+        Evidence[] evidence =
+        [
+            Supporting(Lead, 0.5, 0, 20, "deploy-1", "deploy-2") with { IndependenceGroup = "deployment:d1" },
+            Supporting(saturation, 0.85, 20, 50, "surge-1") with { IndependenceGroup = "redis-connections:checkout-service" },
+            Supporting(saturation, 0.8, 30, 60, "errors-1") with { IndependenceGroup = "redis-errors:checkout-service" },
+            Supporting(saturation, 0.7, 40, 60, "latency-1") with { IndependenceGroup = "latency:checkout-service" },
+            .. secondChange ? [Supporting(second, 0.5, 25, 30, "deploy-5") with { IndependenceGroup = "deployment:d5" }] : Array.Empty<Evidence>()
+        ];
+        Hypothesis[] hypotheses =
+        [
+            Hypothesis(Lead, "The v2.4.1 deployment leaks connections.", Checkout, ObservationId.From("deploy-controller:deployment:d1:started")) with { Key = "change:deploy-controller:deployment:d1:started" },
+            Hypothesis(saturation, "Redis ran out of client connections.") with { Key = key },
+            .. secondChange
+                ? [Hypothesis(second, "The v2.4.2 deployment leaks connections.", Checkout, ObservationId.From("deploy-controller:deployment:d5:started")) with { Key = "change:deploy-controller:deployment:d5:started" }]
+                : Array.Empty<Hypothesis>()
+        ];
+        incident.RecordInvestigation(Report(investigation, evidence, hypotheses), Start.AddSeconds(200)).IsSuccess.ShouldBeTrue();
+        return incident;
+    }
 
     /// <summary>The leak with its change and a saturation hypothesis that shares only the connection-surge evidence.</summary>
     private static Incident WithSaturation(HypothesisId saturation, string key)

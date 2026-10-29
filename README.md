@@ -219,7 +219,7 @@ sequenceDiagram
     Wf->>Rt: request the adversarial challenge
     Rt-->>Aw: InvestigateIncident for the verifier
     Aw-->>Rt: challenges and any alternative explanations
-    Wf->>Rt: decide with consensus-v1
+    Wf->>Rt: decide with consensus-v3
     Rt->>Ex: evaluate the rollback plan against policy
     Ex-->>Rt: approval required, with the rule trace
     Rt->>Rt: propose plan v1 and await approval
@@ -313,7 +313,7 @@ flowchart TB
     accept --> board["Hypothesis blackboard<br/>merge by key, keep lineage"]
     board --> verifier["Adversarial verifier"]
     verifier --> falsifiers["Falsifiers<br/>change served before onset, mechanism follows change,<br/>culprit shift precedes onset, load rose before onset"]
-    falsifiers --> consensus["consensus-v1<br/>source reliability, independence families,<br/>contradiction weight, dissent, completeness"]
+    falsifiers --> consensus["consensus-v3<br/>source reliability, independence families,<br/>contradiction weight, mechanisms, dissent, completeness"]
     consensus --> diagnosed["Diagnosed: plan remediation"]
     consensus --> abstained["Abstained: escalate with what is missing"]
 
