@@ -28,6 +28,13 @@
     <Project Path="packages/Sentinel.Contracts/tests/Sentinel.Contracts.Primitives.Tests/Sentinel.Contracts.Primitives.Tests.csproj" />
     <Project Path="packages/Sentinel.Contracts/tests/Sentinel.Contracts.Tests/Sentinel.Contracts.Tests.csproj" />
   </Folder>
+  <Folder Name="/packages/Sentinel.Testing/" />
+  <Folder Name="/packages/Sentinel.Testing/src/">
+    <Project Path="packages/Sentinel.Testing/src/Sentinel.Testing/Sentinel.Testing.csproj" />
+  </Folder>
+  <Folder Name="/packages/Sentinel.Testing/tests/">
+    <Project Path="packages/Sentinel.Testing/tests/Sentinel.Testing.Tests/Sentinel.Testing.Tests.csproj" />
+  </Folder>
   <Folder Name="/packages/Sentinel.ServiceDefaults/" />
   <Folder Name="/packages/Sentinel.ServiceDefaults/src/">
     <Project Path="packages/Sentinel.ServiceDefaults/src/Sentinel.ServiceDefaults/Sentinel.ServiceDefaults.csproj" />

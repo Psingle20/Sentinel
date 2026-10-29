@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- Test support only: referenced by service test projects, never by production code. -->
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+        <PackageReference Include="NetArchTest.Rules" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Application\CleanArchitecture.BuildingBlocks.Application.csproj" />
+        <ProjectReference Include="..\..\..\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure\CleanArchitecture.BuildingBlocks.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />
+    </ItemGroup>
+
+</Project>
