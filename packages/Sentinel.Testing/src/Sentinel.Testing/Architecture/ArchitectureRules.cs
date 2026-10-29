@@ -90,13 +90,23 @@ public static partial class ArchitectureRules
         return Judge(controllers.Select(controller => (controller, ControllerProblems(controller, apiController, forbiddenNamespaces))), pending);
     }
 
-    /// <summary>Rule 9, second half: the host's <c>Program.cs</c> is composition and middleware, with no inline endpoint.</summary>
-    public static IReadOnlyList<string> ProgramEndpoints(string programSource)
+    /// <summary>
+    /// Rule 9, second half: the host's <c>Program.cs</c> is composition and middleware, with no inline
+    /// endpoint. A host whose endpoints a later step moves is <paramref name="pending"/>: it is
+    /// reported only once it maps none inline, so the flag is removed.
+    /// </summary>
+    public static IReadOnlyList<string> ProgramEndpoints(string programSource, bool pending = false)
     {
         ArgumentNullException.ThrowIfNull(programSource);
 
-        return [.. InlineEndpoint().Matches(File.ReadAllText(programSource))
-            .Select(match => $"{Path.GetFileName(programSource)} maps an endpoint inline ({match.Value.Trim()}); it belongs on a controller.")];
+        string file = Path.GetFileName(programSource);
+        Match[] inline = [.. InlineEndpoint().Matches(File.ReadAllText(programSource))];
+        if (pending)
+        {
+            return inline.Length == 0 ? [$"{file} maps no endpoint inline any more; it is no longer pending."] : [];
+        }
+
+        return [.. inline.Select(match => $"{file} maps an endpoint inline ({match.Value.Trim()}); it belongs on a controller.")];
     }
 
     /// <summary>Rule 10: only <c>ApplicationDependencyModule</c> calls <c>AddBuildingBlocks</c>.</summary>
