@@ -418,7 +418,7 @@ All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still o
 ## Repository map
 
 - `apps/Sentinel.Web`: the Next.js frontend and its design system.
-- `services/`: `Sentinel.GatewayService`, `Sentinel.RuntimeService` and `Sentinel.ExecutorService`, each split into Api, Application, Domain and Infrastructure projects ([composition guide](docs/architecture/application-composition-and-cqrs.md)), and `Sentinel.Ingestion` and `Sentinel.AgentWorker`, which still use Host projects until their refactoring steps; tests sit beside each service.
+- `services/`: `Sentinel.Gateway`, `Sentinel.Runtime` and `Sentinel.Executor`, each split into Api, Application, Domain and Infrastructure projects ([composition guide](docs/architecture/application-composition-and-cqrs.md)), and `Sentinel.Ingestion` and `Sentinel.AgentWorker`, which still use Host projects until their refactoring steps; tests sit beside each service.
 - `packages/`: the only shared code ([ADR-007](docs/decisions/ADR-007-cross-service-code-and-provider-access.md)): `CleanArchitecture.BuildingBlocks` for results, messaging and persistence, `Sentinel.Contracts` for versioned messages, queries and views, and `Sentinel.ServiceDefaults` for hosting defaults. There is no shared domain package.
 - `reference-system/`: the system Sentinel is tested against ([ADR-011](docs/decisions/ADR-011-reference-system-location.md)): checkout, order and reporting services, the deploy controller, the observability stack configuration, scenarios `S0` to `S3`, runbooks and the deploy-blame baseline.
 - `deploy/local/`: the .NET Aspire AppHost that runs everything locally and the end-to-end suites.
