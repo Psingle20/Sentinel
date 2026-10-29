@@ -16,6 +16,8 @@ obj/
 x64/
 x86/
 [Ww][Ii][Nn]32/
+# Playwright keeps visual baselines per platform; win32 is a platform here, not a build output.
+!apps/Sentinel.Web/tests/__screenshots__/win32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
