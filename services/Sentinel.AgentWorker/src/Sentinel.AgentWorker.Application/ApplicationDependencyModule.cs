@@ -32,6 +32,7 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddScoped<IInvestigationTool, SlowSpansTool>();
         services.AddScoped<IInvestigationTool, ServiceDependenciesTool>();
         services.AddScoped<IInvestigationTool, RunbookSearchTool>();
+        services.AddScoped<ModelSpendGuard>();
         services.AddScoped<IInvestigator, ModelInvestigator>();
         services.AddScoped<IInvestigator, DeployBlameInvestigator>();
         services.AddScoped<IInvestigator, AdversarialVerifier>();

@@ -43,6 +43,9 @@ public sealed record AgentExecutionRecord
 
     public int OutputTokens { get; init; }
 
+    /// <summary>The estimated cost of the model calls in US dollars; zero for the test double and for records made before it was kept.</summary>
+    public double EstimatedCost { get; init; }
+
     public int SchemaFailures { get; init; }
 
     /// <summary>The findings as sent (or, for a shadow run, as they would have been sent), in contract JSON.</summary>

@@ -21,7 +21,7 @@ Bounded request/response calls between services ([ADR-012](../decisions/ADR-012-
 | `GET /v1/memory/{id}` | Runtime | Api, operators | `IncidentMemoryView` | A deleted record returns its tombstone. |
 | `POST /v1/incidents/{id}/replays/domain` | Runtime | Api | `DomainReplayResult` | Level-1 replay. Read-only: nothing is written, sent or signalled. |
 | `GET /.well-known/sentinel/approval-keys` | Api | Executor | `ApprovalKeySet` (JWK) | Public verification keys only. |
-| `GET /v1/executions?incidentId=`, `GET /v1/executions/{id}` | AgentWorker | Api, operators, evaluation | Agent executions with tool calls, token usage and findings | Includes the shadow deploy-blame baseline. |
+| `GET /v1/executions?incidentId=`, `GET /v1/executions/{id}` | AgentWorker | Api, operators, evaluation | Agent executions with tool calls, token usage, estimated cost and findings | Includes the shadow deploy-blame baseline. |
 | `POST /v1/executions/{id}/replays` | AgentWorker | Api | `InvestigationReplayRequest` → `InvestigationReplayResult` | Levels 2 and 3, served only from the execution's captured inputs; `400` for another level or an unknown prompt version (ADR-019). |
 | `GET /v1/executions` | Executor | Operators | Execution request snapshots | The execution audit trail. |
 

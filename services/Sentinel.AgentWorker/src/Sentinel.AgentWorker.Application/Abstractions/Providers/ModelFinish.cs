@@ -9,6 +9,9 @@ public enum ModelFinish
     Final,
 
     Refused,
+
+    /// <summary>The model ran out of output tokens, reasoning included, before it finished its answer.</summary>
+    Truncated,
     Timeout,
     RateLimited,
     Error

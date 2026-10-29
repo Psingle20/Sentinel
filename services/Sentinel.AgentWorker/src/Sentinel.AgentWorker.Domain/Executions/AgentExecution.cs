@@ -68,6 +68,9 @@ public sealed class AgentExecution
 
     public int OutputTokens { get; private set; }
 
+    /// <summary>The estimated cost of the model calls so far, in US dollars, at the model's configured price.</summary>
+    public double EstimatedCost { get; private set; }
+
     public int SchemaFailures { get; private set; }
 
     public DateTimeOffset StartedAt { get; }
@@ -95,7 +98,7 @@ public sealed class AgentExecution
     /// A model call returned. Its tokens count against <paramref name="tokenBudget"/>, and a call that
     /// takes the run past it is refused: the run must abstain rather than spend more.
     /// </summary>
-    public Result RecordModelCall(int inputTokens, int outputTokens, int tokenBudget)
+    public Result RecordModelCall(int inputTokens, int outputTokens, int tokenBudget, double estimatedCost = 0)
     {
         if (State != ExecutionState.Running)
         {
@@ -105,6 +108,7 @@ public sealed class AgentExecution
         ModelCalls++;
         InputTokens += inputTokens;
         OutputTokens += outputTokens;
+        EstimatedCost += estimatedCost;
         return InputTokens + OutputTokens > tokenBudget ? Result.Failure(AgentExecutionErrors.TokenBudgetExhausted) : Result.Success();
     }
 
@@ -180,6 +184,7 @@ public sealed class AgentExecution
             ModelCalls = ModelCalls,
             InputTokens = InputTokens,
             OutputTokens = OutputTokens,
+            EstimatedCost = EstimatedCost,
             SchemaFailures = SchemaFailures,
             Findings = findings,
             StartedAt = StartedAt,

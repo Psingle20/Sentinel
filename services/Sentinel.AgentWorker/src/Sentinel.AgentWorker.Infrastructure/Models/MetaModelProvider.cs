@@ -3,25 +3,28 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Sentinel.AgentWorker.Application.Abstractions.Providers;
 
 namespace Sentinel.AgentWorker.Infrastructure.Models;
 
 /// <summary>
-/// The Meta Model API adapter (ADR-015) over the OpenAI-compatible chat completions protocol with
-/// function tools. It is selected with <c>Model:Provider = meta</c>; its wire details are confirmed
-/// against the live API once the Muse Spark details are available.
+/// The Meta Model API adapter (ADR-015) over the OpenAI-compatible chat completions protocol, one instance per
+/// <see cref="MetaModelProfile"/>. It offers the tools and the findings' JSON Schema in the same request, so a final
+/// answer is shaped by the API; reasoning is requested at the profile's effort and given its own share of the output
+/// limit, which it counts against. Prices come from the profile; the response's usage reports cached input and reasoning.
 /// </summary>
-public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions> options, ILogger<MetaModelProvider> logger) : IModelProvider
+public sealed class MetaModelProvider(HttpClient http, string name, MetaModelProfile profile, MetaModelOptions connection, ILogger<MetaModelProvider> logger) : IModelProvider
 {
+    /// <summary>The default profile's name, and the prefix every Meta profile's name starts with.</summary>
     public const string ProviderName = "meta";
 
-    public string Provider => ProviderName;
+    public string Provider => name;
 
-    public string Model => options.Value.Model;
+    public string Model => profile.Model;
 
-    public string? ModelVersion => options.Value.ModelVersion;
+    public string? ModelVersion => profile.ModelVersion;
+
+    public ModelPrice Price => profile.Price;
 
     public async Task<ModelResponse> CompleteAsync(ModelRequest request, CancellationToken cancellationToken)
     {
@@ -31,7 +34,7 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
         {
             ["model"] = Model,
             ["temperature"] = 0,
-            ["max_tokens"] = request.MaxOutputTokens,
+            ["max_tokens"] = request.MaxOutputTokens + profile.ReasoningTokens,
             ["messages"] = new JsonArray([.. request.Messages.Select(Message)]),
             ["tools"] = new JsonArray([.. request.Tools.Select(tool => (JsonNode)new JsonObject
             {
@@ -46,15 +49,29 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
             ["tool_choice"] = "auto"
         };
 
+        if (profile.ReasoningEffort is { } effort)
+        {
+            body["reasoning_effort"] = effort;
+        }
+
+        if (request.OutputSchema is { } schema)
+        {
+            body["response_format"] = new JsonObject
+            {
+                ["type"] = "json_schema",
+                ["json_schema"] = new JsonObject { ["name"] = SchemaName(request.OutputSchemaName), ["schema"] = JsonNode.Parse(schema) }
+            };
+        }
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(options.Value.RequestTimeout);
+        timeout.CancelAfter(connection.RequestTimeout);
         try
         {
-            using var message = new HttpRequestMessage(HttpMethod.Post, options.Value.ChatCompletionsUri)
+            using var message = new HttpRequestMessage(HttpMethod.Post, connection.ChatCompletionsUri)
             {
                 Content = JsonContent.Create(body)
             };
-            message.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", options.Value.ApiKey);
+            message.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", connection.ApiKey);
             using HttpResponseMessage response = await http.SendAsync(message, timeout.Token);
 
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
@@ -64,6 +81,9 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
 
             if (!response.IsSuccessStatusCode)
             {
+                // The error body says why a request was refused, for example an unsupported parameter; only its start is logged.
+                string detail = await response.Content.ReadAsStringAsync(timeout.Token);
+                logger.LogWarning("Model API {Model} returned {Status}: {Detail}", Model, (int)response.StatusCode, detail.Length > 500 ? detail[..500] : detail);
                 return ModelResponse.Failed(ModelFinish.Error, $"The model API returned {(int)response.StatusCode}.");
             }
 
@@ -72,7 +92,7 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            return ModelResponse.Failed(ModelFinish.Timeout, $"No response within {options.Value.RequestTimeout}.");
+            return ModelResponse.Failed(ModelFinish.Timeout, $"No response within {connection.RequestTimeout}.");
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException)
         {
@@ -117,18 +137,27 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
     {
         JsonNode? choice = root?["choices"]?[0];
         JsonNode? message = choice?["message"];
+        JsonNode? reported = root?["usage"];
         var usage = new ModelUsage(
-            root?["usage"]?["prompt_tokens"]?.GetValue<int>() ?? 0,
-            root?["usage"]?["completion_tokens"]?.GetValue<int>() ?? 0);
+            reported?["prompt_tokens"]?.GetValue<int>() ?? 0,
+            reported?["completion_tokens"]?.GetValue<int>() ?? 0,
+            reported?["prompt_tokens_details"]?["cached_tokens"]?.GetValue<int>() ?? 0,
+            reported?["completion_tokens_details"]?["reasoning_tokens"]?.GetValue<int>() ?? 0);
 
         if (message is null)
         {
             return ModelResponse.Failed(ModelFinish.Error, "The response has no message.");
         }
 
-        if (choice?["finish_reason"]?.GetValue<string>() == "content_filter")
+        string? finish = choice?["finish_reason"]?.GetValue<string>();
+        if (finish == "content_filter")
         {
             return new ModelResponse(ModelFinish.Refused, [], null, usage, "The model declined to answer.");
+        }
+
+        if (finish == "length")
+        {
+            return new ModelResponse(ModelFinish.Truncated, [], null, usage, $"The answer reached the output limit after {usage.ReasoningTokens} reasoning tokens.");
         }
 
         if (message["tool_calls"] is JsonArray toolCalls && toolCalls.Count > 0)
@@ -146,6 +175,10 @@ public sealed class MetaModelProvider(HttpClient http, IOptions<MetaModelOptions
         string content = message["content"]?.GetValue<string>() ?? string.Empty;
         return new ModelResponse(ModelFinish.Final, [], StripFences(content), usage);
     }
+
+    // The API accepts letters, digits, underscores and hyphens in a schema's name.
+    private static string SchemaName(string schemaName) =>
+        new([.. schemaName.Select(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-' ? character : '_')]);
 
     // Some models wrap JSON in a Markdown code fence; the document inside is what is validated.
     private static string StripFences(string content)

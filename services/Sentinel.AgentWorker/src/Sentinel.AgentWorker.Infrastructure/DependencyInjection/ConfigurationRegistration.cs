@@ -29,6 +29,10 @@ internal static class ConfigurationRegistration
         services.AddOptions<ModelRoutingOptions>(ModelDeploymentOptions.OptionsName).Bind(configuration.GetSection(ModelRoutingOptions.Section));
         services.AddOptions<ModelPricingOptions>().Bind(configuration.GetSection(ModelPricingOptions.Section));
         services.AddOptions<ModelPricingOptions>(ModelDeploymentOptions.OptionsName).Bind(configuration.GetSection(ModelPricingOptions.Section));
+        services.AddOptions<ModelBudgetOptions>()
+            .Bind(configuration.GetSection(ModelBudgetOptions.Section))
+            .Validate(budget => budget.TotalLimit is null or >= 0 && budget.DailyLimit is null or >= 0, "Model:Budget limits are not negative.")
+            .ValidateOnStart();
         services.AddOptions<CompletenessOptions>().Bind(configuration.GetSection(CompletenessOptions.Section));
         services.TryAddSingleton(TimeProvider.System);
 

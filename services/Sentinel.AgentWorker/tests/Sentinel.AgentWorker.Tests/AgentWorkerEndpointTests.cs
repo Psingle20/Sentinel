@@ -37,7 +37,7 @@ public sealed class AgentWorkerEndpointTests
         Names(body).ShouldBe([
             "agentExecutionId", "tenantId", "environmentId", "incidentId", "investigationId", "investigator", "shadow", "modelProvider",
             "model", "modelVersion", "promptVersion", "result", "abstentionReason", "toolCalls", "modelCalls", "inputTokens", "outputTokens",
-            "schemaFailures", "findings", "startedAt", "completedAt"]);
+            "estimatedCost", "schemaFailures", "findings", "startedAt", "completedAt"]);
         body.GetProperty("result").GetString().ShouldBe("abstained");
         body.GetProperty("inputTokens").GetInt32().ShouldBe(1200);
         JsonElement toolCall = body.GetProperty("toolCalls").EnumerateArray().Single();

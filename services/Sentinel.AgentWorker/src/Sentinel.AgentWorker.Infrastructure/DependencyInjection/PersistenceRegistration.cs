@@ -7,11 +7,12 @@ namespace Sentinel.AgentWorker.Infrastructure.DependencyInjection;
 
 internal static class PersistenceRegistration
 {
-    /// <summary>The execution store in AgentWorker's database, and its schema with the messaging tables.</summary>
+    /// <summary>The execution store in AgentWorker's database, the model spend read from it, and its schema with the messaging tables.</summary>
     public static IServiceCollection AddAgentWorkerPersistence(this IServiceCollection services)
     {
         services.AddSingleton<IMessagingStoreInitializer, AgentWorkerSchema>();
         services.AddScoped<IExecutionStore, PostgresExecutionStore>();
+        services.AddSingleton<IModelSpend, PostgresModelSpend>();
         return services;
     }
 }

@@ -50,3 +50,14 @@ Option 1 makes CI depend on a live model. Option 3 adds a dependency whose abstr
 ## Revisit criteria
 
 Revisit when the Muse Spark API details arrive, if a second service needs model access (ADR-007), or if native structured-output features make AgentWorker-side validation redundant for a provider.
+
+## Revisit, 2026-10-29: the Meta Model API details
+
+The decision stands; its configuration is refined against the live API (`https://api.meta.ai/v1`):
+
+- Model selection is by named profile, `Model:Meta:Profiles:<name>`, not `Model:Name`. A profile is a model with its reasoning effort, an allowance of output tokens for reasoning, and its list prices. Each profile is a provider of its own name, starting with `meta`, so `Model:Provider` and `Model:Routing:<role>` choose among them and the control plane can only select a profile the deployment configured. A configuration with a single `Model:Meta:Model` is the profile `meta`.
+- The adapter keeps the Chat Completions protocol. It sends the findings JSON Schema as `response_format` with the tools, which the API accepts together. AgentWorker-side validation stays, because the API does not guarantee that output conforms to a schema, and provenance checks cannot be expressed as one.
+- Reasoning tokens are billed as output and count against `max_tokens`, so each request adds the profile's reasoning allowance to the answer's budget. An answer cut off at the limit (`finish_reason: length`) is reported as truncated and gets the one repair attempt.
+- Usage records cached input and reasoning tokens. Each call is costed at its profile's price and recorded with the execution, and `Model:Budget` caps the estimated spend of priced models in total and per day. At a cap, an investigation abstains without calling the model.
+- Contributor-mode models (`*-contributor`) are much cheaper because Meta may train on their prompts and outputs. They are not the default and should see only synthetic data.
+- Multi-turn reasoning is not carried between Chat Completions turns. The Responses API would carry it, and is the next step if investigation quality needs it.

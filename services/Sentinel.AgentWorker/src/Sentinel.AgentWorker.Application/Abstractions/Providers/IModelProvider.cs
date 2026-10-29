@@ -15,5 +15,8 @@ public interface IModelProvider
     /// <summary>True when the same request always gets the same response, so a replay may claim determinism (Phase 07).</summary>
     bool Deterministic => false;
 
+    /// <summary>This model's list price, when the deployment configured one; null falls back to <c>Model:Pricing</c>.</summary>
+    ModelPrice? Price => null;
+
     Task<ModelResponse> CompleteAsync(ModelRequest request, CancellationToken cancellationToken);
 }

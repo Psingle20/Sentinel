@@ -435,7 +435,16 @@ From this directory:
 
 Local sign-in uses synthetic development identities such as `responder@example.test`, which exist only in the development configuration. Tokens between the reference system and Sentinel are generated Aspire parameters kept in the AppHost's user secrets; none is stored in the repository.
 
-To investigate with a Meta model instead of the test double, set `Model:Provider` to `meta` for AgentWorker and supply `Model:Meta:ChatCompletionsUri`, `Model:Meta:Model` and `Model:Meta:ApiKey` through user secrets or a secret manager. Never commit model credentials.
+To investigate with Meta models instead of the test double, put the API key in AgentWorker's user secrets as `Model:Meta:ApiKey`, set `Model:Provider` to a Meta profile, and route roles with `Model:Routing:<role>`. Never commit model credentials. AgentWorker's [appsettings.json](services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/appsettings.json) defines the profiles, each a model with its reasoning effort, reasoning-token allowance and list prices:
+
+| Profile | Model | Effort | Suggested roles |
+| --- | --- | --- | --- |
+| `meta` | `muse-spark-1.3` | medium | metrics, logs, knowledge |
+| `meta-deep` | `muse-spark-1.3` | high | traces, topology |
+| `meta-wonder` | `muse-wonder-1.0` | high | changes, where a misleading deployment is decided |
+| `meta-contributor` | `muse-spark-1.3-contributor` | medium | None by default. Meta may train on prompts and outputs in Contributor mode, so use it only with synthetic data. |
+
+Findings are requested with the findings JSON Schema alongside the tools, so the API shapes the answer, and reasoning gets its own share of the output limit because it counts against it. Every model call is costed at its profile's price and recorded with the execution. `Model:Budget` caps the estimated spend of priced models, by default at $100 in total and $15 a day. At a cap, investigations abstain and say why. An incident's six specialists run side by side (`AgentWorker:InvestigationConcurrency`, default 6).
 
 ## Commands
 
@@ -454,6 +463,8 @@ The end-to-end suites start the whole system and drive real scenarios, so they t
 ```text
 dotnet test deploy/local/Sentinel.EndToEnd.Tests --filter "FullyQualifiedName~GoldenPathTests"
 ```
+
+They always investigate with the deterministic test double, even when Meta models are configured and routed in user secrets, so their results are reproducible and cost nothing. To run them live, set `SENTINEL_E2E_MODEL_PROVIDER=configured` to use AgentWorker's own configuration with its routing, or name one profile such as `meta` for every role. Live runs are slower, cost real money, and their assertions on the diagnosis depend on the model.
 
 Keep this table synchronized with `PROJECT.json` and the scripts.
 

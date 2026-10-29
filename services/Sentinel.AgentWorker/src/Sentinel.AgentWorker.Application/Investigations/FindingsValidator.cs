@@ -56,6 +56,61 @@ public static class FindingsValidator
         }
         """;
 
+    /// <summary>
+    /// <see cref="OutputSchema"/> as JSON Schema, for providers with structured output. It is flat, because recursive
+    /// schemas are refused, and closed, so nothing but findings fits; the validator still checks every rule it cannot express.
+    /// </summary>
+    public const string OutputJsonSchema = """
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["abstain", "abstentionReason", "evidence", "hypotheses", "unknowns"],
+          "properties": {
+            "abstain": { "type": "boolean" },
+            "abstentionReason": { "type": ["string", "null"] },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "statement", "direction", "strength", "observationIds", "hypothesisIds", "from", "to", "toolCallId", "independenceGroup"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "statement": { "type": "string" },
+                  "direction": { "type": "string", "enum": ["supports", "contradicts", "neutral"] },
+                  "strength": { "type": "number" },
+                  "observationIds": { "type": "array", "items": { "type": "string" } },
+                  "hypothesisIds": { "type": "array", "items": { "type": "string" } },
+                  "from": { "type": "string" },
+                  "to": { "type": "string" },
+                  "toolCallId": { "type": "string" },
+                  "independenceGroup": { "type": ["string", "null"] }
+                }
+              }
+            },
+            "hypotheses": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "key", "statement", "causalChain", "suspectedService", "suspectedChangeObservationId", "supportingEvidenceIds", "contradictingEvidenceIds"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "key": { "type": "string" },
+                  "statement": { "type": "string" },
+                  "causalChain": { "type": "array", "items": { "type": "string" } },
+                  "suspectedService": { "type": ["string", "null"] },
+                  "suspectedChangeObservationId": { "type": ["string", "null"] },
+                  "supportingEvidenceIds": { "type": "array", "items": { "type": "string" } },
+                  "contradictingEvidenceIds": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "unknowns": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+        """;
+
     public static ValidatedFindings Validate(string? output, IReadOnlySet<ObservationId> returnedObservations, IReadOnlySet<string> toolCallIds) =>
         Validate(output, returnedObservations, toolCallIds, MinimumHypotheses);
 

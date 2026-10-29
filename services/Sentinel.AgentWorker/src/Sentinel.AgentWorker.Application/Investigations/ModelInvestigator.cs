@@ -28,9 +28,12 @@ public sealed class ModelInvestigator(
     AgentWorkerTelemetry telemetry,
     TimeProvider time,
     ILogger<ModelInvestigator> logger,
-    InvestigationCapture? capture = null) : IInvestigator
+    InvestigationCapture? capture = null,
+    ModelSpendGuard? spend = null) : IInvestigator
 {
     public static readonly ActivitySource Activities = new("Sentinel.AgentWorker.Investigations");
+
+    private const string TruncatedAnswer = "Your answer was cut off at the output limit. Reply with the JSON document only, with every statement in one short sentence.";
 
     private readonly Dictionary<string, IInvestigationTool> _tools = tools.ToDictionary(tool => tool.Definition.Name, StringComparer.Ordinal);
 
@@ -66,16 +69,26 @@ public sealed class ModelInvestigator(
             ModelMessage.User(InvestigatorPrompt.Task(command, promptVersion))
         };
 
+        ModelPricingOptions fallback = pricing.Value;
+        ModelPrice price = model.Price ?? new ModelPrice(fallback.InputPerMillionTokens, fallback.InputPerMillionTokens, fallback.OutputPerMillionTokens);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(command.Budget.Timeout);
         try
         {
             for (int turn = 0; turn < settings.MaxModelTurns; turn++)
             {
+                if (spend is not null && await spend.RefusalAsync(model, price, timeout.Token) is { } refusal)
+                {
+                    return Finish(command, state, InvestigationOutcome.Abstained, refusal);
+                }
+
                 long called = Stopwatch.GetTimestamp();
-                ModelResponse response = await model.CompleteAsync(new ModelRequest(InvestigatorPrompt.VersionFor(profile, promptVersion), messages, definitions, FindingsValidator.OutputSchemaName, settings.MaxOutputTokens), timeout.Token);
-                telemetry.ModelCall(model, profile.Role, response, Stopwatch.GetElapsedTime(called), pricing.Value.Estimate(response.Usage));
-                Result budget = execution.RecordModelCall(response.Usage.InputTokens, response.Usage.OutputTokens, command.Budget.MaxModelTokens);
+                ModelResponse response = await model.CompleteAsync(
+                    new ModelRequest(InvestigatorPrompt.VersionFor(profile, promptVersion), messages, definitions, FindingsValidator.OutputSchemaName, settings.MaxOutputTokens, FindingsValidator.OutputJsonSchema),
+                    timeout.Token);
+                double cost = price.Estimate(response.Usage);
+                telemetry.ModelCall(model, profile.Role, response, Stopwatch.GetElapsedTime(called), cost);
+                Result budget = execution.RecordModelCall(response.Usage.InputTokens, response.Usage.OutputTokens, command.Budget.MaxModelTokens, cost);
                 if (budget.IsFailure)
                 {
                     return Finish(command, state, InvestigationOutcome.Abstained, budget.Error.Description);
@@ -115,6 +128,16 @@ public sealed class ModelInvestigator(
                         }
 
                         messages.Add(ModelMessage.User(InvestigatorPrompt.Repair(findings.Errors)));
+                        break;
+                    case ModelFinish.Truncated:
+                        // Reasoning counts against the output limit, so a cut-off answer gets the same single repair as an invalid one.
+                        telemetry.SchemaFailure(model, profile.Role);
+                        if (execution.RecordSchemaFailure() is { IsFailure: true } exhausted)
+                        {
+                            return Finish(command, state, InvestigationOutcome.Abstained, $"{exhausted.Error.Description}: {response.Error}");
+                        }
+
+                        messages.Add(ModelMessage.User(InvestigatorPrompt.Repair([TruncatedAnswer])));
                         break;
                     case ModelFinish.Refused:
                         return Finish(command, state, InvestigationOutcome.Abstained, $"The model refused: {response.Error}");
