@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Sentinel.AgentWorker.Domain.Executions;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Queries;
@@ -28,8 +30,14 @@ public sealed class InvestigationCapture
     /// <summary>Level 3: the prompt version to investigate with instead of the configured one.</summary>
     public string? PromptVersion { get; set; }
 
-    public static string Hash<T>(T request) =>
-        Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(request, SentinelJson.Options)));
+    /// <summary>
+    /// The SHA-256 of the request's canonical JSON, with every object's properties in ordinal order, so equal
+    /// requests hash equally whatever order their dictionaries were filled in.
+    /// </summary>
+    public static string Hash<T>(T request) => Hash(JsonSerializer.SerializeToNode(request, SentinelJson.Options));
+
+    /// <summary>The hash of a request as a capture stored it; replay matches on this, never on the stored hash.</summary>
+    public static string HashStored(string request) => Hash(JsonNode.Parse(request));
 
     public void BeginRecording() => _recording = [];
 
@@ -47,13 +55,16 @@ public sealed class InvestigationCapture
     {
         ArgumentNullException.ThrowIfNull(captured);
 
+        // Keyed by the stored request rather than the stored hash, so captures made before a change to the
+        // canonical form still replay.
         Replaying = true;
         foreach (CapturedResponse response in captured.OrderBy(response => response.Sequence))
         {
-            if (!_replay.TryGetValue(response.RequestHash, out Queue<CapturedResponse>? queue))
+            string hash = HashStored(response.Request);
+            if (!_replay.TryGetValue(hash, out Queue<CapturedResponse>? queue))
             {
                 queue = new Queue<CapturedResponse>();
-                _replay[response.RequestHash] = queue;
+                _replay[hash] = queue;
             }
 
             queue.Enqueue(response);
@@ -87,4 +98,16 @@ public sealed class InvestigationCapture
             JsonSerializer.Serialize(result, SentinelJson.Options)));
         return result;
     }
+
+    private static string Hash(JsonNode? request) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Canonical(request)?.ToJsonString() ?? "null")));
+
+    private static JsonNode? Canonical(JsonNode? node) => node switch
+    {
+        JsonObject properties => new JsonObject(properties
+            .OrderBy(property => property.Key, StringComparer.Ordinal)
+            .Select(property => KeyValuePair.Create(property.Key, Canonical(property.Value)))),
+        JsonArray items => new JsonArray([.. items.Select(Canonical)]),
+        _ => node?.DeepClone()
+    };
 }
