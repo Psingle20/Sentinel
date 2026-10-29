@@ -20,6 +20,15 @@ public class SentinelSystem : IAsyncLifetime
 {
     public static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(6);
 
+    /// <summary>
+    /// The model every investigator uses: the deterministic test double, so the suite is reproducible and free even
+    /// when a live model is configured in user secrets. SENTINEL_E2E_MODEL_PROVIDER names another provider for every
+    /// role, for example <c>meta</c>, or <c>configured</c> to use AgentWorker's own configuration with its routing.
+    /// </summary>
+    public static readonly string ModelProvider = Environment.GetEnvironmentVariable("SENTINEL_E2E_MODEL_PROVIDER") is { Length: > 0 } configured ? configured : "test-double";
+
+    private const string ConfiguredModels = "configured";
+
     private static readonly string[] ReferenceResources =
     [
         "checkout-service", "order-service", "reporting-worker", "redis-exporter", "deploy-controller", "scenario-runner", "prometheus"
@@ -72,7 +81,9 @@ public class SentinelSystem : IAsyncLifetime
     public async Task InitializeAsync()
     {
         IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Sentinel_AppHost>(
-            ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}"]);
+            ModelProvider == ConfiguredModels
+                ? ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}"]
+                : ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}", $"Sentinel:ModelProvider={ModelProvider}"]);
         // Resource output goes only to the in-memory capture, printed when a test fails.
         builder.Services.AddLogging(logging => logging
             .ClearProviders()
@@ -210,11 +221,26 @@ public class SentinelSystem : IAsyncLifetime
         }
     }
 
-    /// <summary>Stops or starts a resource through Aspire's resource commands, as an operator would from the dashboard.</summary>
+    /// <summary>
+    /// Stops or starts a resource through Aspire's resource commands, as an operator would from the dashboard. A container
+    /// that outlives its graceful-stop timeout is killed and reported as a failed stop although it stopped, so a reported
+    /// failure counts only if the resource does not reach the state the command asked for.
+    /// </summary>
     public async Task CommandAsync(string resource, string command)
     {
         ExecuteCommandResult result = await App.ResourceCommands.ExecuteCommandAsync(resource, command, CancellationToken.None);
-        if (!result.Success)
+        if (result.Success)
+        {
+            return;
+        }
+
+        string[] reached = command == KnownResourceCommands.StopCommand ? [KnownResourceStates.Exited, KnownResourceStates.Finished] : [KnownResourceStates.Running];
+        using var settle = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            await App.ResourceNotifications.WaitForResourceAsync(resource, reached, settle.Token);
+        }
+        catch (OperationCanceledException)
         {
             throw new InvalidOperationException($"{command} on {resource} failed: {result.Message}");
         }

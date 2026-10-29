@@ -29,10 +29,11 @@ public sealed class FailureScenarioTests(SentinelSystem system, ITestOutputHelpe
     public async Task S4_with_the_logs_provider_down_Sentinel_never_remediates_falsely()
     {
         await system.WaitUntilQuietAsync(output);
-        await system.CommandAsync("loki", KnownResourceCommands.StopCommand);
         ScenarioRunView? run = null;
         try
         {
+            // Inside the try, so Loki is started again even if stopping it is reported as failed.
+            await system.CommandAsync("loki", KnownResourceCommands.StopCommand);
             run = await system.StartScenarioAsync("S1");
             IncidentDetail incident = await system.WaitForIncidentAsync(
                 detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,

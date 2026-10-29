@@ -11,6 +11,10 @@ IDistributedApplicationBuilder builder = DistributedApplication.CreateBuilder(ar
 // End-to-end runs pass Sentinel:EphemeralStorage=true so that every run starts from empty databases.
 bool ephemeral = builder.Configuration.GetValue<bool>("Sentinel:EphemeralStorage");
 
+// End-to-end runs pass Sentinel:ModelProvider=test-double so that a model configured in a developer's user secrets is
+// never called by the suite, whatever roles it routes. Unset, AgentWorker's own configuration decides (ADR-015).
+string? modelProvider = builder.Configuration["Sentinel:ModelProvider"];
+
 // The system Sentinel observes and remediates (Phase 01, ADR-011).
 ReferenceSystemResources reference = builder.AddReferenceSystem();
 
@@ -70,6 +74,10 @@ void AddSentinel()
         .WaitFor(temporal);
     IResourceBuilder<ProjectResource> agentworker = AddService<Projects.Sentinel_AgentWorker_Api>("agent-worker-service", database: "agentworker")
         .WithReference(ingestion);
+    if (modelProvider is not null)
+    {
+        agentworker.WithEnvironment("Model__Override", modelProvider);
+    }
 
     // The gateway reads incidents from Runtime and agent executions and replays from AgentWorker (Phase 07), and is the
     // control plane's edge for Executor's policy and controls and Ingestion's sources (Phase 08).

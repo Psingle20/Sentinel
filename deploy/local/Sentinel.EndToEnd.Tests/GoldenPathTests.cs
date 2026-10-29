@@ -58,6 +58,8 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
 
             await system.RecordOutcomeAsync("S1", resolved, approved: true);
             await EvaluationRun.WriteAsync(system, "S1", resolved, approved: true);
+
+            await ShouldReplayWithoutProvidersOrActionsAsync(resolved);
         }
         catch
         {
@@ -130,6 +132,61 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         }
     }
 
+    /// <summary>
+    /// Phase 07's first exit criterion: the golden incident replays through the gateway, at level 1 from its
+    /// stream and at level 2 from every agent execution's captured inputs, without reaching a provider or
+    /// executing anything.
+    /// </summary>
+    private async Task ShouldReplayWithoutProvidersOrActionsAsync(IncidentDetail resolved)
+    {
+        Guid incidentId = resolved.Summary.IncidentId.Value;
+        DomainReplayResult domain = await PostAsync<DomainReplayResult>($"/api/v1/incidents/{incidentId}/replays/domain", null);
+        output.WriteLine($"Domain replay: {domain.EventCount} events to v{domain.StreamVersion}, state {domain.StateHash[..12]}, {domain.Decisions.Count} decision(s)");
+        domain.Level.ShouldBe(ReplayLevel.Domain);
+        domain.StateStable.ShouldBeTrue("two rebuilds of the stream give the same state");
+        domain.ProjectionMatches.ShouldBeTrue(string.Join("; ", domain.ProjectionDifferences));
+        domain.Decisions.ShouldNotBeEmpty();
+        domain.Decisions.ShouldAllBe(decision => decision.Matches && decision.SettingsRecorded);
+
+        using JsonDocument executions = (await system.Api.GetFromJsonAsync<JsonDocument>($"/api/v1/incidents/{incidentId}/agent-executions"))!;
+        Guid[] executionIds = [.. executions.RootElement.EnumerateArray().Select(execution => execution.GetProperty("agentExecutionId").GetGuid())];
+        executionIds.ShouldNotBeEmpty();
+        bool deterministicModel = SentinelSystem.ModelProvider == "test-double";
+        foreach (Guid executionId in executionIds)
+        {
+            InvestigationReplayResult replay = await PostAsync<InvestigationReplayResult>(
+                $"/api/v1/agent-executions/{executionId}/replays", new InvestigationReplayRequest { Level = ReplayLevel.Investigation });
+            output.WriteLine($"Investigation replay of {executionId}: {replay.ToolCallsReplayed} tool call(s), deterministic {replay.Deterministic}, findings match {replay.FindingsMatch}");
+            replay.Level.ShouldBe(ReplayLevel.Investigation);
+            replay.UncapturedQueries.ShouldBe(0, "every provider answer comes from the captured inputs");
+            replay.InputsReproduced.ShouldBeTrue(string.Join("; ", replay.ToolCallMismatches));
+            replay.UnsupportedCitations.ShouldBeEmpty();
+            if (deterministicModel)
+            {
+                replay.Deterministic.ShouldBeTrue(replay.Explanation);
+                replay.FindingsMatch.ShouldBe(true, string.Join("; ", replay.Differences));
+            }
+        }
+
+        DomainReplayResult after = await PostAsync<DomainReplayResult>($"/api/v1/incidents/{incidentId}/replays/domain", null);
+        after.StreamVersion.ShouldBe(domain.StreamVersion, "replays append nothing to the incident");
+        after.StateHash.ShouldBe(domain.StateHash);
+        (await system.SentinelRollbacksAsync("checkout-service")).ShouldBe(1, "replays execute no action");
+    }
+
+    private async Task<T> PostAsync<T>(string path, object? body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = body is null ? null : JsonContent.Create(body, options: SentinelJson.Options)
+        };
+        request.Headers.Add("Idempotency-Key", $"replay-{Guid.NewGuid():N}");
+        using HttpResponseMessage response = await system.Api.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        response.IsSuccessStatusCode.ShouldBeTrue($"POST {path} answered {(int)response.StatusCode}: {content}");
+        return JsonSerializer.Deserialize<T>(content, SentinelJson.Options)!;
+    }
+
     private async Task ApproveInBrowserAsync(IncidentDetail incident)
     {
         using IPlaywright playwright = await Playwright.CreateAsync();
@@ -143,7 +200,8 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         await Assertions.Expect(dialog).ToContainTextAsync(incident.Plan.Plan.PlanHash[..20]);
         await dialog.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Confirm approval" }).ClickAsync();
 
-        await Assertions.Expect(page.GetByText("Approved by responder@example.test")).ToBeVisibleAsync();
+        // The approval reaches Runtime as a message and comes back to the page as a live event, so give it time.
+        await Assertions.Expect(page.GetByText("Approved by responder@example.test")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 60_000 });
         output.WriteLine("Approved in Sentinel.Web.");
     }
 
