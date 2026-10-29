@@ -53,19 +53,43 @@ internal sealed class VersionedPolicyStore(FilePolicyStore seed, NpgsqlDataSourc
         return history;
     }
 
-    public async Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
+    /// <summary>
+    /// Compare and append under a transaction-scoped advisory lock: of two operators publishing over the same version,
+    /// exactly one succeeds and the other is told to reload, so neither change silently replaces the other.
+    /// </summary>
+    public async Task<bool> AppendAsync(PolicyDocument document, string basedOn, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(document);
+        ArgumentException.ThrowIfNullOrWhiteSpace(basedOn);
 
-        await using NpgsqlCommand command = dataSource.CreateCommand(
-            "insert into executor.policy_versions (version, document, author, published_at) values (@version, @document, @author, @published_at)");
-        command.Parameters.AddWithValue("version", document.Version);
-        command.Parameters.Add(new NpgsqlParameter("document", NpgsqlDbType.Jsonb) { Value = JsonSerializer.Serialize(document, FilePolicyStore.Json) });
-        command.Parameters.AddWithValue("author", author);
-        command.Parameters.AddWithValue("published_at", publishedAt);
+        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var lockCommand = new NpgsqlCommand("select pg_advisory_xact_lock(hashtext('executor.policy_versions'))", connection, transaction))
+        {
+            await lockCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var headCommand = new NpgsqlCommand("select version from executor.policy_versions order by published_at desc limit 1", connection, transaction))
+        {
+            string head = await headCommand.ExecuteScalarAsync(cancellationToken) as string ?? seed.Current.Version;
+            if (!string.Equals(head, basedOn, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        await using var insert = new NpgsqlCommand(
+            "insert into executor.policy_versions (version, document, author, published_at) values (@version, @document, @author, @published_at)",
+            connection,
+            transaction);
+        insert.Parameters.AddWithValue("version", document.Version);
+        insert.Parameters.Add(new NpgsqlParameter("document", NpgsqlDbType.Jsonb) { Value = JsonSerializer.Serialize(document, FilePolicyStore.Json) });
+        insert.Parameters.AddWithValue("author", author);
+        insert.Parameters.AddWithValue("published_at", publishedAt);
         try
         {
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            await insert.ExecuteNonQueryAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return true;
         }
         catch (PostgresException exception) when (exception.SqlState == UniqueViolation)

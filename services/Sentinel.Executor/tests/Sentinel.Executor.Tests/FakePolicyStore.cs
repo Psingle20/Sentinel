@@ -28,9 +28,9 @@ internal sealed class FakePolicyStore : IPolicyStore
 
     public Task<IReadOnlyList<PolicyVersionInfo>> HistoryAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<PolicyVersionInfo>>(Published);
 
-    public Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
+    public Task<bool> AppendAsync(PolicyDocument document, string basedOn, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken)
     {
-        if (Published.Exists(version => version.Version == document.Version))
+        if (Current.Version != basedOn || Published.Exists(version => version.Version == document.Version))
         {
             return Task.FromResult(false);
         }

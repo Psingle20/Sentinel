@@ -17,6 +17,9 @@ public interface IPolicyStore
 
     Task<IReadOnlyList<PolicyVersionInfo>> HistoryAsync(CancellationToken cancellationToken);
 
-    /// <summary>Stores a validated version. False when the version already exists.</summary>
-    Task<bool> AppendAsync(PolicyDocument document, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken);
+    /// <summary>
+    /// Stores a validated version over <paramref name="basedOn"/>, atomically: false when the version already exists or
+    /// another version was published since the operator read <paramref name="basedOn"/>.
+    /// </summary>
+    Task<bool> AppendAsync(PolicyDocument document, string basedOn, string author, DateTimeOffset publishedAt, CancellationToken cancellationToken);
 }

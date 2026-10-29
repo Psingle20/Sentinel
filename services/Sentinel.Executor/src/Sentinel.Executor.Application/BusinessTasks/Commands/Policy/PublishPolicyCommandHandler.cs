@@ -32,7 +32,8 @@ public sealed class PublishPolicyCommandHandler(IPolicyStore policies, TimeProvi
             return Result.Failure<PolicyDocument>(PolicyErrors.VersionUnchanged);
         }
 
-        return await policies.AppendAsync(command.Document, command.Author, time.GetUtcNow(), cancellationToken)
+        // The check above answers most conflicts early; the store's compare-and-append decides a race between two publishers.
+        return await policies.AppendAsync(command.Document, current.Version, command.Author, time.GetUtcNow(), cancellationToken)
             ? Result.Success(command.Document)
             : Result.Failure<PolicyDocument>(PolicyErrors.VersionConflict);
     }
