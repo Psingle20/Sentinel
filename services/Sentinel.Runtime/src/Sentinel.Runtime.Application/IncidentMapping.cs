@@ -230,5 +230,6 @@ public static class IncidentMapping
             Threshold = measurement.Threshold
         },
         measurement.ObservedValue,
-        measurement.Met);
+        measurement.Met,
+        measurement.BaselineValue);
 }

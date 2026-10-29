@@ -1,4 +1,6 @@
 using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using OpenTelemetry.Trace;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
@@ -7,6 +9,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using CleanArchitecture.BuildingBlocks.Integration;
 using Sentinel.Runtime.Application;
+using Sentinel.Runtime.Application.ControlPlane;
 using Sentinel.Runtime.Application.Memory;
 using Sentinel.Runtime.Host;
 using Sentinel.Runtime.Infrastructure;
@@ -71,11 +74,30 @@ app.MapGet("/v1/incidents/{incidentId:guid}/state", async (Guid incidentId, Inci
 app.MapPost("/v1/remediation/start-confirmations", async (RemediationStartRequest request, RemediationControlService control, CancellationToken cancellationToken) =>
     await control.ConfirmStartAsync(request, cancellationToken));
 
+// Phase 08: Runtime's control-plane document, with every published version. Api authorizes and audits changes.
+app.MapGet("/v1/configuration", async (RuntimeConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.CurrentAsync(cancellationToken));
+app.MapGet("/v1/configuration/history", async (RuntimeConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.HistoryAsync(cancellationToken));
+
 // Operator tooling: rebuild every projection from its stream. It overwrites in place and deletes nothing.
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Sentinel:OperatorEndpoints:Enabled"))
 {
     app.MapPost("/admin/projections/rebuild", async (ProjectionRebuilder rebuilder, CancellationToken cancellationToken) =>
         Results.Ok(new { rebuilt = await rebuilder.RebuildAsync(cancellationToken) }));
+
+    // A published version applies here at once and on other instances at their next refresh; workflows already running keep their timers.
+    app.MapPut("/admin/configuration", async (PublishRuntimeConfigurationRequest request, RuntimeConfigurationService configuration, ManagedDocument<RuntimeConfigurationDocument> current, CancellationToken cancellationToken) =>
+    {
+        Result<PublishedDocument<RuntimeConfigurationDocument>> published = await configuration.PublishAsync(request.Document, request.ExpectedVersion, request.Author, cancellationToken);
+        if (published.IsFailure)
+        {
+            return published.Error.ToProblem();
+        }
+
+        current.Set(published.Value);
+        return Results.Ok(published.Value.Version);
+    });
 
     // Retention controls (Phase 07). The purge is never scheduled and defaults to a dry run.
     app.MapPost("/admin/memory/{incidentId:guid}/legal-hold", async (Guid incidentId, LegalHoldRequest request, IncidentMemoryService memory, IUnitOfWork unitOfWork, CancellationToken cancellationToken) =>

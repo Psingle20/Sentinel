@@ -70,13 +70,15 @@ public sealed class RecoveryAssessor(IObservationQueries observations)
             MetricObservation[] tail = [.. samples.Where(sample => sample.EventTime >= tailFrom)];
             bool met = tail.Length > 0 && tail.All(sample => Meets(criterion, sample.Value));
             double last = samples[^1].Value;
-            measurements.Add(Measure(criterion, last, met));
-            improvedOrFlat &= !Worse(criterion, samples[0].Value, last);
 
-            // The pre-action baseline: the same signal over an equal window before the action (Phase 06).
-            if (!met && await BaselineAsync(incident, criterion, from, to - from, cancellationToken) is { } before && tail.Length > 0)
+            // The pre-action baseline: the same signal over an equal window before the action (Phase 06),
+            // recorded with every measurement so responders see before and after (Phase 08).
+            double? before = await BaselineAsync(incident, criterion, from, to - from, cancellationToken);
+            measurements.Add(Measure(criterion, last, met, before));
+            improvedOrFlat &= !Worse(criterion, samples[0].Value, last);
+            if (!met && before is { } baseline && tail.Length > 0)
             {
-                worseThanBefore |= Worse(criterion, before, tail.Average(sample => sample.Value));
+                worseThanBefore |= Worse(criterion, baseline, tail.Average(sample => sample.Value));
             }
         }
 
@@ -122,8 +124,8 @@ public sealed class RecoveryAssessor(IObservationQueries observations)
         return samples.Length == 0 ? null : samples.Average(sample => sample.Value);
     }
 
-    private static Measurement Measure(RecoveryCriterion criterion, double? value, bool? met) =>
-        new(criterion.ServiceId.Value, criterion.MetricName, criterion.Comparison.ToString(), criterion.Threshold, value, met);
+    private static Measurement Measure(RecoveryCriterion criterion, double? value, bool? met, double? baseline = null) =>
+        new(criterion.ServiceId.Value, criterion.MetricName, criterion.Comparison.ToString(), criterion.Threshold, value, met, baseline);
 
     private static bool Meets(RecoveryCriterion criterion, double value) => criterion.Comparison switch
     {

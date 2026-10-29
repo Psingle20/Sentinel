@@ -244,6 +244,9 @@ public sealed record ProposedPlan
 
     /// <summary>The plan's actions in operator terms, for an escalation that suggests rather than executes.</summary>
     public string? Summary { get; init; }
+
+    /// <summary>When an unanswered approval request expires and the incident escalates (Phase 08); set only when approval is required, absent before Phase 08.</summary>
+    public DateTimeOffset? ApprovalDeadline { get; init; }
 }
 
 public enum ExecutionResult
@@ -266,4 +269,5 @@ public enum RecoveryResult
     CompensationRequired
 }
 
-public sealed record Measurement(string ServiceId, string MetricName, string Comparison, double Threshold, double? ObservedValue, bool? Met);
+/// <summary>One recovery signal as measured: its last value after the action, whether it met the criterion, and its average over an equal window before the action. Measurements recorded before Phase 08 have no baseline.</summary>
+public sealed record Measurement(string ServiceId, string MetricName, string Comparison, double Threshold, double? ObservedValue, bool? Met, double? BaselineValue = null);

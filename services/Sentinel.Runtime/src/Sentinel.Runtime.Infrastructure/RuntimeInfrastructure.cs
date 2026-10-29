@@ -1,13 +1,19 @@
 using System.Net;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
+using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Npgsql;
 using Orleans.Configuration;
 using Orleans.Serialization;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Runtime.Application;
+using Sentinel.Runtime.Application.ControlPlane;
 using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Application.Memory;
 using Sentinel.Runtime.Infrastructure.Grains;
@@ -29,6 +35,9 @@ public static class RuntimeInfrastructure
         "Microsoft.Orleans.Application"
     ];
 
+    /// <summary>The options name for Runtime's deployment configuration without the control-plane document.</summary>
+    public const string DeploymentOptions = "deployment";
+
     public static IServiceCollection AddRuntimeInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -37,6 +46,14 @@ public static class RuntimeInfrastructure
             .Bind(configuration.GetSection(RuntimeOptions.Section))
             .Validate(options => options.IsValid(), "Runtime needs a detection rule with a detection threshold above its onset threshold, known investigation roles and positive workflow timeouts.")
             .ValidateOnStart();
+        // The deployment configuration alone, unchanged by the control plane: the seed and the base a candidate is validated on.
+        services.AddOptions<RuntimeOptions>(DeploymentOptions).Bind(configuration.GetSection(RuntimeOptions.Section));
+        services.AddSingleton(provider => new RuntimeDeploymentOptions(() => provider.GetRequiredService<IOptionsFactory<RuntimeOptions>>().Create(DeploymentOptions)));
+        services.AddSingleton<IVersionedDocumentStore<RuntimeConfigurationDocument>>(provider =>
+            new PostgresVersionedDocumentStore<RuntimeConfigurationDocument>(provider.GetRequiredService<NpgsqlDataSource>(), RuntimeSchema.ConfigurationTable, SentinelJson.Options));
+        services.AddSingleton<VersionedDocumentPublisher<RuntimeConfigurationDocument>>();
+        services.AddSingleton<RuntimeConfigurationService>();
+        services.AddManagedDocument<RuntimeOptions, RuntimeConfigurationDocument>(RuntimeConfigurationMapping.Apply);
         services.AddOptions<TemporalOptions>()
             .Bind(configuration.GetSection(TemporalOptions.Section))
             .Validate(options => !string.IsNullOrWhiteSpace(options.Address), "Runtime:Temporal:Address is not configured.")

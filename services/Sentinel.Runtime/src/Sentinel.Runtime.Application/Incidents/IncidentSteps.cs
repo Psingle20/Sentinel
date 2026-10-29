@@ -223,6 +223,7 @@ public sealed class IncidentSteps(
             PolicyVersion = evaluation.PolicyVersion,
             PolicyTrace = evaluation.RuleTrace,
             ProposedAt = now,
+            ApprovalDeadline = evaluation.Decision == PolicyDecision.ApprovalRequired ? now + settings.Workflow.ApprovalTimeout : null,
             Summary = action switch
             {
                 RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",

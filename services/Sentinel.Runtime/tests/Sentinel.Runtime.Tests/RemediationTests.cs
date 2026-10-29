@@ -118,6 +118,24 @@ public sealed class RemediationPlanningTests : IDisposable
         judged.Recovery.ShouldBe(RecoveryResult.CompensationRequired);
         judged.State.ShouldBe(IncidentState.Escalated);
         plan.PlanId.ShouldBe(judged.PlanId!.Value);
+
+        // Responders see the signal before and after the action (Phase 08).
+        Sentinel.Contracts.Incidents.RecoveryMeasurement measured = _runtime.Outbox.Of<Sentinel.Contracts.Incidents.RecoveryEvaluated>().Single().Measurements.Single();
+        measured.BaselineValue.ShouldBe(4);
+        measured.ObservedValue.ShouldBe(9);
+    }
+
+    [Fact]
+    public async Task A_plan_that_needs_approval_carries_the_moment_its_request_expires()
+    {
+        IncidentId incidentId = await DiagnoseAsync(new HypothesisSpec("change:deploy-controller:deployment:d1:started", ObservationId.From("deploy-controller:deployment:d1:started"), null));
+
+        IncidentSnapshot planned = await _runtime.InScopeAsync(provider => Steps(provider).PlanAsync(incidentId, CancellationToken.None));
+        Sentinel.Contracts.Incidents.IncidentDetail detail = (await _runtime.InScopeAsync(provider =>
+            ((IncidentQueryService)provider.GetService(typeof(IncidentQueryService))!).GetAsync(incidentId, CancellationToken.None))).Value;
+
+        planned.State.ShouldBe(IncidentState.AwaitingApproval);
+        detail.Plan.ShouldNotBeNull().ApprovalDeadline.ShouldNotBeNull().ShouldBeGreaterThan(DateTimeOffset.UnixEpoch);
     }
 
     private static IncidentSteps Steps(IServiceProvider provider) => (IncidentSteps)provider.GetService(typeof(IncidentSteps))!;

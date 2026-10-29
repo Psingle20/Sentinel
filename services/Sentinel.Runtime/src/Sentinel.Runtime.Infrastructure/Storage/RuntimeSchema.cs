@@ -1,16 +1,21 @@
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
+using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Npgsql;
+using Sentinel.Runtime.Application.ControlPlane;
 
 namespace Sentinel.Runtime.Infrastructure.Storage;
 
 /// <summary>
 /// Runtime's tables in its own database: the incident event stream (authoritative), the
 /// incident read model (a rebuildable projection) and correlation state, including dependency edges
-/// observed in traces, and incident memory with its feature index (Phase 07). Recovery timers live in the incident workflow (Phase 03); databases created
+/// observed in traces, incident memory with its feature index (Phase 07), and the published versions of Runtime's control-plane document (Phase 08). Recovery timers live in the incident workflow (Phase 03); databases created
 /// before it keep an unused <c>runtime.recovery_checks</c> table, which is left in place, not dropped.
 /// </summary>
 internal sealed class RuntimeSchema(NpgsqlDataSource dataSource) : IMessagingStoreInitializer
 {
+    /// <summary>Published versions of Runtime's control-plane document (Phase 08).</summary>
+    public const string ConfigurationTable = "runtime.configuration_versions";
+
     private const string Sql = """
         select pg_advisory_xact_lock(hashtext('sentinel.runtime.schema'));
 
@@ -109,7 +114,7 @@ internal sealed class RuntimeSchema(NpgsqlDataSource dataSource) : IMessagingSto
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(Sql, connection, transaction);
+        await using var command = new NpgsqlCommand(Sql + PostgresVersionedDocumentStore<RuntimeConfigurationDocument>.CreateTableSql(ConfigurationTable), connection, transaction);
         await command.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }

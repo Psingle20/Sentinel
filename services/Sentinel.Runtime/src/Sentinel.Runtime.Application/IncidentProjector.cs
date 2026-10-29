@@ -43,7 +43,7 @@ public static class IncidentProjector
                 entry.Refines?.ToString()))],
             Decision = decision?.ToView(),
             Plan = incident.Plan is { } plan
-                ? new PlanView(plan.PlanDocument(), plan.PolicyEvaluation(), PlanState(incident), incident.Approval?.ApproverId, incident.Approval?.OccurredAt)
+                ? new PlanView(plan.PlanDocument(), plan.PolicyEvaluation(), PlanState(incident), incident.Approval?.ApproverId, incident.Approval?.OccurredAt, plan.ApprovalDeadline)
                 : null,
             Execution = incident.Execution is { } execution
                 ? new ExecutionView(

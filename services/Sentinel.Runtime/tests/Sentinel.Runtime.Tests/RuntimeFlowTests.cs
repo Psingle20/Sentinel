@@ -35,6 +35,27 @@ public sealed class RuntimeFlowTests : IDisposable
         _runtime.Outbox.Of<IncidentOpened>().ShouldHaveSingleItem();
     }
 
+    /// <summary>
+    /// S0, the healthy control: a logging change and a benign order-service deployment while
+    /// checkout's SLO stays healthy apart from one isolated spike. Changes alone never open an
+    /// incident, and one sample above the threshold is not the sustained burn detection requires.
+    /// </summary>
+    [Fact]
+    public async Task The_healthy_control_opens_no_incident_and_starts_no_workflow()
+    {
+        await ObserveAsync(OrderChange("s0-config", "v1.7.0", "config-change", 0));
+        await ObserveAsync(OrderChange("s0-deploy", "v1.7.1", "deploy", 30));
+        double[] burn = [0.2, 0.4, 0.3, 2.6, 0.5, 0.3, 0.6, 0.2, 0.4, 0.3];
+        for (int index = 0; index < burn.Length; index++)
+        {
+            await ObserveAsync(InMemoryRuntime.Burn(index * 15, burn[index], "s0-"));
+        }
+
+        (await _runtime.Store.ListAsync(10, CancellationToken.None)).ShouldBeEmpty();
+        _runtime.Workflows.Started.ShouldBeEmpty();
+        _runtime.Outbox.Of<IncidentOpened>().ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_retried_open_with_the_same_trigger_is_the_same_incident()
     {
@@ -164,6 +185,25 @@ public sealed class RuntimeFlowTests : IDisposable
         _runtime.InScopeAsync(provider => step(provider.GetRequiredService<RemediationControlService>()));
 
     private static LinkedChange Change() => IncidentScenario.Deployment("checkout-service", "v2.4.1", "v2.4.0", -60, -40, "d1");
+
+    private static DeploymentObservation OrderChange(string deploymentId, string version, string kind, int secondsFromStart) => new()
+    {
+        ObservationId = ObservationId.From($"deploy-controller:deployment:{deploymentId}:completed"),
+        TenantId = InMemoryRuntime.Tenant,
+        EnvironmentId = InMemoryRuntime.Environment,
+        ServiceId = ServiceId.From("order-service"),
+        SourceProvider = "deploy-controller",
+        SourceResource = "deployments",
+        EventTime = IncidentScenario.Start.AddSeconds(secondsFromStart),
+        IngestTime = IncidentScenario.Start.AddSeconds(secondsFromStart + 5),
+        DeploymentId = deploymentId,
+        Version = version,
+        PreviousVersion = "v1.7.0",
+        ChangeKind = kind,
+        StartedAt = IncidentScenario.Start.AddSeconds(secondsFromStart),
+        CompletedAt = IncidentScenario.Start.AddSeconds(secondsFromStart + 20),
+        Status = "completed"
+    };
 
     private static InvestigationCompleted Report(IncidentId incidentId, InvestigationId investigationId)
     {
