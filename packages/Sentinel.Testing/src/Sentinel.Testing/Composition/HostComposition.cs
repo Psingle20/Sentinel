@@ -25,6 +25,13 @@ public sealed class HostComposition<TProgram> : IDisposable
         _factory = new Factory(settings, environment);
         Provider = _factory.Services;
         Services = _factory.Captured ?? throw new InvalidOperationException("The host's service collection was not captured.");
+
+        // Program starts the host itself; stopping it before it started would fail, so wait. A host that
+        // never starts means Program failed after building it.
+        if (!Provider.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted.WaitHandle.WaitOne(TimeSpan.FromSeconds(30)))
+        {
+            throw new InvalidOperationException("The host did not start within 30 seconds; its Program failed after building it.");
+        }
     }
 
     /// <summary>Every registration the host made, in order.</summary>

@@ -24,18 +24,18 @@ public static class CompositionAssertions
     ];
 
     /// <summary>Every command, query and request in <paramref name="application"/> has exactly one handler or processor, and it resolves.</summary>
-    public static IReadOnlyList<string> HandlerProblems(IServiceCollection services, IServiceProvider provider, params Assembly[] application)
+    public static async Task<IReadOnlyList<string>> HandlerProblemsAsync(IServiceCollection services, IServiceProvider provider, params Assembly[] application)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(provider);
 
         var problems = new List<string>();
-        using IServiceScope scope = provider.CreateScope();
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
         foreach (Type message in ConcreteTypes(application))
         {
             foreach (Type handler in HandlersOf(message))
             {
-                int registered = services.Count(descriptor => descriptor.ServiceType == handler);
+                int registered = services.Count(descriptor => Registers(descriptor, handler));
                 if (registered != 1)
                 {
                     problems.Add($"{message.FullName} has {registered} registrations of {handler.Name}; exactly one is required.");
@@ -74,7 +74,7 @@ public static class CompositionAssertions
         var problems = new List<string>();
         foreach (Type port in ports)
         {
-            int registered = services.Count(descriptor => descriptor.ServiceType == port);
+            int registered = services.Count(descriptor => Registers(descriptor, port));
             bool collection = collections.Contains(port);
             if (collection ? registered == 0 : registered != 1)
             {
@@ -161,6 +161,11 @@ public static class CompositionAssertions
             .. pending.Where(type => !foreign.Contains(type)).Select(type => $"Pending entry {type} is no longer registered by {name}; remove it from the pending list.")
         ];
     }
+
+    // A decorator library keeps each decorated registration under a delegating type that compares equal to the service type,
+    // and keyed registrations are a different service; neither is a second implementation.
+    private static bool Registers(ServiceDescriptor descriptor, Type serviceType) =>
+        descriptor.ServiceType == serviceType && descriptor.ServiceType is not TypeDelegator && descriptor.ServiceKey is null;
 
     private static Type? ImplementationOf(ServiceDescriptor descriptor) =>
         descriptor.ImplementationType

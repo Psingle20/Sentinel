@@ -12,18 +12,22 @@ public sealed class CompositionTests : IDisposable
 {
     private static readonly Assembly ApplicationAssembly = Sentinel.Ingestion.Application.AssemblyReference.Assembly;
 
+    // Every provider configured, as the AppHost does, so the optional ports are registered too; nothing is contacted.
     private readonly HostComposition<Program> _host = new(new Dictionary<string, string?>
     {
         ["ConnectionStrings:ingestion-db"] = "Host=localhost;Database=ingestion",
         ["ConnectionStrings:messaging"] = "localhost:6379",
-        ["Ingestion:Providers:DeployController:Token"] = "composition-test-not-a-token"
+        ["Ingestion:Providers:DeployController:Token"] = "composition-test-not-a-token",
+        ["Ingestion:Providers:Prometheus:Endpoint"] = "http://prometheus",
+        ["Ingestion:Providers:Loki:Endpoint"] = "http://loki",
+        ["Ingestion:Providers:Jaeger:Endpoint"] = "http://jaeger"
     });
 
     public void Dispose() => _host.Dispose();
 
     [Fact]
-    public void Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
-        CompositionAssertions.HandlerProblems(_host.Services, _host.Provider, ApplicationAssembly).ShouldBeEmpty();
+    public async Task Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
+        (await CompositionAssertions.HandlerProblemsAsync(_host.Services, _host.Provider, ApplicationAssembly)).ShouldBeEmpty();
 
     [Fact]
     public void Every_port_has_exactly_one_implementation() =>

@@ -55,23 +55,23 @@ public sealed class CompositionAssertionsTests
     private static readonly System.Reflection.Assembly ThisAssembly = typeof(CompositionAssertionsTests).Assembly;
 
     [Fact]
-    public void A_request_without_a_processor_or_with_two_is_reported()
+    public async Task A_request_without_a_processor_or_with_two_is_reported()
     {
         var none = new ServiceCollection();
         IServiceCollection two = new ServiceCollection()
             .AddScoped<IProcessor<ApprovePlanRequest, string>, ApprovePlanProcessor>()
             .AddScoped<IProcessor<ApprovePlanRequest, string>, SecondApprovePlanProcessor>();
 
-        CompositionAssertions.HandlerProblems(none, none.BuildServiceProvider(), ThisAssembly).ShouldContain(problem => problem.Contains("0 registrations", StringComparison.Ordinal));
-        CompositionAssertions.HandlerProblems(two, two.BuildServiceProvider(), ThisAssembly).ShouldContain(problem => problem.Contains("2 registrations", StringComparison.Ordinal));
+        (await CompositionAssertions.HandlerProblemsAsync(none, none.BuildServiceProvider(), ThisAssembly)).ShouldContain(problem => problem.Contains("0 registrations", StringComparison.Ordinal));
+        (await CompositionAssertions.HandlerProblemsAsync(two, two.BuildServiceProvider(), ThisAssembly)).ShouldContain(problem => problem.Contains("2 registrations", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void A_request_with_exactly_one_processor_passes()
+    public async Task A_request_with_exactly_one_processor_passes()
     {
         IServiceCollection one = new ServiceCollection().AddScoped<IProcessor<ApprovePlanRequest, string>, ApprovePlanProcessor>();
 
-        CompositionAssertions.HandlerProblems(one, one.BuildServiceProvider(), ThisAssembly).ShouldBeEmpty();
+        (await CompositionAssertions.HandlerProblemsAsync(one, one.BuildServiceProvider(), ThisAssembly)).ShouldBeEmpty();
     }
 
     [Fact]

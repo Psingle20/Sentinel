@@ -30,8 +30,8 @@ public sealed class CompositionTests : IDisposable
     public void Dispose() => _host.Dispose();
 
     [Fact]
-    public void Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
-        CompositionAssertions.HandlerProblems(_host.Services, _host.Provider, ApplicationAssembly).ShouldBeEmpty();
+    public async Task Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
+        (await CompositionAssertions.HandlerProblemsAsync(_host.Services, _host.Provider, ApplicationAssembly)).ShouldBeEmpty();
 
     [Fact]
     public void Every_port_has_exactly_one_implementation() =>
