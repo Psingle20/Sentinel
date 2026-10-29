@@ -6,7 +6,7 @@ using Sentinel.Gateway.Application.Abstractions.Persistence;
 using Sentinel.Gateway.Application.Abstractions.Providers;
 using Sentinel.Gateway.Application.Abstractions.Security;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
-using Sentinel.Gateway.Application.Commands.Approvals;
+using Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 using Sentinel.Gateway.Application.Options;
 using Sentinel.Gateway.Domain.Approvals;
 using Sentinel.Contracts;
@@ -15,7 +15,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Shouldly;
 
-namespace Sentinel.Gateway.Tests.Commands.Approvals;
+namespace Sentinel.Gateway.Tests.BusinessTasks.Commands.Approvals;
 
 /// <summary>The approval handlers: what they sign, keep and relay to Runtime once the approval rules allow a decision.</summary>
 public sealed class ApprovalHandlerTests

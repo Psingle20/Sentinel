@@ -5,7 +5,7 @@ using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 
-namespace Sentinel.Gateway.Application.Commands.Approvals;
+namespace Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
 /// <summary>Runtime's incident view to what an approval decision depends on, and approvals to receipts and message metadata.</summary>
 internal static class ApprovalMapping

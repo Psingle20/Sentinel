@@ -9,7 +9,7 @@ using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 
-namespace Sentinel.Gateway.Application.Commands.Approvals;
+namespace Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
 /// <summary>
 /// Withdraws an approval before execution starts (Phase 06): the Gateway marks it revoked and tells

@@ -13,7 +13,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 
-namespace Sentinel.Gateway.Application.Commands.Approvals;
+namespace Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
 /// <summary>
 /// Approval capture (ADR-006): once the approval rules allow it, sign a short-lived single-use

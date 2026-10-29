@@ -1,6 +1,6 @@
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Messaging;
-using Sentinel.Gateway.Application.Commands.Approvals;
+using Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
 namespace Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 

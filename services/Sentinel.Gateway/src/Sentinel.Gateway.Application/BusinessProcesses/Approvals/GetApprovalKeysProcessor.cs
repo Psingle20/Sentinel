@@ -1,7 +1,7 @@
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Messaging;
 using Sentinel.Contracts.Remediation;
-using Sentinel.Gateway.Application.Queries.Approvals;
+using Sentinel.Gateway.Application.BusinessTasks.Queries.Approvals;
 
 namespace Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 

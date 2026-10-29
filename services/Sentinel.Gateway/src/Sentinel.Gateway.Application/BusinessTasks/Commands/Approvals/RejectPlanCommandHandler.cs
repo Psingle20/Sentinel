@@ -8,7 +8,7 @@ using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 
-namespace Sentinel.Gateway.Application.Commands.Approvals;
+namespace Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
 /// <summary>Records a rejection of the incident's current plan and relays it to Runtime.</summary>
 public sealed class RejectPlanCommandHandler(
