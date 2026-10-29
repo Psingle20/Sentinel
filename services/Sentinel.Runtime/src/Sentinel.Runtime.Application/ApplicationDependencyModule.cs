@@ -24,6 +24,7 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddBuildingBlocks(AssemblyReference.Assembly);
 
         services.AddScoped<IncidentReportRecorder>();
+        services.AddScoped<DecisionVerifier>();
         services.AddScoped<IncidentCommandExecutor>();
         services.AddScoped<IncidentSteps>();
         services.AddScoped<RecoveryAssessor>();

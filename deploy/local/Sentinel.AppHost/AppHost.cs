@@ -87,6 +87,9 @@ void AddSentinel()
         .WithReference(executor)
         .WithReference(ingestion);
 
+    // Runtime verifies approver decisions against the gateway's published keys before recording them (ADR-006).
+    runtime.WithReference(gateway);
+
     // Only Executor holds the privileged deploy token (ADR-006). It confirms starts with Runtime and
     // verifies attestations with the gateway's published keys.
     executor

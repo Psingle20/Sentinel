@@ -51,6 +51,7 @@ internal sealed class InMemoryRuntime : IDisposable
         services.AddSingleton<IncidentLocks>();
         services.AddSingleton<IIncidentOwner, LocalIncidentOwner>();
         services.AddSingleton<IIncidentMemoryStore>(Memory);
+        services.AddSingleton<Sentinel.Runtime.Application.Abstractions.Security.IApprovalKeyResolver, TestDecisions.Keys>();
 
         // Runtime's own application module: the processes, tasks and services exactly as the host registers them.
         new ApplicationDependencyModule().RegisterServices(services, new ConfigurationBuilder().Build());

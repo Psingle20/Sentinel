@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Messaging;
@@ -143,6 +144,53 @@ public sealed class RuntimeFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task An_approval_whose_attestation_does_not_verify_is_not_recorded()
+    {
+        (IncidentId incidentId, RemediationPlan plan) = await AwaitingApprovalAsync();
+        using var stranger = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        string forged = TestDecisions.Sign(ApprovalAttestation.ExecutePlanScope, ApprovalAttestation.Audience, incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", IncidentScenario.Start, stranger);
+        string someoneElses = TestDecisions.Approve(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", IncidentScenario.Start);
+
+        await RequestAsync(new RecordApprovalRequest(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", forged));
+        await RequestAsync(new RecordApprovalRequest(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "intruder@example.test", someoneElses));
+
+        (await _runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.Approved.ShouldBeFalse();
+        _runtime.Workflows.Signals.ShouldNotContain(signal => signal.Kind == IncidentSignalKind.ApprovalRecorded);
+    }
+
+    [Fact]
+    public async Task A_revocation_needs_a_verified_attestation_and_is_accepted_before_execution_starts()
+    {
+        (IncidentId incidentId, RemediationPlan plan) = await AwaitingApprovalAsync();
+        await RequestAsync(Approval(incidentId, plan));
+
+        RevocationResponse unsigned = (await RequestAsync(Revocation(incidentId, plan, attestation: null))).Value;
+        RevocationResponse signed = (await RequestAsync(Revocation(incidentId, plan, TestDecisions.Revoke(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", IncidentScenario.Start)))).Value;
+
+        unsigned.Accepted.ShouldBeFalse();
+        unsigned.Reason.ShouldNotBeNull().ShouldContain("no attestation");
+        signed.ShouldBe(new RevocationResponse(true, null));
+        IncidentSnapshot incident = (await _runtime.Owner.GetAsync(incidentId, CancellationToken.None))!;
+        incident.Approved.ShouldBeFalse();
+        incident.State.ShouldBe(IncidentState.Escalated);
+    }
+
+    [Fact]
+    public async Task A_revocation_after_execution_started_is_refused_with_the_reason_and_the_approval_stands()
+    {
+        (IncidentId incidentId, RemediationPlan plan) = await AwaitingApprovalAsync();
+        await RequestAsync(Approval(incidentId, plan));
+        IncidentSnapshot executing = await StepsAsync(steps => steps.RequestExecutionAsync(incidentId, CancellationToken.None));
+        await RequestAsync(new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, plan.PlanId, plan.PlanVersion, executing.FencingToken!.Value));
+
+        RevocationResponse answer = (await RequestAsync(Revocation(incidentId, plan, TestDecisions.Revoke(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", IncidentScenario.Start)))).Value;
+
+        answer.Accepted.ShouldBeFalse();
+        answer.Reason.ShouldNotBeNullOrWhiteSpace();
+        (await _runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.Approved.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task A_start_confirmation_with_a_stale_fencing_token_is_refused()
     {
         IncidentId incidentId = await OpenAsync();
@@ -176,6 +224,22 @@ public sealed class RuntimeFlowTests : IDisposable
         state.Value.ProjectionLag.ShouldBe(0);
         state.Value.StreamVersion.ShouldBe(state.Value.ProjectionVersion!.Value);
     }
+
+    /// <summary>An incident through investigation, decision and plan, awaiting the approver.</summary>
+    private async Task<(IncidentId IncidentId, RemediationPlan Plan)> AwaitingApprovalAsync()
+    {
+        IncidentId incidentId = await OpenAsync();
+        await _runtime.Correlation.SaveChangeAsync(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, Change(), CancellationToken.None);
+        await _runtime.Owner.SendAsync(incidentId, new UpdateChangesCommand([Change()], LinkNew: true), CancellationToken.None);
+        InvestigationId investigation = (await StepsAsync(steps => steps.RequestInvestigationsAsync(incidentId, CancellationToken.None))).ShouldHaveSingleItem();
+        await RequestAsync(new RecordInvestigationReportRequest(incidentId, Report(incidentId, investigation).ToReport()));
+        await StepsAsync(steps => steps.DecideAsync(incidentId, CancellationToken.None));
+        (await StepsAsync(steps => steps.PlanAsync(incidentId, CancellationToken.None))).State.ShouldBe(IncidentState.AwaitingApproval);
+        return (incidentId, _runtime.Outbox.Of<RemediationPlanProposed>().ShouldHaveSingleItem().Plan);
+    }
+
+    private static RecordRevocationRequest Revocation(IncidentId incidentId, RemediationPlan plan, string? attestation) =>
+        new(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", "The change window closed.", attestation);
 
     private async Task<IncidentId> OpenAsync()
     {
@@ -255,7 +319,7 @@ public sealed class RuntimeFlowTests : IDisposable
     }
 
     private static RecordApprovalRequest Approval(IncidentId incidentId, RemediationPlan plan) =>
-        new(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", "header.claims.signature");
+        new(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", TestDecisions.Approve(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", IncidentScenario.Start));
 
     private static RecordExecutionResultRequest Executed(IncidentId incidentId, RemediationPlan plan) =>
         new(incidentId, plan.PlanId, plan.PlanVersion, ExecutionOutcome.ActionVerified.ToDomain(), "Rolled back.");

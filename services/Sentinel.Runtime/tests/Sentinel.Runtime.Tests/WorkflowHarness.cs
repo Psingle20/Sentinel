@@ -82,7 +82,7 @@ internal sealed class WorkflowHarness : IDisposable
     {
         RemediationPlan plan = Runtime.Outbox.Of<RemediationPlanProposed>().Single(proposed => proposed.IncidentId == incidentId).Plan;
         await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
-            new RecordApprovalRequest(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", "header.claims.signature"),
+            new RecordApprovalRequest(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", TestDecisions.Approve(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", IncidentScenario.Start)),
             CancellationToken.None));
     }
 
@@ -90,7 +90,7 @@ internal sealed class WorkflowHarness : IDisposable
     {
         RemediationPlan plan = Runtime.Outbox.Of<RemediationPlanProposed>().Single(proposed => proposed.IncidentId == incidentId).Plan;
         await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
-            new RecordRejectionRequest(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", "Not this change."),
+            new RecordRejectionRequest(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", "Not this change.", TestDecisions.Reject(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", IncidentScenario.Start)),
             CancellationToken.None));
     }
 

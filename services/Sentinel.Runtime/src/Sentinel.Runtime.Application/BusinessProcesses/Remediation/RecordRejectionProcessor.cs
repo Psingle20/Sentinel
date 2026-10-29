@@ -10,6 +10,6 @@ public sealed class RecordRejectionProcessor(ICommandDispatcher commands) : IPro
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return commands.Dispatch(new RecordRejectionCommand(request.IncidentId, request.PlanId, request.PlanVersion, request.RejectedBy, request.Reason), cancellationToken);
+        return commands.Dispatch(new RecordRejectionCommand(request.IncidentId, request.PlanId, request.PlanVersion, request.RejectedBy, request.Reason, request.Attestation), cancellationToken);
     }
 }
