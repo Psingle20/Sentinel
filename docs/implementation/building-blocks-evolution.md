@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 00 foundation work. Stages A to C are complete as of 2026-10-28, and Stage E's messaging packages exist with unit and container-based integration tests; adopting them in the services happens with the walking skeleton. the [package changelog](../../packages/CleanArchitecture.BuildingBlocks/CHANGELOG.md) records each change. This document defines how the existing `CleanArchitecture.BuildingBlocks` package should be adopted, improved and eventually extracted into an independently versioned project.
+Phase 00 foundation work. Stages A to C are complete as of 2026-10-28, and Stage E's messaging packages exist with unit and container-based integration tests and are adopted in all five services. Stage E2, added on 2026-10-29 by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md), is not started. The [package changelog](../../packages/CleanArchitecture.BuildingBlocks/CHANGELOG.md) records each change. This document defines how the existing `CleanArchitecture.BuildingBlocks` package should be adopted, improved and eventually extracted into an independently versioned project.
 
 The reviewed source currently lives under `distributed-job-engine/packages/CleanArchitecture.BuildingBlocks`. Sentinel must not depend on that machine-specific repository path. Adoption requires a reproducible source or package boundary.
 
@@ -105,6 +105,7 @@ Initial public surface:
 - `IQuery<TResponse>`;
 - command/query handler interfaces;
 - command/query dispatcher interfaces and implementations;
+- `IRequest<TResponse>` and `IRequest`, `IProcessor<TRequest, TResponse>` and `IProcessor<TRequest>`, and `IRequestDispatcher`: the inbound seam. A processor validates one application request, maps it to exactly one command or query and dispatches it, so an HTTP endpoint, a message consumer and a workflow activity for the same use case are thin adapters over one entry point ([ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md));
 - framework-neutral pipeline/decorator contracts if they provide clear value;
 - the outbox port application handlers use to enqueue integration messages inside the current unit of work. It carries no database or transport types; the infrastructure layer implements it.
 
@@ -112,11 +113,12 @@ Constraints:
 
 - depends only on Core plus the minimum DI abstraction required by the chosen dispatcher implementation;
 - commands and queries represent in-process application requests, not integration events or durable messages;
+- a request is the application's view of what a caller asked for; it never carries transport types and never crosses a service boundary;
 - cancellation tokens flow through every asynchronous operation;
-- missing and ambiguous handlers fail with intentional, tested behavior;
+- missing and ambiguous handlers and processors fail with intentional, tested behavior;
 - reflection caches must be bounded by application request types and must preserve original exceptions.
 
-The parallel `IDto`, `IProcessor` and `IRequestHandler` path should either be removed or justified by a distinct use case. Sentinel should use one primary request pipeline.
+`0.1.0-alpha.2` removed `IDto`, `IProcessor` and `IRequestHandler` because they duplicated the command and query pipeline without a defined role. ADR-020 gives them one: they are the only way inbound adapters reach the application layer. They return under the names above, with `IRequest` replacing `IDto` and `IRequestDispatcher` replacing `IRequestHandler` so that "handler" keeps meaning the use case. The distributed job engine still uses the original names; aligning it is part of the Stage F two-consumer criteria, not a Sentinel task.
 
 ### `CleanArchitecture.BuildingBlocks.Infrastructure`
 
@@ -174,11 +176,10 @@ Purpose: optional .NET host composition.
 
 Initial public surface:
 
-- service registration extensions;
-- handler and validator assembly scanning;
+- service registration extensions: `AddBuildingBlocks(assembly)` registers the dispatchers, every handler, processor and validator in the assembly, and the fixed decorator pipeline;
+- `IDependencyModule`, the contract each Application, Infrastructure and Host project implements once to register the types it owns, and a small composer (`AddModules(configuration, params IDependencyModule[])`) that a host's `DependencyContainer` calls in the order Application, Infrastructure, Host;
 - validation decorators;
-- logging decorators;
-- dependency-module discovery if retained.
+- logging decorators.
 
 Constraints:
 
@@ -186,9 +187,11 @@ Constraints:
 - use `ILogger.BeginScope` instead of a Serilog-specific context;
 - decoration must not silently depend on registration order;
 - validation passes cancellation and preserves structured failures;
-- registration is idempotent or explicitly rejects duplicate registration;
+- registration is idempotent or explicitly rejects duplicate registration; `AddBuildingBlocks` rejects a second call and rejects two handlers or two processors for one message;
 - optional integrations should not become transitive dependencies for consumers that do not use them;
-- Hosting does not reference the infrastructure packages. Each infrastructure package provides its own registration extension, so a host takes only the integrations it uses.
+- Hosting does not reference the infrastructure packages. Each infrastructure package provides its own registration extension, so a host takes only the integrations it uses;
+- a service's Application project may reference Hosting for registration only, because `AddBuildingBlocks` and `IDependencyModule` live here. Application code must not use anything else from Hosting; the architecture tests check that Application types depend only on the `IDependencyModule` and registration namespaces. Domain never references Hosting;
+- Hosting stays free of ASP.NET Core. The `Result`-to-HTTP mapping each Sentinel host needs lives in that host until the job engine needs the same helper, at which point it becomes a separate `Hosting.AspNetCore` package.
 
 ### `CleanArchitecture.BuildingBlocks.Testing` — optional
 
@@ -296,11 +299,23 @@ packages/
 3. Adopt the packages in all five Sentinel services and remove any per-service copies of the same mechanics.
 4. Offer the packages to the distributed job engine. The Stage F extraction criteria apply per package, so an infrastructure package used only by Sentinel stays with Sentinel.
 
+### Stage E2 – Inbound seam, composition and file layout
+
+Added by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md). The package must follow the same conventions it asks services to follow, and it must offer the pieces the [composition guide](../architecture/application-composition-and-cqrs.md) relies on.
+
+1. Reinstate `IRequest`, `IProcessor` and `IRequestDispatcher` in Application as described above; scan processors in `AddBuildingBlocks`; extend the duplicate check; add dispatcher tests for missing, duplicate and faulting processors.
+2. Add the module composer to Hosting and document the Application-to-Hosting reference rule.
+3. One type per file across every package, named for the type. On 2026-10-29 seventeen files hold more than one top-level type, including `Infrastructure/Messaging/Ports.cs` with nine interfaces, `Infrastructure/Configuration/ManagedDocuments.cs` with six, and the two decorator files. Split them with no behavior change and keep namespaces, so consumers recompile without edits.
+4. Enable StyleCop rules `SA1402` and `SA1649` for the package at error severity once the split is done; the package is small enough to finish in one change, unlike the services.
+5. Record every step in the changelog with a prerelease version bump, and regenerate the public API baselines.
+
+Stage E2 precedes the first service slice in the composition guide because the services cannot adopt the processor seam until the package provides it.
+
 ### Stage F – Standalone extraction
 
 Extract the library into its own repository when all criteria below are satisfied:
 
-- Sentinel and the distributed job engine both consume the split packages;
+- Sentinel and the distributed job engine both consume the split packages; the reference system's deploy controller and scenario runner are a third, smaller consumer under the [ADR-011 amendment](../decisions/ADR-011-reference-system-location.md#internal-composition-amendment-2026-10-29) and count as evidence but not as the second product;
 - the public surface has survived at least two real feature cycles;
 - ownership and release responsibility are assigned;
 - package naming, license and repository metadata are decided;
@@ -331,8 +346,10 @@ Extract the library into its own repository when all criteria below are satisfie
 ### Application
 
 - command/query dispatch with and without results;
+- request dispatch to a processor, with and without results;
+- a processor that validates, maps and dispatches exactly once;
 - cancellation propagation;
-- missing and duplicate handler behavior;
+- missing and duplicate handler and processor behavior;
 - handler exception preservation;
 - concurrent dispatch and invoker-cache behavior;
 - scoped lifetime behavior.
@@ -349,6 +366,7 @@ Extract the library into its own repository when all criteria below are satisfie
 ### Hosting
 
 - registration in supported call orders;
+- module composition in the documented order, and a module that registers a type outside its layer being caught by the composition test;
 - deterministic decorator ordering;
 - zero, one and multiple validators;
 - cancellation during validation;
@@ -368,7 +386,7 @@ Extract the library into its own repository when all criteria below are satisfie
 - Whether the clock remains `IDateTimeProvider` or becomes `IClock`.
 - Whether `Entity` should be generic over its identifier.
 - Whether dispatchers continue using cached reflection or move to generated/compiled invokers.
-- Whether `IDependencyModule` remains part of Hosting or Sentinel uses explicit composition.
+- Decided by ADR-020: `IDependencyModule` stays in Hosting as the per-layer module contract, composed by a host-owned `DependencyContainer`.
 - Whether validation integration belongs in Hosting or a separate optional package.
 - Which target frameworks the standalone project will support.
 - How the integration envelope is serialized, and how schema versions are negotiated between producer and consumer.
