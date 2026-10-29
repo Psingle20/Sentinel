@@ -19,6 +19,15 @@ public static class SentinelMessagingExtensions
 {
     public const string MessagingConnectionName = "messaging";
 
+    /// <summary>The identity headers of a Sentinel message and the tag each takes in traces and log scopes.</summary>
+    public static readonly IReadOnlyDictionary<string, string> ContextTags = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [SentinelHeaders.TenantId] = SentinelTags.TenantId,
+        [SentinelHeaders.EnvironmentId] = SentinelTags.EnvironmentId,
+        [SentinelHeaders.ServiceId] = SentinelTags.ServiceId,
+        [SentinelHeaders.IncidentId] = SentinelTags.IncidentId
+    };
+
     public static MessagingBuilder AddSentinelMessaging(
         this IHostApplicationBuilder builder,
         string serviceName,
@@ -35,6 +44,16 @@ public static class SentinelMessagingExtensions
 
         builder.Services.AddPostgresDataSource(database, ServiceDefaultsExtensions.ReadyTag);
         builder.Services.AddRedisConnection(redis, ServiceDefaultsExtensions.ReadyTag);
+
+        // Whose message it is goes on every consumer span and into the log scope of every handler, so traces and logs
+        // can be filtered by tenant, environment, service and incident.
+        builder.Services.Configure<MessagingOptions>(options =>
+        {
+            foreach ((string header, string tag) in ContextTags)
+            {
+                options.ContextHeaders[header] = tag;
+            }
+        });
         return builder.Services
             .AddMessaging(ProducerName(serviceName), configureOutbox)
             .AddPostgresStorage()

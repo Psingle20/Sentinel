@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -26,6 +28,7 @@ using Sentinel.Gateway.Api.Filters;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.ServiceDefaults;
 using Shouldly;
 using Sentinel.Gateway.Api.Identity;
 using Sentinel.Gateway.Application.Abstractions.Persistence;
@@ -41,9 +44,21 @@ public sealed class TenantScopeTests
     private static readonly IncidentId Acme = IncidentId.New();
 
     [Fact]
+    public async Task An_incident_the_caller_may_see_tags_the_request_with_its_tenant_and_id()
+    {
+        var filter = new IncidentTenantFilter(new OneIncident(Acme, TenantId.From("acme")), NullLogger<IncidentTenantFilter>.Instance);
+        using Activity request = new Activity("GET incident").Start();
+
+        (await InvokeAsync(filter, Acme, ["acme"])).ShouldBeNull();
+
+        request.GetTagItem(SentinelTags.TenantId).ShouldBe("acme");
+        request.GetTagItem(SentinelTags.IncidentId).ShouldBe(Acme.ToString());
+    }
+
+    [Fact]
     public async Task An_incident_of_another_tenant_is_not_found_rather_than_forbidden()
     {
-        var filter = new IncidentTenantFilter(new OneIncident(Acme, TenantId.From("acme")));
+        var filter = new IncidentTenantFilter(new OneIncident(Acme, TenantId.From("acme")), NullLogger<IncidentTenantFilter>.Instance);
 
         (await InvokeAsync(filter, Acme, ["acme"])).ShouldBeNull();
         (await InvokeAsync(filter, Acme, ["globex"])).ShouldBeOfType<NotFoundResult>();
