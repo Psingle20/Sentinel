@@ -26,7 +26,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [04 – AI investigation](#phase-04--ai-investigation) | In progress | Six specialists, typed tools, Meta adapter and routing, findings validation, blackboard | A live run that produces findings; model failure metrics evidenced |
 | [05 – Verification and consensus](#phase-05--verification-and-consensus) | In progress | Deterministic adversarial verifier, `consensus-v1` with dissent and abstention, replayable decisions | Beating the baseline on `S1`–`S3`; calibration |
 | [06 – Safe remediation](#phase-06--safe-remediation) | In progress | Policy as code, autonomy modes, single-use capabilities, key rotation, revocation, compensation, baseline-aware recovery | Managed signing facility; three test gaps; a recorded end-to-end pass |
-| [07 – Memory, replay and evaluation](#phase-07--memory-replay-and-evaluation) | In progress | Incident memory, replay levels 1–3, postmortems, similar incidents, retention, scenario packages, evaluation harness | Baseline evaluation report; golden incident replayed offline; level 4 |
+| [07 – Memory, replay and evaluation](#phase-07--memory-replay-and-evaluation) | In progress | Incident memory, replay levels 1–3, postmortems, similar incidents, retention, scenario packages, evaluation harness | Baseline evaluation report; golden incident replayed offline |
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API, notifications, analytics, responder pages | Configuration UI, real-system journey tests, API contract docs |
 | [09 – Production hardening](#phase-09--production-hardening) | Not started | Resilience and health in the building blocks and service defaults | Everything, including runbooks and a deployment definition |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
@@ -221,13 +221,20 @@ Delivered:
 - Scenario packages `S0`–`S5` and a versioned dataset: [scenario packages](../../reference-system/scenarios/packages/), [dataset.json](../../scripts/evaluation/dataset.json).
 - The evaluation harness, with a promotion gate against the baseline: [evaluate.py](../../scripts/evaluation/evaluate.py), [scoring.py](../../scripts/evaluation/sentinel_eval/scoring.py), [test_evaluation.py](../../scripts/evaluation/tests/test_evaluation.py). The run writer is [EvaluationRun](../../deploy/local/Sentinel.EndToEnd.Tests/EvaluationRun.cs).
 
-Open:
+Exit criteria with test evidence: the event stream rebuilds the same state, postmortem facts trace to their sources, and similar-incident retrieval respects tenant and retention boundaries ([MemoryReplayTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/MemoryReplayTests.cs)).
 
-- The baseline evaluation report (`artifacts/reports/evaluation/report.md` and `report.json`), and schema-2 runs for `S0`, `S1`, `S3`, `S4` and `S5`. Only `S2` exists.
-- The golden incident replayed without live providers or actions. There is no `S1` run record and no replay in the end-to-end suite.
-- Replay level 4, system simulation. Only the enum value exists.
-- Tests for the retention SQL in the PostgreSQL memory store, and for stable version manifests.
-- A regression-kind scenario package.
+Open exit criteria:
+
+- The baseline evaluation report (`artifacts/reports/evaluation/report.md` and `report.json`), with schema-2 runs for every scenario in the dataset.
+- The golden incident replayed without live providers or actions. The replay levels are tested in isolation, but the end-to-end suite does not replay the golden incident.
+
+Open from the test plan and scope, not exit criteria:
+
+- A test that captured inputs and version manifests are stable.
+- A test of the retention SQL in the PostgreSQL memory store; the Runtime tests use the in-memory store.
+- Consensus accuracy and hallucination as named benchmark measures; the harness reports fabricated evidence and unsupported claims.
+- A regression-kind scenario package; the schema allows the kind, but no package uses it.
+- The simulation interface, with the reference system as its first implementation. Only the level 4 enum value exists. The phase defers a full digital twin deliberately.
 
 ## Phase 08 – Product experience
 
