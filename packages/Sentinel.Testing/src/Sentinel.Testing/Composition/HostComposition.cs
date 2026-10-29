@@ -10,7 +10,8 @@ namespace Sentinel.Testing.Composition;
 /// A service host composed exactly as its <c>Program</c> composes it, with the host's own
 /// appsettings plus <paramref name="settings"/>, built but never started: no hosted service, silo,
 /// workflow worker or consumer runs, so the composition can be inspected without the databases,
-/// brokers and peers it would connect to (ADR-020 composition tests).
+/// brokers and peers it would connect to (ADR-020 composition tests). The test project must reference
+/// <c>Microsoft.AspNetCore.Mvc.Testing</c> itself, which locates the host's content root.
 /// </summary>
 public sealed class HostComposition<TProgram> : IDisposable
     where TProgram : class
@@ -46,8 +47,23 @@ public sealed class HostComposition<TProgram> : IDisposable
                 builder.UseSetting(key, value);
             }
 
-            // Runs after the host's own registrations; the collection is the one the provider is built from.
-            builder.ConfigureTestServices(services => Captured = services);
+            // Runs after the host's own registrations. The copy is what the host registered; the
+            // hosted services then leave the live collection, because Program starts the host itself
+            // when it reaches RunAsync, and a started worker would reach for its database or broker.
+            builder.ConfigureTestServices(services =>
+            {
+                var registered = new ServiceCollection();
+                foreach (ServiceDescriptor descriptor in services)
+                {
+                    registered.Add(descriptor);
+                }
+
+                Captured = registered;
+                foreach (ServiceDescriptor hosted in services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService)).ToList())
+                {
+                    services.Remove(hosted);
+                }
+            });
         }
 
         // Built, not started.

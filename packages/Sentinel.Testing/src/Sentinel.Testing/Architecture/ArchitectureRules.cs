@@ -76,9 +76,9 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>
-    /// Rule 9: controllers derive from the service's <c>ApiController</c>, depend on
-    /// <see cref="IRequestDispatcher"/> and on nothing from <paramref name="forbiddenNamespaces"/>, and
-    /// <c>Program.cs</c> maps no endpoint itself.
+    /// Rule 9: controllers derive from the service's <c>ApiController</c>, reach the application only
+    /// through <see cref="IRequestDispatcher"/>, and depend on nothing from <paramref name="forbiddenNamespaces"/>.
+    /// A controller with no dependencies, one that only answers from the caller's own claims, passes.
     /// </summary>
     public static IReadOnlyList<string> Controllers(Assembly api, string controllersNamespace, Type apiController, IReadOnlyCollection<string> forbiddenNamespaces, IReadOnlyCollection<string> pending)
     {
@@ -180,7 +180,7 @@ public static partial class ArchitectureRules
         }
 
         Type[] parameters = Parameters(controller);
-        if (!parameters.Contains(typeof(IRequestDispatcher)))
+        if (parameters.Length > 0 && !parameters.Contains(typeof(IRequestDispatcher)))
         {
             problems.Add($"Controller {controller.FullName} does not send requests through IRequestDispatcher.");
         }

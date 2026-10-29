@@ -108,7 +108,7 @@ public sealed class CompositionAssertionsTests
     [Fact]
     public void A_module_that_registers_a_type_outside_its_layer_is_caught()
     {
-        IReadOnlyList<string> problems = CompositionAssertions.ModuleProblems(new LeakyInfrastructureModule(), new ConfigurationBuilder().Build(), ThisAssembly);
+        IReadOnlyList<string> problems = CompositionAssertions.ModuleProblems(new LeakyInfrastructureModule(), new ConfigurationBuilder().Build(), [], ThisAssembly);
 
         problems.ShouldHaveSingleItem().ShouldContain(nameof(ApprovePlanProcessor));
     }

@@ -136,20 +136,30 @@ public static class CompositionAssertions
     /// <summary>
     /// A layer's module registers only what that layer owns (ADR-020): no implementation from
     /// <paramref name="otherLayers"/>, whether registered by type or returned by a factory. Port
-    /// interfaces from inner layers may be the service type; their implementations may not.
+    /// interfaces from inner layers may be the service type, and a factory typed as the port says
+    /// nothing about its implementation; implementations from another layer may not be registered.
+    /// <paramref name="pending"/> names, by full name, implementations a later refactoring step moves;
+    /// an entry the module no longer registers is reported, so the list can only shrink.
     /// </summary>
-    public static IReadOnlyList<string> ModuleProblems(IDependencyModule module, IConfiguration configuration, params Assembly[] otherLayers)
+    public static IReadOnlyList<string> ModuleProblems(IDependencyModule module, IConfiguration configuration, IReadOnlyCollection<string> pending, params Assembly[] otherLayers)
     {
         ArgumentNullException.ThrowIfNull(module);
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(pending);
 
         var services = new ServiceCollection();
         module.RegisterServices(services, configuration);
-        return [.. services
-            .Select(descriptor => (descriptor.ServiceType, Implementation: ImplementationOf(descriptor)))
-            .Where(registration => registration.Implementation is { } type && otherLayers.Contains(type.Assembly))
-            .Select(registration => $"{module.GetType().Name} registers {registration.Implementation!.FullName} as {registration.ServiceType.Name}, which another layer owns.")
+        string[] foreign = [.. services
+            .Select(ImplementationOf)
+            .Where(type => type is { IsInterface: false, IsAbstract: false } && otherLayers.Contains(type.Assembly))
+            .Select(type => type!.FullName ?? type.Name)
             .Distinct()];
+
+        string name = module.GetType().Name;
+        return [
+            .. foreign.Where(type => !pending.Contains(type)).Select(type => $"{name} registers {type}, which another layer owns."),
+            .. pending.Where(type => !foreign.Contains(type)).Select(type => $"Pending entry {type} is no longer registered by {name}; remove it from the pending list.")
+        ];
     }
 
     private static Type? ImplementationOf(ServiceDescriptor descriptor) =>
