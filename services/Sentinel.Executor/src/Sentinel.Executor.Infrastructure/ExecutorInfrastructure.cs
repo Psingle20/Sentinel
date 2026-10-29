@@ -21,6 +21,7 @@ using Sentinel.Executor.Domain.Policy;
 
 namespace Sentinel.Executor.Infrastructure;
 
+/// <summary>Executor's infrastructure not yet split into capability registrations (ADR-020, Executor's own step).</summary>
 public static class ExecutorInfrastructure
 {
     /// <summary>
@@ -39,10 +40,6 @@ public static class ExecutorInfrastructure
         services.AddScoped<IControlStore, PostgresControlStore>();
         services.AddSingleton<FilePolicyStore>();
         services.AddScoped<IPolicyStore, VersionedPolicyStore>();
-        services.AddScoped<PolicyService>();
-        services.AddScoped<PolicyAdministration>();
-        services.AddScoped<AttestationVerifier>();
-        services.AddScoped<ExecutionService>();
 
         Uri api = Required(configuration, "Executor:Services:Gateway");
         Uri runtime = Required(configuration, "Executor:Services:Runtime");
@@ -85,15 +82,6 @@ public static class ExecutorInfrastructure
 
     private static Uri Required(IConfiguration configuration, string key) =>
         new(configuration[key] ?? throw new InvalidOperationException($"{key} is not configured."));
-}
-
-public sealed class ExecuteRemediationHandler(ExecutionService executions) : IIntegrationMessageHandler<ExecuteRemediation>
-{
-    public async Task<Result> HandleAsync(ExecuteRemediation message, MessageEnvelope envelope, CancellationToken cancellationToken)
-    {
-        await executions.HandleAsync(message, cancellationToken);
-        return Result.Success();
-    }
 }
 
 /// <summary>Finishes requests that stopped part-way, for example because Executor was killed mid-execution.</summary>

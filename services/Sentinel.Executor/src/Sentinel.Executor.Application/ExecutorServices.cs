@@ -100,12 +100,13 @@ public sealed class PolicyService(IPolicyStore policies, IControlStore controls,
 }
 
 /// <summary>
-/// Executes approved plans through the durable state machine (ADR-006): verify, reserve, confirm the
-/// start with Runtime, then for each action issue a single-use capability, execute through the
-/// adapter and verify the action, and report. Each transition is committed before the next
-/// external call; a request that stops part-way is finished by <see cref="ReconcileAsync"/>, which
-/// inspects the target instead of repeating the action. A plan that fails part-way is compensated:
-/// its completed actions are undone in reverse, or the failure is escalated.
+/// The durable execution state machine (ADR-006) behind <c>ExecuteRemediationCommandHandler</c>,
+/// which verifies and reserves a request: confirm the start with Runtime, then for each action issue
+/// a single-use capability, execute through the adapter and verify the action, and report. Each
+/// transition is committed before the next external call; a request that stops part-way is finished
+/// by <see cref="ReconcileAsync"/>, which inspects the target instead of repeating the action. A plan
+/// that fails part-way is compensated: its completed actions are undone in reverse, or the failure is
+/// escalated. It becomes processes and tasks in Executor's own refactoring step.
 /// </summary>
 public sealed class ExecutionService(
     IExecutionStore store,
@@ -119,58 +120,6 @@ public sealed class ExecutionService(
     IOptions<ExecutorOptions> options,
     ILogger<ExecutionService> logger)
 {
-    public async Task HandleAsync(ExecuteRemediation command, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-
-        if (await store.FindAsync(command.IdempotencyKey, cancellationToken) is { } existing)
-        {
-            // A repeated request never runs the action again. A finished one reports its result again;
-            // an unfinished one is left to reconciliation.
-            if (existing.HasFinalOutcome)
-            {
-                Publish(existing);
-            }
-
-            await unitOfWork.CommitAsync(cancellationToken);
-            return;
-        }
-
-        RemediationPlan plan = command.Plan;
-        var request = ExecutionRequest.Receive(
-            command.IdempotencyKey, command.TenantId, command.EnvironmentId, command.IncidentId,
-            plan.PlanId, plan.PlanVersion, plan.PlanHash, command.FencingToken,
-            JsonSerializer.Serialize(plan, SentinelJson.Options), time.GetUtcNow());
-        await SaveAsync(request, cancellationToken);
-
-        Result<ApprovalAttestationClaims> approval = await ValidateAsync(command, cancellationToken);
-        if (approval.IsFailure)
-        {
-            request.Reject(approval.Error.Description, time.GetUtcNow());
-            await FinishAsync(request, cancellationToken);
-            return;
-        }
-
-        if (!await store.TryRaiseFenceAsync(command.IncidentId, command.FencingToken, cancellationToken))
-        {
-            request.Reject($"Fencing token {command.FencingToken} is lower than one already seen for the incident.", time.GetUtcNow());
-            await FinishAsync(request, cancellationToken);
-            return;
-        }
-
-        if (!await store.TryConsumeAttestationAsync(approval.Value.AttestationId, request.RequestId, cancellationToken))
-        {
-            request.Reject($"Attestation {approval.Value.AttestationId} was already used.", time.GetUtcNow());
-            await FinishAsync(request, cancellationToken);
-            return;
-        }
-
-        request.Reserve(approval.Value.AttestationId, approval.Value.ApproverId, approval.Value.PolicyVersion, time.GetUtcNow());
-        await SaveAsync(request, cancellationToken);
-
-        await ConfirmAndExecuteAsync(request, plan, cancellationToken);
-    }
-
     /// <summary>Finishes a request that stopped part-way, from the state it reached.</summary>
     public async Task ReconcileAsync(ExecutionRequest request, CancellationToken cancellationToken)
     {
@@ -210,7 +159,8 @@ public sealed class ExecutionService(
         }
     }
 
-    private async Task<Result<ApprovalAttestationClaims>> ValidateAsync(ExecuteRemediation command, CancellationToken cancellationToken)
+    /// <summary>The plan's hash, the attestation, execution-time policy, an adapter for every action and the preconditions at the target.</summary>
+    internal async Task<Result<ApprovalAttestationClaims>> ValidateAsync(ExecuteRemediation command, CancellationToken cancellationToken)
     {
         if (!RemediationPlanHash.Matches(command.Plan))
         {
@@ -266,7 +216,7 @@ public sealed class ExecutionService(
         _ => false
     };
 
-    private async Task ConfirmAndExecuteAsync(ExecutionRequest request, RemediationPlan plan, CancellationToken cancellationToken)
+    internal async Task ConfirmAndExecuteAsync(ExecutionRequest request, RemediationPlan plan, CancellationToken cancellationToken)
     {
         RemediationStartResponse response;
         try
@@ -475,13 +425,13 @@ public sealed class ExecutionService(
     private IRemediationAdapter? Adapter(RemediationAction action) =>
         adapters.FirstOrDefault(adapter => adapter.ActionKind == PolicyService.ActionKind(action));
 
-    private async Task SaveAsync(ExecutionRequest request, CancellationToken cancellationToken)
+    internal async Task SaveAsync(ExecutionRequest request, CancellationToken cancellationToken)
     {
         await store.SaveAsync(request, cancellationToken);
         await unitOfWork.CommitAsync(cancellationToken);
     }
 
-    private async Task FinishAsync(ExecutionRequest request, CancellationToken cancellationToken)
+    internal async Task FinishAsync(ExecutionRequest request, CancellationToken cancellationToken)
     {
         await store.SaveAsync(request, cancellationToken);
         Publish(request);
@@ -489,7 +439,7 @@ public sealed class ExecutionService(
         logger.LogInformation("Execution {Key} for incident {IncidentId} ended {State}: {Detail}", request.IdempotencyKey, request.IncidentId, request.State, request.Detail);
     }
 
-    private void Publish(ExecutionRequest request) =>
+    internal void Publish(ExecutionRequest request) =>
         outbox.Enqueue(
             new RemediationExecuted
             {

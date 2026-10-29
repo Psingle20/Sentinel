@@ -1,9 +1,11 @@
 using System.Security.Cryptography;
+using CleanArchitecture.BuildingBlocks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Executor.Application;
+using Sentinel.Executor.Application.BusinessTasks.Commands.Execution;
 using Sentinel.Executor.Domain.Executions;
 using Sentinel.Executor.Domain.Policy;
 using Shouldly;
@@ -43,12 +45,16 @@ public sealed class ExecutionTests : IDisposable
             NullLogger<ExecutionService>.Instance);
     }
 
+    // The consumer's path: Runtime's message arrives as a command, whose handler verifies and reserves it and hands it to the state machine.
+    private Task<Result> ExecuteAsync(ExecuteRemediation command) =>
+        new ExecuteRemediationCommandHandler(_store, Service(), new NoUnitOfWork(), _time).Handle(new ExecuteRemediationCommand(command), CancellationToken.None);
+
     private ExecutionOutcome LastOutcome() => _outbox.Messages.OfType<RemediationExecuted>().Last().Outcome;
 
     [Fact]
     public async Task An_approved_plan_is_confirmed_executed_once_and_verified()
     {
-        await Service().HandleAsync(Commands.Execute(_signer), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer));
 
         _start.Calls.ShouldBe(1);
         _target.Executions.ShouldBe(1);
@@ -62,8 +68,8 @@ public sealed class ExecutionTests : IDisposable
     {
         ExecuteRemediation command = Commands.Execute(_signer);
 
-        await Service().HandleAsync(command, CancellationToken.None);
-        await Service().HandleAsync(command, CancellationToken.None);
+        await ExecuteAsync(command);
+        await ExecuteAsync(command);
 
         _target.Executions.ShouldBe(1);
         _outbox.Messages.OfType<RemediationExecuted>().Count().ShouldBe(2);
@@ -75,8 +81,8 @@ public sealed class ExecutionTests : IDisposable
         ExecuteRemediation first = Commands.Execute(_signer);
         ExecuteRemediation replay = first with { IdempotencyKey = first.IdempotencyKey + ":replay", FencingToken = first.FencingToken + 1 };
 
-        await Service().HandleAsync(first, CancellationToken.None);
-        await Service().HandleAsync(replay, CancellationToken.None);
+        await ExecuteAsync(first);
+        await ExecuteAsync(replay);
 
         _target.Executions.ShouldBe(1);
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
@@ -86,11 +92,11 @@ public sealed class ExecutionTests : IDisposable
     public async Task A_fencing_token_lower_than_one_already_seen_is_rejected()
     {
         var incident = IncidentId.New();
-        await Service().HandleAsync(Commands.Execute(_signer, fencingToken: 9, key: "k1", incident: incident), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, fencingToken: 9, key: "k1", incident: incident));
         _target.Serving = "v2.4.1";
         _target.Operation = OperationStatus.NotFound;
 
-        await Service().HandleAsync(Commands.Execute(_signer, fencingToken: 8, key: "k2", incident: incident), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, fencingToken: 8, key: "k2", incident: incident));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _target.Executions.ShouldBe(1);
@@ -100,12 +106,12 @@ public sealed class ExecutionTests : IDisposable
     public async Task Without_Runtime_confirmation_nothing_runs()
     {
         _start.Confirm = false;
-        await Service().HandleAsync(Commands.Execute(_signer, key: "refused"), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, key: "refused"));
         LastOutcome().ShouldBe(ExecutionOutcome.Aborted);
 
         _start.Confirm = true;
         _start.Unreachable = true;
-        await Service().HandleAsync(Commands.Execute(_signer, key: "unreachable"), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, key: "unreachable"));
         LastOutcome().ShouldBe(ExecutionOutcome.Aborted);
 
         _target.Executions.ShouldBe(0);
@@ -116,7 +122,7 @@ public sealed class ExecutionTests : IDisposable
     {
         _target.Serving = "v2.4.3";
 
-        await Service().HandleAsync(Commands.Execute(_signer), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _start.Calls.ShouldBe(0);
@@ -127,7 +133,7 @@ public sealed class ExecutionTests : IDisposable
     {
         RemediationPlan plan = Commands.Plan(target: "payments-service");
 
-        await Service().HandleAsync(Commands.Execute(_signer, plan), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, plan));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _target.Executions.ShouldBe(0);
@@ -137,7 +143,7 @@ public sealed class ExecutionTests : IDisposable
     public async Task An_ambiguous_result_becomes_outcome_unknown_and_is_reconciled_from_the_target_without_repeating_the_action()
     {
         _target.NextOutcome = AdapterOutcome.Unknown;
-        await Service().HandleAsync(Commands.Execute(_signer), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer));
         LastOutcome().ShouldBe(ExecutionOutcome.OutcomeUnknown);
 
         // The rollback did happen at the target after all.
@@ -184,7 +190,7 @@ public sealed class ExecutionTests : IDisposable
     [Fact]
     public async Task Every_action_runs_under_its_own_single_use_capability()
     {
-        await Service().HandleAsync(Commands.Execute(_signer), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer));
 
         Sentinel.Executor.Domain.Capabilities.Capability capability = _target.Capabilities.ShouldHaveSingleItem();
         capability.Action.ShouldBe("rollback");
@@ -199,7 +205,7 @@ public sealed class ExecutionTests : IDisposable
     {
         RemediationPlan plan = Commands.PausePlan();
 
-        await Service().HandleAsync(Commands.Execute(_signer, plan), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, plan));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _outbox.Messages.OfType<RemediationExecuted>().Last().Detail.ShouldNotBeNull().ShouldContain("SuggestionOnly");
@@ -211,7 +217,7 @@ public sealed class ExecutionTests : IDisposable
     {
         await _controls.SetEmergencyStopAsync(true, "operator@example.test", CancellationToken.None);
 
-        await Service().HandleAsync(Commands.Execute(_signer), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _target.Executions.ShouldBe(0);
@@ -224,7 +230,7 @@ public sealed class ExecutionTests : IDisposable
         _target.NextOutcome = AdapterOutcome.Rejected;
         RemediationPlan plan = Commands.PausePlan(alsoRollback: true);
 
-        await Service().HandleAsync(Commands.Execute(_signer, plan), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, plan));
 
         LastOutcome().ShouldBe(ExecutionOutcome.Compensated);
         _batch.Resumes.ShouldBe(1);
@@ -239,7 +245,7 @@ public sealed class ExecutionTests : IDisposable
         _batch.RefusePause = true;
         RemediationPlan plan = Commands.RollbackThenPause();
 
-        await Service().HandleAsync(Commands.Execute(_signer, plan), CancellationToken.None);
+        await ExecuteAsync(Commands.Execute(_signer, plan));
 
         LastOutcome().ShouldBe(ExecutionOutcome.CompensationFailed);
         _outbox.Messages.OfType<RemediationExecuted>().Last().Detail.ShouldNotBeNull().ShouldContain("Responders must restore it");

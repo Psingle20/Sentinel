@@ -15,6 +15,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Sentinel.Executor.Application\Sentinel.Executor.Application.csproj" />
         <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\Sentinel.ServiceDefaults\src\Sentinel.ServiceDefaults\Sentinel.ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>
