@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
@@ -24,6 +25,9 @@ public static class ServiceDefaultsExtensions
     private const string NpgsqlInstrumentation = "Npgsql";
     private const string OtlpEndpointSetting = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
+    /// <summary>The response header that names the request's trace, so a caller can quote it when reporting a problem.</summary>
+    public const string CorrelationHeader = "X-Correlation-Id";
+
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
@@ -36,6 +40,9 @@ public static class ServiceDefaultsExtensions
             .AddCheck("self", () => HealthCheckResult.Healthy(), [LiveTag]);
 
         builder.Services.AddSentinelJson();
+
+        // Every problem response carries its stable code and the W3C trace it belongs to as traceId (Phase 08 API principles).
+        builder.Services.AddProblemDetails();
         builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
@@ -49,6 +56,15 @@ public static class ServiceDefaultsExtensions
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
+
+        // Unhandled exceptions and bare status codes become problem details; no stack trace leaves the service.
+        app.UseExceptionHandler();
+        app.UseStatusCodePages();
+        app.Use((context, next) =>
+        {
+            context.Response.Headers[CorrelationHeader] = CorrelationId(context);
+            return next(context);
+        });
 
         app.MapHealthChecks(LivenessPath, new HealthCheckOptions
         {
@@ -90,6 +106,9 @@ public static class ServiceDefaultsExtensions
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
     }
+
+    // The same value problem details report as traceId.
+    private static string CorrelationId(HttpContext context) => Activity.Current?.Id ?? context.TraceIdentifier;
 
     private static bool IsHealthRequest(PathString path) =>
         path.StartsWithSegments(HealthPathPrefix, StringComparison.OrdinalIgnoreCase);
