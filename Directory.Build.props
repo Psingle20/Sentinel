@@ -10,10 +10,17 @@
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
-    <NoWarn>NU1608;NU1903;CA1812;CA2007</NoWarn>
+    <!-- SA0001 is StyleCop's compilation-level note that XML documentation analysis is off; only SA1402 and SA1649 are used. -->
+    <NoWarn>NU1608;NU1903;CA1812;CA2007;SA0001</NoWarn>
   </PropertyGroup>
   <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
     <PackageReference Include="SonarAnalyzer.CSharp">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- One type per file (ADR-020): only SA1402 and SA1649 are enabled, in .editorconfig. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
+    <PackageReference Include="StyleCop.Analyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
