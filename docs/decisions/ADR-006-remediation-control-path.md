@@ -1,11 +1,11 @@
 # ADR-006: Remediation control path
 
-- Status: Accepted
+- Status: Accepted; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-27
 
 ## Context
 
-The production topology sent an approved plan from `Sentinel.Api` directly to `Sentinel.Executor`. `Sentinel.Runtime` owns the workflow that waits for approval but was not on that path. Runtime could therefore supersede the decision, close the incident or time out the workflow while Executor still ran the previously approved plan, and Runtime would learn about the action only afterwards.
+The production topology sent an approved plan from `Sentinel.Gateway` directly to `Sentinel.Executor`. `Sentinel.Runtime` owns the workflow that waits for approval but was not on that path. Runtime could therefore supersede the decision, close the incident or time out the workflow while Executor still ran the previously approved plan, and Runtime would learn about the action only afterwards.
 
 Two related ownership questions were also unresolved:
 
@@ -62,7 +62,7 @@ Runtime workflow
 
 ### Rules
 
-- `Sentinel.Api` never sends commands to `Sentinel.Executor`.
+- `Sentinel.Gateway` never sends commands to `Sentinel.Executor`.
 - `Sentinel.Runtime` relays approvals but cannot create or alter them.
 - `Sentinel.Executor` is the only policy engine. Plan-time evaluation is advisory and recorded. Execution-time enforcement is authoritative; if policy changed in between, the execution-time result wins and may require a new approval.
 - The start confirmation records the point of no return in the authoritative stream. If Runtime is unreachable, the action does not start. The added latency is accepted because remediation safety outweighs it.

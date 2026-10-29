@@ -1,4 +1,4 @@
-﻿# Sentinel agent guidance
+# Sentinel agent guidance
 
 This project inherits the workspace and centralized project policies. Refine this file with project-specific facts; do not repeat generic rules.
 
@@ -10,13 +10,13 @@ This project inherits the workspace and centralized project policies. Refine thi
 
 ## Architecture boundaries
 
-- Follow ADR-001: five backend services (`Sentinel.Api`, `Sentinel.Ingestion`, `Sentinel.Runtime`, `Sentinel.AgentWorker`, `Sentinel.Executor`) and one web app (`Sentinel.Web`). Keep logical modules inside their owning service; any additional deployable requires an ADR.
+- Follow ADR-001: five backend services (`Sentinel.Gateway`, `Sentinel.Ingestion`, `Sentinel.Runtime`, `Sentinel.AgentWorker`, `Sentinel.Executor`) and one web app (`Sentinel.Web`). Keep logical modules inside their owning service; any additional deployable requires an ADR.
 - Deliver the Phase 01A walking skeleton before deepening any service, and keep its end-to-end suite passing in every later phase.
 - Write backend services in C# on .NET 10 LTS (ADR-003). Use Python only for offline evaluation, data preparation and operational scripts under `scripts/`.
 - Share code across services only through the packages listed in ADR-007; never add a shared domain package, and keep provider and model interfaces inside their owning services.
 - Keep Temporal workflow code free of I/O: reach `IncidentGrain` only through activities, pass IDs rather than telemetry or model output, and never treat workflow history as incident truth (ADR-004, ADR-005).
 - Only `Sentinel.Ingestion` holds external provider credentials, and only `Sentinel.Executor` holds privileged action credentials.
-- Route approvals from `Sentinel.Api` to `Sentinel.Runtime`, never directly to `Sentinel.Executor` (ADR-006).
+- Route approvals from `Sentinel.Gateway` to `Sentinel.Runtime`, never directly to `Sentinel.Executor` (ADR-006).
 - Keep the domain and canonical observation contracts independent of cloud, telemetry-vendor, model-provider, web, persistence, and actor-runtime SDKs.
 - Put reusable code in `packages/` only when it has a clear consumer and stable boundary.
 - Integrate Meta models behind typed agent and model interfaces; model output must use validated structured contracts for evidence, hypotheses, decisions, and remediation plans.

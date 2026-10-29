@@ -36,7 +36,7 @@ public sealed class LayerDependencyTests
 
     private static readonly string[] OtherServiceNamespaces =
     [
-        "Sentinel.Api",
+        "Sentinel.Gateway",
         "Sentinel.Runtime",
         "Sentinel.AgentWorker",
         "Sentinel.Executor"

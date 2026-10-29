@@ -74,7 +74,7 @@ flowchart TB
 
     subgraph edge["Edge"]
         web["Sentinel.Web<br/>incidents, timeline, evidence, approvals"]
-        api["Sentinel.Api<br/>authorization, queries, approval signing"]
+        api["Sentinel.Gateway<br/>authorization, queries, approval signing"]
     end
 
     subgraph control["Control plane"]
@@ -142,7 +142,7 @@ flowchart LR
     web["Sentinel.Web"]
 
     subgraph edgezone["Edge: identity and approval signing"]
-        api["Sentinel.Api"]
+        api["Sentinel.Gateway"]
     end
 
     subgraph readzone["Read path: provider credentials, untrusted data"]
@@ -186,7 +186,7 @@ Solid arrows are synchronous calls; dotted arrows are events on Redis Streams.
 
 | Service | Owns | Holds credentials for | Publishes | Consumes |
 | --- | --- | --- | --- | --- |
-| `Sentinel.Api` | Approvals, signing keys, the external API | Approval signing (local key today, managed key in production) | `RecordApproval`, `RecordRejection`, `RecordRevocation` | None |
+| `Sentinel.Gateway` | Approvals, signing keys, the external API | Approval signing (local key today, managed key in production) | `RecordApproval`, `RecordRejection`, `RecordRevocation` | None |
 | `Sentinel.Ingestion` | Source checkpoints, watermarks, canonical observations | Telemetry, change and knowledge providers | `ObservationRecorded` for metrics, deployments and topology ([ADR-018](docs/decisions/ADR-018-observation-publication-scope.md)) | None |
 | `Sentinel.Runtime` | Incident streams, projections, correlation state, incident memory | None | `InvestigateIncident`, `ExecuteRemediation`, incident lifecycle events | Observations, findings, approvals, execution results |
 | `Sentinel.AgentWorker` | Agent executions, tool calls, captured inputs, replays | The model API | `InvestigationCompleted` | `InvestigateIncident` |
@@ -241,7 +241,7 @@ sequenceDiagram
     autonumber
     actor Approver
     participant Web as Sentinel.Web
-    participant Api as Sentinel.Api
+    participant Api as Sentinel.Gateway
     participant Rt as Runtime
     participant Ex as Executor
     participant Tgt as Deploy controller
@@ -418,7 +418,7 @@ All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still o
 ## Repository map
 
 - `apps/Sentinel.Web`: the Next.js frontend and its design system.
-- `services/`: `Sentinel.Api`, `Sentinel.Ingestion`, `Sentinel.Runtime`, `Sentinel.AgentWorker` and `Sentinel.Executor`, each split into Domain, Application, Infrastructure and Host projects, with their tests beside them.
+- `services/`: `Sentinel.GatewayService`, `Sentinel.RuntimeService` and `Sentinel.ExecutorService`, each split into Api, Application, Domain and Infrastructure projects ([composition guide](docs/architecture/application-composition-and-cqrs.md)), and `Sentinel.Ingestion` and `Sentinel.AgentWorker`, which still use Host projects until their refactoring steps; tests sit beside each service.
 - `packages/`: the only shared code ([ADR-007](docs/decisions/ADR-007-cross-service-code-and-provider-access.md)): `CleanArchitecture.BuildingBlocks` for results, messaging and persistence, `Sentinel.Contracts` for versioned messages, queries and views, and `Sentinel.ServiceDefaults` for hosting defaults. There is no shared domain package.
 - `reference-system/`: the system Sentinel is tested against ([ADR-011](docs/decisions/ADR-011-reference-system-location.md)): checkout, order and reporting services, the deploy controller, the observability stack configuration, scenarios `S0` to `S3`, runbooks and the deploy-blame baseline.
 - `deploy/local/`: the .NET Aspire AppHost that runs everything locally and the end-to-end suites.

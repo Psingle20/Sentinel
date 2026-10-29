@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Sentinel.Gateway.Infrastructure\Sentinel.Gateway.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\Sentinel.ServiceDefaults\src\Sentinel.ServiceDefaults\Sentinel.ServiceDefaults.csproj" />
+    </ItemGroup>
+
+</Project>

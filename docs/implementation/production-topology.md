@@ -9,7 +9,7 @@ apps/
 └── Sentinel.Web
 
 services/
-├── Sentinel.Api
+├── Sentinel.Gateway
 ├── Sentinel.Ingestion
 ├── Sentinel.Runtime
 ├── Sentinel.AgentWorker
@@ -30,7 +30,7 @@ This rule controls delivery order; it does not reduce architectural scope. The [
 
 | Deployable | Owns | Does not own |
 | --- | --- | --- |
-| `Sentinel.Api` | External HTTP/API boundary, identity and authorization, control-plane commands, incident queries, approval capture and attestation signing, live UI delivery | Telemetry normalization, authoritative incident state, model execution, privileged remediation, commands to Executor |
+| `Sentinel.Gateway` | External HTTP/API boundary, identity and authorization, control-plane commands, incident queries, approval capture and attestation signing, live UI delivery | Telemetry normalization, authoritative incident state, model execution, privileged remediation, commands to Executor |
 | `Sentinel.Ingestion` | Provider connections and credentials, canonical normalization, event-time metadata, checkpoints, deduplication, durable publication, read-only observation queries | Incident decisions, AI conclusions, remediation |
 | `Sentinel.Runtime` | Authoritative incident state, correlation, Orleans actors, durable workflows, evidence and hypotheses, consensus, projections, recovery verification | Provider credentials, direct model SDK use, privileged action execution |
 | `Sentinel.AgentWorker` | Meta model calls, typed read tools over the Ingestion query contract, specialist investigations, adversarial verification, structured findings | Authoritative incident writes, approvals, provider or production credentials, direct remediation |
@@ -41,7 +41,7 @@ This rule controls delivery order; it does not reduce architectural scope. The [
 
 ```text
 Sentinel.Web
-    -> Sentinel.Api
+    -> Sentinel.Gateway
         -> Sentinel.Runtime
 
 Sentinel.Ingestion
@@ -60,7 +60,7 @@ Sentinel.Runtime
 
 Sentinel.Web
     -> approve(plan hash)
-        -> Sentinel.Api (signs attestation)
+        -> Sentinel.Gateway (signs attestation)
             -> Sentinel.Runtime
                 -> execute(plan, attestation, fencing token)
                     -> Sentinel.Executor
@@ -69,7 +69,7 @@ Sentinel.Web
                             -> Sentinel.Runtime
                                 -> recovery verification
                                 -> projection/live update
-                                    -> Sentinel.Api -> Sentinel.Web
+                                    -> Sentinel.Gateway -> Sentinel.Web
 ```
 
 Approval, execution and recovery follow [ADR-006](../decisions/ADR-006-remediation-control-path.md). Provider access follows [ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md).
@@ -84,7 +84,7 @@ Long-running work crosses service boundaries asynchronously. Synchronous calls a
 - `Sentinel.Ingestion` owns provider checkpoints and delivery state.
 - `Sentinel.AgentWorker` owns execution metadata needed for model/tool auditing; accepted evidence becomes Runtime-owned state.
 - `Sentinel.Executor` owns policy/execution audit, capability consumption and adapter results.
-- `Sentinel.Api` owns control-plane configuration only where another service is not the authority; read views remain derived and rebuildable.
+- `Sentinel.Gateway` owns control-plane configuration only where another service is not the authority; read views remain derived and rebuildable.
 - Workflow-engine persistence ([ADR-005](../decisions/ADR-005-durable-workflow-engine.md)) belongs to that infrastructure; no Sentinel service reads it directly, and it never holds domain state ([ADR-004](../decisions/ADR-004-runtime-state-ownership.md)).
 
 ## Packages versus services
@@ -110,7 +110,7 @@ The first slice proves one controlled incident from observation to verified reco
 2. `Sentinel.Runtime` correlates them with one deployment and opens one incident.
 3. `Sentinel.AgentWorker` uses one Meta model, reading through the Ingestion query contract, to return attributable evidence and competing hypotheses.
 4. `Sentinel.Runtime` challenges the leader, records a decision and creates one typed rollback plan.
-5. `Sentinel.Web` retrieves the incident through `Sentinel.Api`; an operator approves the immutable plan, and Api sends a signed attestation to Runtime.
+5. `Sentinel.Web` retrieves the incident through `Sentinel.Gateway`; an operator approves the immutable plan, and Api sends a signed attestation to Runtime.
 6. `Sentinel.Runtime` sends the execute command to `Sentinel.Executor`, which validates policy, attestation and fencing, obtains start confirmation, runs one constrained rollback adapter and reports the result.
 7. `Sentinel.Runtime` verifies recovery from new observations and projects the final timeline back through the API to the UI.
 

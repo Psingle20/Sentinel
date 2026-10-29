@@ -62,8 +62,8 @@ void AddSentinel()
         .WithEndpoint(targetPort: 7233, name: "grpc", scheme: "tcp")
         .WaitFor(postgres);
 
-    IResourceBuilder<ProjectResource> executor = AddService<Projects.Sentinel_Executor_Host>("executor");
-    IResourceBuilder<ProjectResource> runtime = AddService<Projects.Sentinel_Runtime_Host>("runtime")
+    IResourceBuilder<ProjectResource> executor = AddService<Projects.Sentinel_Executor_Api>("executor-service", database: "executor");
+    IResourceBuilder<ProjectResource> runtime = AddService<Projects.Sentinel_Runtime_Api>("runtime-service", database: "runtime")
         .WithEnvironment("Runtime__Temporal__Address", ReferenceExpression.Create($"{temporal.GetEndpoint("grpc").Property(EndpointProperty.HostAndPort)}"))
         .WithReference(ingestion)
         .WithReference(executor)
@@ -71,41 +71,43 @@ void AddSentinel()
     IResourceBuilder<ProjectResource> agentworker = AddService<Projects.Sentinel_AgentWorker_Host>("agentworker")
         .WithReference(ingestion);
 
-    // Api reads incidents from Runtime and agent executions and replays from AgentWorker (Phase 07), and is the
+    // The gateway reads incidents from Runtime and agent executions and replays from AgentWorker (Phase 07), and is the
     // control plane's edge for Executor's policy and controls and Ingestion's sources (Phase 08).
-    IResourceBuilder<ProjectResource> api = AddService<Projects.Sentinel_Api_Host>("api")
+    IResourceBuilder<ProjectResource> gateway = AddService<Projects.Sentinel_Gateway_Api>("gateway-service", database: "api")
         .WithReference(runtime)
         .WithReference(agentworker)
         .WithReference(executor)
         .WithReference(ingestion);
 
     // Only Executor holds the privileged deploy token (ADR-006). It confirms starts with Runtime and
-    // verifies attestations with Api's published keys.
+    // verifies attestations with the gateway's published keys.
     executor
         .WithEnvironment("Executor__Adapters__DeployController__Token", reference.DeployToken)
         .WithEnvironment("Executor__Adapters__ReportingWorker__ControlToken", reference.ControlToken)
         .WithReference(reference.ReportingWorker)
         .WithReference(reference.DeployController)
         .WithReference(runtime)
-        .WithReference(api);
+        .WithReference(gateway);
 
-    // The web app talks only to Sentinel.Api. Run `npm ci` in apps/Sentinel.Web once; the AppHost does not install packages.
+    // The web app talks only to Sentinel.Gateway. Run `npm ci` in apps/Sentinel.Web once; the AppHost does not install packages.
     // Uses the stable JavaScript API; AddNextJsApp is still experimental (ASPIREJAVASCRIPT001).
     builder.AddJavaScriptApp("web", "../../../apps/Sentinel.Web", "dev")
         .WithNpm(install: false)
         .WithHttpEndpoint(env: "PORT")
-        .WithReference(api)
-        .WaitFor(api);
+        .WithReference(gateway)
+        .WaitFor(gateway);
 
     // Each service gets its own database on the shared server (ADR-009) and the messaging Redis (ADR-008).
-    IResourceBuilder<ProjectResource> AddService<TProject>(string name)
+    // Database names are durable identities and do not follow a service's resource name (ADR-020).
+    IResourceBuilder<ProjectResource> AddService<TProject>(string name, string? database = null)
         where TProject : IProjectMetadata, new()
     {
-        IResourceBuilder<PostgresDatabaseResource> database = postgres.AddDatabase($"{name}-db", name);
+        string databaseName = database ?? name;
+        IResourceBuilder<PostgresDatabaseResource> store = postgres.AddDatabase($"{databaseName}-db", databaseName);
 
         return builder.AddProject<TProject>(name)
-            .WithReference(database)
-            .WaitFor(database)
+            .WithReference(store)
+            .WaitFor(store)
             .WithReference(messaging)
             .WaitFor(messaging)
             .WithHttpHealthCheck(ReadinessPath);

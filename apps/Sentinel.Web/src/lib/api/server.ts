@@ -38,9 +38,9 @@ export class ApiError extends Error {
 export class ApiUnavailableError extends Error {}
 
 function baseUrl(): string {
-  const url = process.env.services__api__http__0 ?? process.env.SENTINEL_API_URL;
+  const url = process.env["services__gateway-service__http__0"] ?? process.env.SENTINEL_API_URL;
   if (!url) {
-    throw new ApiUnavailableError("Sentinel.Api's address is not configured (services__api__http__0 or SENTINEL_API_URL).");
+    throw new ApiUnavailableError("Sentinel.Gateway's address is not configured (services__gateway-service__http__0 or SENTINEL_API_URL).");
   }
   return url.replace(/\/$/, "");
 }

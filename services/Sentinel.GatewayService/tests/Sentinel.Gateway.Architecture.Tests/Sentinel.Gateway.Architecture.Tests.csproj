@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);S2699</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NetArchTest.Rules" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Sentinel.Gateway.Domain\Sentinel.Gateway.Domain.csproj" />
+        <ProjectReference Include="..\..\src\Sentinel.Gateway.Application\Sentinel.Gateway.Application.csproj" />
+        <ProjectReference Include="..\..\src\Sentinel.Gateway.Infrastructure\Sentinel.Gateway.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\src\Sentinel.Gateway.Api\Sentinel.Gateway.Api.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>

@@ -1,6 +1,6 @@
 # ADR-001: Production-first five-service topology
 
-- Status: Accepted
+- Status: Accepted; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-25
 
 ## Context
@@ -27,7 +27,7 @@ At the same time, creating many narrow services would spend the early delivery w
 
 Use five backend services from the start:
 
-- `Sentinel.Api`
+- `Sentinel.Gateway`
 - `Sentinel.Ingestion`
 - `Sentinel.Runtime`
 - `Sentinel.AgentWorker`

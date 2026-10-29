@@ -1,6 +1,6 @@
 # ADR-007: Cross-service code and provider access
 
-- Status: Accepted; amended by [ADR-010](ADR-010-local-orchestration.md) on 2026-10-28
+- Status: Accepted; amended by [ADR-010](ADR-010-local-orchestration.md) on 2026-10-28; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-27
 
 ## Context
@@ -41,7 +41,7 @@ Use option 2. `Sentinel.Domain` is removed from `packages/`.
 | --- | --- |
 | `Sentinel.Runtime` | Incidents, investigations, evidence acceptance, hypotheses, decisions, plan lifecycle and recovery |
 | `Sentinel.Executor` | Policy, capabilities, execution, compensation and action verification |
-| `Sentinel.Api` | Control-plane configuration: tenants, environments, catalog, SLO definitions, approvals and identity |
+| `Sentinel.Gateway` | Control-plane configuration: tenants, environments, catalog, SLO definitions, approvals and identity |
 | `Sentinel.Ingestion` | Provider connections, checkpoints, normalization and observation queries |
 | `Sentinel.AgentWorker` | Agent executions, tool calls and model metadata |
 
@@ -62,7 +62,7 @@ Provider and model interfaces stay inside their owning services until multiple c
 | --- | --- |
 | Log, metric, trace, topology, alert, deployment and knowledge providers | `Sentinel.Ingestion` |
 | Remediation providers (adapters) | `Sentinel.Executor` |
-| Notification providers | `Sentinel.Api` |
+| Notification providers | `Sentinel.Gateway` |
 | `IModelProvider` | `Sentinel.AgentWorker` |
 
 ### Provider read access
@@ -75,7 +75,7 @@ Use option 3.
 - Queries are typed. Models cannot generate arbitrary vendor queries.
 - `Sentinel.AgentWorker` read tools and `Sentinel.Runtime` recovery verification use this contract. AgentWorker holds no provider credentials.
 - AgentWorker records tool-call inputs and the canonical results it received, including the response metadata below, in its execution metadata. This supports investigation replay (Phase 07, level 2).
-- Remediation adapters and their privileged credentials remain in `Sentinel.Executor`. Notification adapters remain in `Sentinel.Api`.
+- Remediation adapters and their privileged credentials remain in `Sentinel.Executor`. Notification adapters remain in `Sentinel.Gateway`.
 
 Every query response carries metadata alongside its values:
 
