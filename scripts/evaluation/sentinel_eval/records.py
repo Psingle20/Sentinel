@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 
 _EARLIEST = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -109,4 +110,21 @@ def latest_per_scenario(runs: list[Run]) -> dict[str, Run]:
         key = (run.schema_version, run.recorded_at or _EARLIEST)
         if current is None or key > (current.schema_version, current.recorded_at or _EARLIEST):
             chosen[run.scenario_id] = run
+    return chosen
+
+
+def latest_runs(runs: list[Run], label: Callable[[Run], str]) -> dict[tuple[str, str], Run]:
+    """The newest run of each scenario for each investigator, so a live model's run is scored beside the test double's.
+
+    A legacy record counts only for a scenario no current-schema run covers, whatever investigator made it.
+    """
+    covered = {run.scenario_id for run in runs if not run.legacy}
+    chosen: dict[tuple[str, str], Run] = {}
+    for run in runs:
+        if run.legacy and run.scenario_id in covered:
+            continue
+        key = (run.scenario_id, label(run))
+        current = chosen.get(key)
+        if current is None or (run.recorded_at or _EARLIEST) > (current.recorded_at or _EARLIEST):
+            chosen[key] = run
     return chosen

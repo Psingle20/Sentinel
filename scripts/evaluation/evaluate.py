@@ -16,9 +16,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from sentinel_eval.packages import load_packages  # noqa: E402
-from sentinel_eval.records import latest_per_scenario, load_runs  # noqa: E402
+from sentinel_eval.records import latest_per_scenario, latest_runs, load_runs  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render, to_json  # noqa: E402
-from sentinel_eval.scoring import BASELINE, score_baseline, score_sentinel  # noqa: E402
+from sentinel_eval.scoring import BASELINE, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -39,22 +39,24 @@ def main(argv: list[str] | None = None) -> int:
     excluded = {item["scenario"] for item in dataset.get("exclusions", [])}
     packages = {key: package for key, package in load_packages(args.packages).items() if key in dataset["packages"] and key not in excluded}
 
-    runs = latest_per_scenario([run for run in load_runs(args.runs, args.legacy) if run.scenario_id in packages])
-    scores = []
-    for scenario_id, run in sorted(runs.items()):
-        package = packages[scenario_id]
-        if run.package_version is not None and run.package_version != package.version:
-            print(f"{scenario_id}: run recorded against package v{run.package_version}, current is v{package.version}; not scored", file=sys.stderr)
-            continue
-        scores.append(score_sentinel(run, package, pricing))
-        scores.append(score_baseline(run, package))
+    loaded = [run for run in load_runs(args.runs, args.legacy) if run.scenario_id in packages]
+    current = [run for run in loaded if run.package_version is None or run.package_version == packages[run.scenario_id].version]
+    for run in loaded:
+        if run not in current:
+            print(f"{run.scenario_id}: run recorded against package v{run.package_version}, current is v{packages[run.scenario_id].version}; not scored", file=sys.stderr)
+
+    # Each investigator's newest run of each scenario is scored; the deploy-blame baseline, which runs in shadow beside
+    # every investigation, is scored once per scenario, from that scenario's newest run.
+    runs = latest_runs(current, sentinel_label)
+    scores = [score_sentinel(run, packages[scenario_id], pricing) for (scenario_id, _), run in sorted(runs.items())]
+    scores += [score_baseline(run, packages[scenario_id]) for scenario_id, run in sorted(latest_per_scenario(list(runs.values())).items())]
 
     labels = sorted({score.label for score in scores if score.investigator != BASELINE})
     candidates = [aggregate(label, [score for score in scores if score.label == label]) for label in labels]
     baseline = aggregate(BASELINE, [score for score in scores if score.investigator == BASELINE])
     groups = [*candidates, baseline]
     gates = [gate(candidate, baseline) for candidate in candidates]
-    missing = sorted(set(packages) - set(runs))
+    missing = sorted(set(packages) - {scenario_id for scenario_id, _ in runs})
 
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "report.md").write_text(render(dataset, packages, scores, groups, gates, missing), encoding="utf-8")

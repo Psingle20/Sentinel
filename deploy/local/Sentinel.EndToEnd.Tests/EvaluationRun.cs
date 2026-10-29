@@ -44,7 +44,9 @@ public static class EvaluationRun
 
         string directory = Path.Combine(ProjectRoot(), "artifacts", "reports", "evaluation", "runs");
         Directory.CreateDirectory(directory);
-        await File.WriteAllTextAsync(Path.Combine(directory, $"{packageId}.json"), record.ToJsonString(Indented) + "\n");
+        // A live model's run sits beside the test double's instead of replacing it; the harness scores each model as its own group.
+        string name = SentinelSystem.ModelProvider == SentinelSystem.TestDouble ? packageId : $"{packageId}.{SentinelSystem.ModelProvider}";
+        await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.json"), record.ToJsonString(Indented) + "\n");
     }
 
     /// <summary>A scenario package from reference-system/scenarios/packages.</summary>

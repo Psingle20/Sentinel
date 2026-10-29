@@ -16,7 +16,7 @@ sys.path.insert(0, str(HERE.parent))
 
 import evaluate  # noqa: E402
 from sentinel_eval.packages import PackageError, load_package, load_packages  # noqa: E402
-from sentinel_eval.records import Run, latest_per_scenario, load_v1, parse_time  # noqa: E402
+from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, parse_time  # noqa: E402
 from sentinel_eval.report import aggregate, gate  # noqa: E402
 from sentinel_eval.scoring import classify_observation, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
@@ -242,6 +242,22 @@ class RecordTests(unittest.TestCase):
         current = run("S1", None, recorded="2026-10-28T09:00:00+00:00")
         legacy = run("S1", None, schema=1, recorded="2026-10-29T09:00:00+00:00")
         self.assertIs(latest_per_scenario([legacy, current])["S1"], current)
+
+    def test_a_live_run_is_kept_beside_the_test_doubles_and_each_keeps_its_newest(self):
+        double_old = run("S1", None, recorded="2026-10-28T09:00:00+00:00")
+        double_new = run("S1", None, recorded="2026-10-29T09:00:00+00:00")
+        live = run("S1", None, recorded="2026-10-28T12:00:00+00:00")
+        labels = {id(double_old): "double", id(double_new): "double", id(live): "live"}
+        chosen = latest_runs([double_old, live, double_new], lambda item: labels[id(item)])
+        self.assertEqual(sorted(chosen), [("S1", "double"), ("S1", "live")])
+        self.assertIs(chosen[("S1", "double")], double_new)
+        self.assertIs(chosen[("S1", "live")], live)
+
+    def test_a_legacy_record_yields_to_a_current_run_of_any_investigator(self):
+        legacy = run("S2", None, schema=1, recorded="2026-10-29T09:00:00+00:00")
+        current = run("S2", None, recorded="2026-10-28T09:00:00+00:00")
+        labels = {id(legacy): "legacy-double", id(current): "live"}
+        self.assertEqual(list(latest_runs([legacy, current], lambda item: labels[id(item)]).values()), [current])
 
 
 class GateTests(unittest.TestCase):

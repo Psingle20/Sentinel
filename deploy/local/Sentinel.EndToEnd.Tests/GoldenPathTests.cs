@@ -35,8 +35,19 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         ScenarioRunView run = await system.StartScenarioAsync("S1");
         try
         {
-            IncidentDetail incident = await system.WaitForIncidentAsync(detail => detail.Summary.Status == IncidentStatus.AwaitingApproval, DetectionTimeout, "S1 awaits approval");
+            IncidentDetail incident = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "S1 is decided");
             Log(incident);
+            if (incident.Summary.Status == IncidentStatus.Escalated)
+            {
+                // A live model can abstain or blame the wrong change; that run is the one most worth scoring, so it is
+                // recorded before the assertions below fail it.
+                await EvaluationRun.WriteAsync(system, "S1", incident, approved: false);
+            }
+
+            incident.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
 
             incident.Decision!.Outcome.ShouldBe(DecisionOutcome.Diagnosed);
             incident.Decision.Checks.ShouldAllBe(check => check.Passed);

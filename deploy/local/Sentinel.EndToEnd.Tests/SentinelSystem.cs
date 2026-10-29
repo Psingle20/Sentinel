@@ -18,6 +18,8 @@ namespace Sentinel.EndToEnd.Tests;
 /// </summary>
 public class SentinelSystem : IAsyncLifetime
 {
+    public const string TestDouble = "test-double";
+
     public static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(6);
 
     /// <summary>
@@ -25,7 +27,7 @@ public class SentinelSystem : IAsyncLifetime
     /// when a live model is configured in user secrets. SENTINEL_E2E_MODEL_PROVIDER names another provider for every
     /// role, for example <c>meta</c>, or <c>configured</c> to use AgentWorker's own configuration with its routing.
     /// </summary>
-    public static readonly string ModelProvider = Environment.GetEnvironmentVariable("SENTINEL_E2E_MODEL_PROVIDER") is { Length: > 0 } configured ? configured : "test-double";
+    public static readonly string ModelProvider = Environment.GetEnvironmentVariable("SENTINEL_E2E_MODEL_PROVIDER") is { Length: > 0 } configured ? configured : TestDouble;
 
     private const string ConfiguredModels = "configured";
 
