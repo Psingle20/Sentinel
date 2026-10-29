@@ -30,9 +30,70 @@
       "agentExecutionId": "0192f0c4-0000-7000-8000-000000000009",
       "outcome": "completed",
       "model": { "provider": "sentinel-test-double", "model": "deterministic-analyst", "modelVersion": "1", "promptVersion": "investigator-v1" },
-      "completedAt": "2026-10-28T09:07:30+00:00"
+      "completedAt": "2026-10-28T09:07:30+00:00",
+      "role": "metrics"
+    },
+    {
+      "investigationId": "0192f0c4-0000-7000-8000-00000000000b",
+      "requestedAt": "2026-10-28T09:07:30+00:00",
+      "agentExecutionId": "0192f0c4-0000-7000-8000-00000000000c",
+      "outcome": "completed",
+      "model": { "provider": "sentinel", "model": "adversarial-verifier", "promptVersion": "falsifiers-v1" },
+      "completedAt": "2026-10-28T09:07:31+00:00",
+      "role": "verifier"
     }
   ],
+  "affectedServices": ["checkout-service"],
+  "changes": [
+    {
+      "deploymentId": "0192f0c4-0000-7000-8000-0000000000d1",
+      "serviceId": "checkout-service",
+      "changeKind": "deployment",
+      "version": "v2.4.1",
+      "previousVersion": "v2.4.0",
+      "startedAt": "2026-10-28T09:03:00+00:00",
+      "servingFrom": "2026-10-28T09:03:20+00:00",
+      "failed": false,
+      "score": 0.92,
+      "reasons": ["same service", "served 40 s before onset"],
+      "observationIds": ["deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:started"]
+    }
+  ],
+  "challenges": [
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+      "falsifier": "change-serving-before-onset",
+      "verdict": "survived",
+      "detail": "v2.4.1 served from 09:03:20, before symptom onset at 09:04:00.",
+      "evidenceIds": ["0192f0c4-0000-7000-8000-000000000006"],
+      "investigationId": "0192f0c4-0000-7000-8000-00000000000b"
+    },
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+      "falsifier": "load-rose-before-onset",
+      "verdict": "falsified",
+      "detail": "Request rate on checkout-service stayed flat before symptoms began.",
+      "evidenceIds": [],
+      "investigationId": "0192f0c4-0000-7000-8000-00000000000b"
+    }
+  ],
+  "causalGraph": {
+    "nodes": [
+      { "id": "change:0192f0c4-0000-7000-8000-0000000000d1", "kind": "change", "label": "checkout-service deploy v2.4.1" },
+      { "id": "service:checkout-service", "kind": "service", "label": "checkout-service" },
+      { "id": "hypothesis:0192f0c4-0000-7000-8000-000000000003", "kind": "hypothesis", "label": "The v2.4.1 deployment leaks Redis connections" },
+      { "id": "hypothesis:0192f0c4-0000-7000-8000-000000000004", "kind": "hypothesis", "label": "A change in load caused the symptoms" },
+      { "id": "evidence:0192f0c4-0000-7000-8000-000000000005", "kind": "evidence", "label": "Redis connections rose from 4 to 186" },
+      { "id": "symptom", "kind": "symptom", "label": "checkout-service slo_burn_rate at 14.8" }
+    ],
+    "edges": [
+      { "from": "change:0192f0c4-0000-7000-8000-0000000000d1", "to": "service:checkout-service", "relation": "changed" },
+      { "from": "hypothesis:0192f0c4-0000-7000-8000-000000000003", "to": "change:0192f0c4-0000-7000-8000-0000000000d1", "relation": "blames" },
+      { "from": "evidence:0192f0c4-0000-7000-8000-000000000005", "to": "hypothesis:0192f0c4-0000-7000-8000-000000000003", "relation": "supports" },
+      { "from": "hypothesis:0192f0c4-0000-7000-8000-000000000003", "to": "symptom", "relation": "explains" },
+      { "from": "hypothesis:0192f0c4-0000-7000-8000-000000000004", "to": "symptom", "relation": "explains" }
+    ]
+  },
   "evidence": [
     {
       "finding": {
@@ -105,7 +166,13 @@
       { "name": "cause-precedes-symptom-onset", "passed": true, "detail": "checkout-service v2.4.1 served from 2026-10-28T09:03:20Z, before symptom onset at 2026-10-28T09:04:00Z." },
       { "name": "support-cites-two-observations", "passed": true, "detail": "Supporting evidence cites 4 distinct observation(s); 2 are required." }
     ],
-    "decidedAt": "2026-10-28T09:07:30+00:00"
+    "decidedAt": "2026-10-28T09:07:30+00:00",
+    "assessments": [
+      { "hypothesisId": "0192f0c4-0000-7000-8000-000000000003", "score": 1.15, "independentSupport": 2, "independentContradiction": 0, "eliminated": false, "reason": "Stands." },
+      { "hypothesisId": "0192f0c4-0000-7000-8000-000000000004", "score": -0.4, "independentSupport": 0, "independentContradiction": 1, "eliminated": true, "reason": "Falsified: load did not rise before symptoms began." }
+    ],
+    "algorithmVersion": "consensus-v1",
+    "inputsHash": "sha256:1d4f7a2c9e0b3d6f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0e3b6d9f2a5c8e1b4d7f"
   },
   "plan": {
     "plan": {
@@ -118,7 +185,11 @@
       ],
       "expectedRecovery": [{ "serviceId": "checkout-service", "metricName": "slo_burn_rate", "comparison": "lessThan", "threshold": 1 }],
       "observationWindow": "00:01:30",
-      "risk": "medium"
+      "risk": "medium",
+      "preconditions": [{ "serviceId": "checkout-service", "check": "serving-revision", "expected": "v2.4.1" }],
+      "expectedEffect": "checkout-service serves v2.4.0 again, and its recovery signals return within 90 s.",
+      "blastRadius": ["checkout-service"],
+      "compensation": "None automatic: undoing the rollback would redeploy v2.4.1, which is a human decision."
     },
     "policyEvaluation": {
       "decision": "approvalRequired",

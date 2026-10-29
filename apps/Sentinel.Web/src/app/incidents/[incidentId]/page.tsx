@@ -4,9 +4,10 @@ import { Suspense } from "react";
 import { AppShell } from "@/design-system/patterns/app-shell";
 import { DataState } from "@/design-system/patterns/data-state";
 import { PageHeader } from "@/design-system/patterns/page-header";
-import { AutoRefresh } from "@/features/incidents/auto-refresh";
+import { LiveUpdates } from "@/features/incidents/live-updates";
 import { IncidentDetailView, IncidentHeaderBadges } from "@/features/incidents/incident-detail";
-import { getIncident } from "@/lib/api/server";
+import type { AgentExecution, SimilarIncident } from "@/lib/api/contracts";
+import { getAgentExecutions, getIncident, getSimilarIncidents } from "@/lib/api/server";
 
 export default function IncidentPage({ params }: PageProps<"/incidents/[incidentId]">) {
   return (
@@ -30,18 +31,24 @@ async function Incident({ params }: { params: Promise<{ incidentId: string }> })
   try {
     incident = await getIncident(incidentId);
   } catch {
-    return <DataState kind="error" title="This incident is unavailable" description="Sentinel.Api cannot be reached. The page refreshes automatically." />;
+    return <DataState kind="error" title="This incident is unavailable" description="Sentinel.Api cannot be reached. The page updates once it is back." />;
   }
 
   if (!incident) {
     return <DataState kind="empty" title="Incident not found" description="It may belong to another tenant or environment." />;
   }
 
+  // The side panels degrade on their own: an unavailable AgentWorker or memory never hides the incident.
+  const [executions, similar] = await Promise.all([
+    getAgentExecutions(incidentId).catch((): AgentExecution[] | null => null),
+    getSimilarIncidents(incidentId).catch((): SimilarIncident[] | null => null),
+  ]);
+
   return (
     <>
-      <PageHeader title={incident.summary.title} actions={<AutoRefresh />} />
+      <PageHeader title={incident.summary.title} actions={<LiveUpdates incidentId={incident.summary.incidentId} />} />
       <IncidentHeaderBadges incident={incident} />
-      <IncidentDetailView incident={incident} />
+      <IncidentDetailView incident={incident} executions={executions} similar={similar} />
     </>
   );
 }

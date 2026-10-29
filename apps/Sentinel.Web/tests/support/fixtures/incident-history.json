@@ -1,0 +1,128 @@
+{
+  "agentExecutions": [
+    {
+      "agentExecutionId": "0192f0c4-0000-7000-8000-000000000009",
+      "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "investigator": "model",
+      "shadow": false,
+      "modelProvider": "sentinel-test-double",
+      "model": "deterministic-analyst",
+      "modelVersion": "1",
+      "promptVersion": "investigator-v3/metrics",
+      "result": "completed",
+      "toolCalls": [
+        { "toolCallId": "call_redis_connections", "toolName": "query_metric", "startedAt": "2026-10-28T09:05:01+00:00", "duration": "00:00:00.4200000" },
+        { "toolCallId": "call_deployments", "toolName": "list_changes", "startedAt": "2026-10-28T09:05:02+00:00", "duration": "00:00:00.1800000" }
+      ],
+      "modelCalls": 3,
+      "inputTokens": 4120,
+      "outputTokens": 866,
+      "schemaFailures": 0,
+      "startedAt": "2026-10-28T09:05:00+00:00",
+      "completedAt": "2026-10-28T09:05:03.2+00:00"
+    },
+    {
+      "agentExecutionId": "0192f0c4-0000-7000-8000-00000000000c",
+      "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+      "investigationId": "0192f0c4-0000-7000-8000-00000000000b",
+      "investigator": "adversarial-verifier",
+      "shadow": false,
+      "modelProvider": "sentinel",
+      "model": "adversarial-verifier",
+      "promptVersion": "falsifiers-v1",
+      "result": "completed",
+      "toolCalls": [{ "toolCallId": "call_falsify_load", "toolName": "query_metric", "startedAt": "2026-10-28T09:07:30+00:00", "duration": "00:00:00.3100000" }],
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "schemaFailures": 0,
+      "startedAt": "2026-10-28T09:07:30+00:00",
+      "completedAt": "2026-10-28T09:07:31.1+00:00"
+    },
+    {
+      "agentExecutionId": "0192f0c4-0000-7000-8000-00000000000d",
+      "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+      "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+      "investigator": "deploy-blame",
+      "shadow": true,
+      "modelProvider": "sentinel",
+      "model": "deploy-blame",
+      "promptVersion": "deploy-blame-v1",
+      "result": "completed",
+      "toolCalls": [{ "toolCallId": "call_baseline_changes", "toolName": "list_changes", "startedAt": "2026-10-28T09:05:00+00:00", "duration": "00:00:00.1200000" }],
+      "modelCalls": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "schemaFailures": 0,
+      "startedAt": "2026-10-28T09:05:00+00:00",
+      "completedAt": "2026-10-28T09:05:00.2+00:00"
+    }
+  ],
+  "similar": [
+    {
+      "incidentId": "0192f0c4-0000-7000-8000-0000000000f1",
+      "similarity": 0.81,
+      "sharedFeatures": ["service:checkout-service", "symptom:slo_burn_rate", "change-kind:deployment"],
+      "causeKey": "change:0192f0c4-0000-7000-8000-0000000000e1",
+      "causeStatement": "A checkout-service deployment exhausted its Redis connection pool.",
+      "outcome": "resolved",
+      "recordedAt": "2026-10-14T16:20:00+00:00"
+    }
+  ],
+  "postmortem": {
+    "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+    "title": "checkout-service slo_burn_rate at 14.8",
+    "status": "awaitingApproval",
+    "streamVersion": 6,
+    "generatedAt": "2026-10-28T09:08:00+00:00",
+    "summary": {
+      "text": "checkout-service burned its SLO after the v2.4.1 deployment; Sentinel diagnosed a Redis connection leak and proposed a rollback that awaits approval.",
+      "sources": [
+        { "kind": "event", "ref": "1" },
+        { "kind": "decision", "ref": "0192f0c4-0000-7000-8000-000000000008" }
+      ]
+    },
+    "timeline": [
+      { "text": "checkout-service slo_burn_rate at 14.8; 1 recent change(s) correlated.", "at": "2026-10-28T09:05:00+00:00", "sources": [{ "kind": "event", "ref": "1" }] },
+      { "text": "Plan v1 proposed for checkout-service; policy static-2026.10.1: ApprovalRequired.", "at": "2026-10-28T09:07:36+00:00", "sources": [{ "kind": "event", "ref": "5" }] }
+    ],
+    "evidence": [
+      {
+        "text": "Supports: checkout-service Redis connections rose from 4 to 186.",
+        "at": "2026-10-28T09:03:30+00:00",
+        "sources": [
+          { "kind": "evidence", "ref": "0192f0c4-0000-7000-8000-000000000005" },
+          { "kind": "observation", "ref": "prometheus:redis_connections:checkout-service:1793178210" }
+        ]
+      }
+    ],
+    "decision": [
+      {
+        "text": "Diagnosed by consensus-v1 at confidence 0.72 with evidence completeness 1.00: the checkout-service v2.4.1 deployment introduced a Redis connection leak.",
+        "at": "2026-10-28T09:07:30+00:00",
+        "sources": [{ "kind": "decision", "ref": "0192f0c4-0000-7000-8000-000000000008" }]
+      },
+      {
+        "text": "Eliminated: a change in load on checkout-service. Request rate stayed flat before symptoms began.",
+        "sources": [{ "kind": "hypothesis", "ref": "0192f0c4-0000-7000-8000-000000000004" }]
+      }
+    ],
+    "actions": [
+      {
+        "text": "Plan v1: roll back checkout-service from v2.4.1 to v2.4.0. Policy static-2026.10.1 requires approval.",
+        "at": "2026-10-28T09:07:36+00:00",
+        "sources": [{ "kind": "plan", "ref": "0192f0c4-0000-7000-8000-000000000006" }]
+      }
+    ],
+    "recovery": [],
+    "openQuestions": [],
+    "versions": {
+      "schemaVersion": 1,
+      "decisionAlgorithm": "consensus-v1",
+      "models": [{ "provider": "sentinel-test-double", "model": "deterministic-analyst", "modelVersion": "1", "promptVersion": "investigator-v3/metrics" }],
+      "toolCatalogVersions": ["tools-v2"],
+      "policyVersion": "static-2026.10.1"
+    }
+  }
+}

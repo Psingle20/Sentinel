@@ -1,20 +1,27 @@
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { AppShell } from "@/design-system/patterns/app-shell";
 import { DataState } from "@/design-system/patterns/data-state";
 import { PageHeader } from "@/design-system/patterns/page-header";
-import { AutoRefresh } from "@/features/incidents/auto-refresh";
+import { LiveUpdates } from "@/features/incidents/live-updates";
 import { IncidentTable } from "@/features/incidents/incident-table";
 import type { IncidentSummary } from "@/lib/api/contracts";
 import { ApiUnavailableError, listIncidents } from "@/lib/api/server";
 
 export default function IncidentsPage() {
   return (
-    <AppShell>
+    <AppShell
+      navigation={
+        <Link href="/admin" className="text-sm text-text-muted hover:text-text-primary focus-visible:text-text-primary">
+          Control plane
+        </Link>
+      }
+    >
       <PageHeader
         title="Incidents"
         description="Correlated incidents across monitored services."
-        actions={<AutoRefresh />}
+        actions={<LiveUpdates />}
       />
       <Suspense fallback={<DataState kind="loading" title="Loading incidents" />}>
         <Incidents />
@@ -33,7 +40,7 @@ async function Incidents() {
       <DataState
         kind="error"
         title="Incidents are unavailable"
-        description={unreachable ? "Sentinel.Api cannot be reached. The list refreshes automatically." : "Sentinel.Api returned an error."}
+        description={unreachable ? "Sentinel.Api cannot be reached. The list updates once it is back." : "Sentinel.Api returned an error."}
       />
     );
   }

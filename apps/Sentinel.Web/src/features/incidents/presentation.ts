@@ -4,7 +4,8 @@ import type { RecoveryStatus } from "@/design-system/domain/recovery-state";
 import type {
   ExecutionOutcome,
   IncidentStatus,
-  PlanStatus,
+  PlanView,
+  PolicyEvaluation,
   RecoveryCriterion,
   RecoveryOutcome,
   RemediationAction,
@@ -16,20 +17,33 @@ export function incidentStatus(status: IncidentStatus): BadgeIncidentStatus {
   return status === "awaitingApproval" ? "awaiting-approval" : status;
 }
 
-export function approvalStatus(status: PlanStatus): ApprovalStatus {
-  switch (status) {
+export function approvalStatus(view: Pick<PlanView, "status" | "approvedBy">): ApprovalStatus {
+  switch (view.status) {
     case "awaitingApproval":
       return "required";
     case "rejected":
       return "rejected";
     case "suggestionOnly":
+      return "suggestion-only";
     case "denied":
-      return "not-required";
+      return "denied";
     case "superseded":
       return "expired";
     default:
-      return "approved";
+      // Approved, executing or done: a person approved it, or policy let it run without approval.
+      return view.approvedBy ? "approved" : "not-required";
   }
+}
+
+const policyVerdicts: Record<PolicyEvaluation["decision"], string> = {
+  allow: "allows it without approval",
+  approvalRequired: "requires approval",
+  suggestionOnly: "allows only a suggestion, which a person carries out",
+  deny: "denies it",
+};
+
+export function policyVerdict(decision: PolicyEvaluation["decision"]): string {
+  return policyVerdicts[decision];
 }
 
 export function recoveryStatus(outcome: RecoveryOutcome): RecoveryStatus {
@@ -51,7 +65,9 @@ export function executionLabel(outcome: ExecutionOutcome | undefined): string {
 }
 
 export function describeAction(action: RemediationAction): string {
-  return `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
+  return action.kind === "pause-batch"
+    ? `Pause the ${action.targetServiceId} batch`
+    : `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
 }
 
 const comparisons: Record<RecoveryCriterion["comparison"], string> = {

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { ApiError, ApiUnavailableError, approvePlan, rejectPlan } from "@/lib/api/server";
+import type { DomainReplayResult } from "@/lib/api/contracts";
+import { ApiError, ApiUnavailableError, approvePlan, rejectPlan, replayDomain, revokePlan, saveNarrative } from "@/lib/api/server";
 
 export type DecisionState = { status: "idle" | "done" | "error"; message?: string };
 
@@ -29,6 +30,51 @@ export async function reject(_previous: DecisionState, form: FormData): Promise<
     await rejectPlan(incidentId, String(form.get("planId")), Number(form.get("planVersion")), reason);
     revalidatePath(`/incidents/${incidentId}`);
     return { status: "done", message: "Rejected. The incident is escalated to responders." };
+  } catch (error) {
+    return { status: "error", message: describe(error) };
+  }
+}
+
+// Withdraws an approval before execution starts (Phase 06); Runtime refuses once the start is confirmed.
+export async function revoke(_previous: DecisionState, form: FormData): Promise<DecisionState> {
+  const incidentId = String(form.get("incidentId"));
+  const reason = String(form.get("reason") ?? "").trim();
+  if (!reason) {
+    return { status: "error", message: "Give a reason for revoking the approval." };
+  }
+
+  try {
+    await revokePlan(incidentId, String(form.get("planId")), Number(form.get("planVersion")), reason);
+    revalidatePath(`/incidents/${incidentId}`);
+    return { status: "done", message: "Approval revoked. Nothing will execute; the incident is escalated to responders." };
+  } catch (error) {
+    return { status: "error", message: describe(error) };
+  }
+}
+
+export type NarrativeState = DecisionState & { version?: number };
+
+// Saves the postmortem narrative over the version the editor started from; a newer save wins and this one is refused.
+export async function saveNarrativeAction(previous: NarrativeState, form: FormData): Promise<NarrativeState> {
+  const incidentId = String(form.get("incidentId"));
+  const expectedVersion = previous.version ?? Number(form.get("expectedVersion"));
+  try {
+    const saved = await saveNarrative(incidentId, String(form.get("markdown") ?? ""), expectedVersion);
+    revalidatePath(`/incidents/${incidentId}/postmortem`);
+    return { status: "done", message: `Saved as version ${saved.version}.`, version: saved.version };
+  } catch (error) {
+    return { status: "error", message: describe(error), version: expectedVersion };
+  }
+}
+
+export type ReplayState = DecisionState & { result?: DomainReplayResult };
+
+export async function replayAction(_previous: ReplayState, form: FormData): Promise<ReplayState> {
+  try {
+    const result = await replayDomain(String(form.get("incidentId")));
+    const decisionsMatch = (result.decisions ?? []).every((decision) => decision.matches);
+    const verdict = result.stateStable && result.projectionMatches && decisionsMatch ? "reproduced exactly" : "differs from what is stored";
+    return { status: "done", message: `Replayed ${result.eventCount} events: the incident ${verdict}.`, result };
   } catch (error) {
     return { status: "error", message: describe(error) };
   }

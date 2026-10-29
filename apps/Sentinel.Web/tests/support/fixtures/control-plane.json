@@ -1,0 +1,34 @@
+{
+  "policy": {
+    "version": "policy-2026.10.2",
+    "defaultMode": "ApprovalRequired",
+    "environmentModes": { "reference": "ApprovalRequired" },
+    "rules": [
+      {
+        "id": "rollback.reference-services",
+        "action": "rollback",
+        "environments": ["reference"],
+        "targets": ["checkout-service", "order-service"],
+        "maxRisk": "medium",
+        "minConfidence": 0.5,
+        "maxBlastRadius": 2,
+        "grants": "ApprovalRequired"
+      },
+      {
+        "id": "pause-batch.reporting-worker",
+        "action": "pause-batch",
+        "environments": ["reference"],
+        "targets": ["reporting-worker"],
+        "maxRisk": "low",
+        "minConfidence": 0.5,
+        "maxBlastRadius": 1,
+        "grants": "SuggestionOnly"
+      }
+    ],
+    "freezes": []
+  },
+  "sources": [
+    { "sourceId": "prometheus-reference", "provider": "prometheus", "watermark": "2026-10-28T09:07:30+00:00", "health": "Healthy" },
+    { "sourceId": "loki-reference", "provider": "loki", "watermark": "2026-10-28T09:06:50+00:00", "health": "Degraded" }
+  ]
+}
