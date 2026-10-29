@@ -16,9 +16,7 @@ internal static class ApprovalMapping
             incident.Summary.TenantId,
             incident.Summary.EnvironmentId,
             incident.Summary.IncidentId,
-            incident.Plan is { } plan
-                ? new CurrentPlan(plan.Plan.PlanId, plan.Plan.PlanVersion, plan.Plan.PlanHash, RemediationPlanHash.Matches(plan.Plan), plan.Status.ToString(), plan.Status == PlanStatus.AwaitingApproval)
-                : null,
+            Current(incident.Plan),
             incident.Summary.Status == IncidentStatus.AwaitingApproval,
             incident.Execution?.StartedAt is not null);
 
@@ -28,4 +26,8 @@ internal static class ApprovalMapping
     public static MessageMetadata Metadata(IncidentDetail incident) => new(
         CorrelationId: incident.Summary.IncidentId.ToString(),
         Headers: SentinelHeaders.For(incident.Summary.TenantId, incident.Summary.EnvironmentId, incident.Summary.AffectedServiceId, incident.Summary.IncidentId));
+
+    private static CurrentPlan? Current(PlanView? plan) => plan is null
+        ? null
+        : new CurrentPlan(plan.Plan.PlanId, plan.Plan.PlanVersion, plan.Plan.PlanHash, RemediationPlanHash.Matches(plan.Plan), plan.Status.ToString(), plan.Status == PlanStatus.AwaitingApproval);
 }

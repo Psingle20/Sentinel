@@ -68,7 +68,7 @@ public sealed class ApprovePlanCommandHandler(
         };
         SignedAttestation signed = await signer.SignAsync(claims, cancellationToken);
 
-        Approval approval = Approval.Approve(state, command.ApproverId, new IssuedAttestation(claims.AttestationId, signed.KeyId, claims.ExpiresAt), now);
+        var approval = Approval.Approve(state, command.ApproverId, new IssuedAttestation(claims.AttestationId, signed.KeyId, claims.ExpiresAt), now);
         await approvals.SaveAsync(approval, cancellationToken);
         outbox.Enqueue(
             new RecordApproval

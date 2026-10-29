@@ -58,7 +58,7 @@ public sealed class CompositionAssertionsTests
     public void A_request_without_a_processor_or_with_two_is_reported()
     {
         var none = new ServiceCollection();
-        var two = new ServiceCollection()
+        IServiceCollection two = new ServiceCollection()
             .AddScoped<IProcessor<ApprovePlanRequest, string>, ApprovePlanProcessor>()
             .AddScoped<IProcessor<ApprovePlanRequest, string>, SecondApprovePlanProcessor>();
 
@@ -69,7 +69,7 @@ public sealed class CompositionAssertionsTests
     [Fact]
     public void A_request_with_exactly_one_processor_passes()
     {
-        var one = new ServiceCollection().AddScoped<IProcessor<ApprovePlanRequest, string>, ApprovePlanProcessor>();
+        IServiceCollection one = new ServiceCollection().AddScoped<IProcessor<ApprovePlanRequest, string>, ApprovePlanProcessor>();
 
         CompositionAssertions.HandlerProblems(one, one.BuildServiceProvider(), ThisAssembly).ShouldBeEmpty();
     }
@@ -85,7 +85,7 @@ public sealed class CompositionAssertionsTests
     [Fact]
     public void A_singleton_that_captures_a_scoped_service_is_reported()
     {
-        var services = new ServiceCollection().AddScoped<ScopedStore>().AddSingleton<SingletonCapturingScoped>();
+        IServiceCollection services = new ServiceCollection().AddScoped<ScopedStore>().AddSingleton<SingletonCapturingScoped>();
 
         CompositionAssertions.LifetimeProblems(services).ShouldHaveSingleItem().ShouldContain(nameof(ScopedStore));
     }
@@ -93,7 +93,7 @@ public sealed class CompositionAssertionsTests
     [Fact]
     public void A_hosted_service_or_consumer_registered_twice_is_reported()
     {
-        var services = new ServiceCollection()
+        IServiceCollection services = new ServiceCollection()
             .AddScoped<IIntegrationMessageHandler<PlanApproved>, PlanApprovedConsumer>()
             .AddScoped<IIntegrationMessageHandler<PlanApproved>, PlanApprovedConsumer>();
         services.AddSingleton<IHostedService, Worker>();

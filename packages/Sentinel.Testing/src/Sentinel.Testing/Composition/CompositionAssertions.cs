@@ -94,7 +94,7 @@ public static class CompositionAssertions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        var copy = new ServiceCollection();
+        IServiceCollection copy = new ServiceCollection();
         foreach (ServiceDescriptor descriptor in services)
         {
             copy.Add(descriptor);

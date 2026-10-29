@@ -25,7 +25,7 @@ public static partial class ArchitectureRules
         (typeof(IRequest<>), typeof(IProcessor<,>))
     ];
 
-    private static readonly Type[] ProcessorDependencies = [typeof(ICommandDispatcher), typeof(IQueryDispatcher)];
+    private static readonly Type[] Dispatchers = [typeof(ICommandDispatcher), typeof(IQueryDispatcher)];
 
     /// <summary>Rule 6: every command, query and request has exactly one handler or processor, in its own namespace.</summary>
     public static IReadOnlyList<string> HandlerPlacement(Assembly application)
@@ -61,7 +61,7 @@ public static partial class ArchitectureRules
         return [.. Concrete(application)
             .Where(type => type.GetInterfaces().Any(IsProcessor))
             .SelectMany(processor => Parameters(processor)
-                .Where(parameter => !ProcessorDependencies.Contains(parameter) && !IsValidator(parameter))
+                .Where(parameter => !Dispatchers.Contains(parameter) && !IsValidator(parameter))
                 .Select(parameter => $"Processor {processor.FullName} depends on {parameter.Name}; a processor depends only on a validator and a dispatcher."))];
     }
 
@@ -72,7 +72,7 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(pending);
 
         Type[] consumers = [.. Concrete(infrastructure).Where(type => type.GetInterfaces().Any(IsConsumer))];
-        return Judge(consumers.Select(consumer => (consumer, ConsumerProblems(consumer, consumersNamespace))), pending);
+        return Judge(consumers.Select(consumer => (consumer, (IReadOnlyList<string>)ConsumerProblems(consumer, consumersNamespace))), pending);
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(forbiddenNamespaces);
 
         Type[] controllers = [.. Concrete(api).Where(type => type.Namespace == controllersNamespace && type != apiController)];
-        return Judge(controllers.Select(controller => (controller, ControllerProblems(controller, apiController, forbiddenNamespaces))), pending);
+        return Judge(controllers.Select(controller => (controller, (IReadOnlyList<string>)ControllerProblems(controller, apiController, forbiddenNamespaces))), pending);
     }
 
     /// <summary>
@@ -100,7 +100,7 @@ public static partial class ArchitectureRules
         ArgumentNullException.ThrowIfNull(programSource);
 
         string file = Path.GetFileName(programSource);
-        Match[] inline = [.. InlineEndpoint().Matches(File.ReadAllText(programSource))];
+        Match[] inline = [.. InlineEndpoint().Matches(File.ReadAllText(programSource)).Cast<Match>()];
         if (pending)
         {
             return inline.Length == 0 ? [$"{file} maps no endpoint inline any more; it is no longer pending."] : [];
@@ -164,7 +164,7 @@ public static partial class ArchitectureRules
         return problems;
     }
 
-    private static IReadOnlyList<string> ConsumerProblems(Type consumer, string consumersNamespace)
+    private static List<string> ConsumerProblems(Type consumer, string consumersNamespace)
     {
         var problems = new List<string>();
         if (consumer.Namespace != consumersNamespace)
@@ -181,7 +181,7 @@ public static partial class ArchitectureRules
         return problems;
     }
 
-    private static IReadOnlyList<string> ControllerProblems(Type controller, Type apiController, IReadOnlyCollection<string> forbiddenNamespaces)
+    private static List<string> ControllerProblems(Type controller, Type apiController, IReadOnlyCollection<string> forbiddenNamespaces)
     {
         var problems = new List<string>();
         if (!controller.IsSubclassOf(apiController))

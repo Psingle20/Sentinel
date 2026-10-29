@@ -184,7 +184,8 @@ public sealed class RuntimeFlowTests : IDisposable
     private Task<T> StepsAsync<T>(Func<IncidentSteps, Task<T>> step) =>
         _runtime.InScopeAsync(provider => step(provider.GetRequiredService<IncidentSteps>()));
 
-    private Task<Result> RequestAsync(IRequest request) =>
+    // Orleans also names a type IRequest.
+    private Task<Result> RequestAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest request) =>
         _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
 
     private Task<T> ControlAsync<T>(Func<RemediationControlService, Task<T>> step) =>

@@ -497,14 +497,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Api/DevelopmentIdentity.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Idempotency.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.Gateway/src/Sentinel.Gateway.Infrastructure/ApiInfrastructure.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -724,3 +716,9 @@ dotnet_diagnostic.SA1649.severity = none
 [services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
+
+# Request bodies keep the binding they had as minimal-API parameters (ADR-020): a missing value binds its
+# default, as it did before the move to controllers. Requiring the values would change responses, so it is a
+# separate, deliberate change.
+[services/*/src/*.Api/Contracts/*.cs]
+dotnet_diagnostic.S6964.severity = none

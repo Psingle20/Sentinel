@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Trace;
 using Sentinel.ServiceDefaults;
 
-namespace Sentinel.Runtime.Infrastructure.DependencyInjection;
+namespace Sentinel.Runtime.Infrastructure;
 
 /// <summary>Runtime's infrastructure: stores, grains, workflows, clients, their tracing and the workflow engine's readiness check (ADR-020).</summary>
 public sealed class InfrastructureDependencyModule : IDependencyModule

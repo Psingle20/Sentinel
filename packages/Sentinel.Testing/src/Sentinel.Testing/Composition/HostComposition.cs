@@ -52,7 +52,7 @@ public sealed class HostComposition<TProgram> : IDisposable
             // when it reaches RunAsync, and a started worker would reach for its database or broker.
             builder.ConfigureTestServices(services =>
             {
-                var registered = new ServiceCollection();
+                IServiceCollection registered = new ServiceCollection();
                 foreach (ServiceDescriptor descriptor in services)
                 {
                     registered.Add(descriptor);

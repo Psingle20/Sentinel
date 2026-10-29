@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sentinel.Executor.Api;
 using Sentinel.Executor.Application;
-using Sentinel.Executor.Infrastructure.DependencyInjection;
+using Sentinel.Executor.Infrastructure;
 using Sentinel.Testing.Composition;
 using Shouldly;
 

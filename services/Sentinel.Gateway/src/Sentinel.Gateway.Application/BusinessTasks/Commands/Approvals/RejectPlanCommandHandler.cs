@@ -37,7 +37,7 @@ public sealed class RejectPlanCommandHandler(
         }
 
         DateTimeOffset now = time.GetUtcNow();
-        Approval rejection = Approval.Reject(state!, command.ApproverId, command.Reason, now);
+        var rejection = Approval.Reject(state!, command.ApproverId, command.Reason, now);
         await approvals.SaveAsync(rejection, cancellationToken);
         outbox.Enqueue(
             new RecordRejection

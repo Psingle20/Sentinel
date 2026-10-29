@@ -35,6 +35,6 @@ public sealed class DependencyModuleTests
     {
         IConfiguration configuration = new ConfigurationBuilder().Build();
 
-        Should.Throw<ArgumentNullException>(() => new ServiceCollection().AddModules(configuration, [null!]));
+        Should.Throw<ArgumentNullException>(() => new ServiceCollection().AddModules(configuration, (IDependencyModule)null!));
     }
 }

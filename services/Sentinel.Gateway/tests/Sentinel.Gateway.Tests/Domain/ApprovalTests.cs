@@ -32,7 +32,7 @@ public sealed class ApprovalTests
     {
         var attestation = new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15));
 
-        Approval approval = Approval.Approve(Incident(), "approver@example.test", attestation, Now);
+        var approval = Approval.Approve(Incident(), "approver@example.test", attestation, Now);
 
         approval.Decision.ShouldBe(ApprovalDecision.Approved);
         approval.PlanId.ShouldBe(Plan);
@@ -46,8 +46,8 @@ public sealed class ApprovalTests
     [Fact]
     public void One_decision_per_version_the_same_one_again_is_the_existing_approval()
     {
-        Approval approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
-        Approval rejected = Approval.Reject(Incident(), "approver@example.test", "Outside the change window.", Now);
+        var approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
+        var rejected = Approval.Reject(Incident(), "approver@example.test", "Outside the change window.", Now);
 
         Approval.CheckApproval(approved, Incident(), Reviewed, Hash).Value.ShouldBeSameAs(approved);
         Approval.CheckApproval(rejected, Incident(), Reviewed, Hash).Error.ShouldBe(ApprovalErrors.AlreadyDecided);
@@ -61,7 +61,7 @@ public sealed class ApprovalTests
         Approval.CheckRejection(null, null, Reviewed, "  ").Error.ShouldBe(ApprovalErrors.ReasonRequired);
         Approval.CheckRejection(null, null, Reviewed, "Outside the change window.").Error.ShouldBe(ApprovalErrors.IncidentNotFound);
 
-        Approval rejected = Approval.Reject(Incident(), "approver@example.test", "Outside the change window.", Now);
+        var rejected = Approval.Reject(Incident(), "approver@example.test", "Outside the change window.", Now);
         rejected.Decision.ShouldBe(ApprovalDecision.Rejected);
         rejected.Reason.ShouldBe("Outside the change window.");
         rejected.AttestationId.ShouldBeNull();
@@ -70,8 +70,8 @@ public sealed class ApprovalTests
     [Fact]
     public void Only_an_approval_whose_execution_has_not_started_can_be_revoked_and_only_once()
     {
-        Approval approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
-        Approval rejected = Approval.Reject(Incident(), "approver@example.test", "No.", Now);
+        var approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
+        var rejected = Approval.Reject(Incident(), "approver@example.test", "No.", Now);
 
         Approval.CheckRevocation(approved, Incident(), " ").Error.ShouldBe(ApprovalErrors.ReasonRequired);
         Approval.CheckRevocation(null, Incident(), "Wrong target.").Error.ShouldBe(ApprovalErrors.NothingToRevoke);
@@ -91,7 +91,7 @@ public sealed class ApprovalTests
     [Fact]
     public void An_approval_rebuilt_from_its_snapshot_is_the_same_approval()
     {
-        Approval approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
+        var approved = Approval.Approve(Incident(), "approver@example.test", new IssuedAttestation(AttestationId.New(), "key-1", Now.AddMinutes(15)), Now);
 
         Approval.Rehydrate(approved.Snapshot()).Snapshot().ShouldBe(approved.Snapshot());
     }

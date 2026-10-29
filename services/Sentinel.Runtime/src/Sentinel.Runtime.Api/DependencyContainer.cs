@@ -1,6 +1,6 @@
 using CleanArchitecture.BuildingBlocks;
 using Sentinel.Runtime.Application;
-using Sentinel.Runtime.Infrastructure.DependencyInjection;
+using Sentinel.Runtime.Infrastructure;
 
 namespace Sentinel.Runtime.Api;
 
