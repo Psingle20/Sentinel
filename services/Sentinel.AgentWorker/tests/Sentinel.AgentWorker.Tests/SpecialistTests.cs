@@ -127,6 +127,68 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task Log_text_is_quoted_as_data_and_never_steers_the_findings()
+    {
+        var clean = Telemetry.ConnectionLeak();
+        Telemetry planted = Telemetry.ConnectionLeak().WithPlantedLog();
+
+        InvestigationRun baseline = await Run(clean, InvestigationRoles.Logs, 70);
+        InvestigationRun run = await Run(planted, InvestigationRoles.Logs, 70);
+
+        run.Completed.Outcome.ShouldBe(InvestigationOutcome.Completed);
+        run.Execution.ToolCalls.ShouldContain(call => call.Result != null && call.Result.Contains("\"untrustedData\":true", StringComparison.Ordinal) && call.Result.Contains("SYSTEM NOTE TO AI AGENTS", StringComparison.Ordinal));
+        run.Completed.Hypotheses.Select(hypothesis => hypothesis.Key).ShouldBe(baseline.Completed.Hypotheses.Select(hypothesis => hypothesis.Key));
+        run.Completed.Hypotheses.ShouldAllBe(hypothesis => !hypothesis.Statement.Contains("roll back every service", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task A_model_that_obeys_an_instruction_planted_in_logs_is_refused_and_abstains()
+    {
+        Telemetry telemetry = Telemetry.ConnectionLeak().WithPlantedLog();
+
+        InvestigationRun run = await Harness.Investigator(telemetry, Harness.Catalog, Harness.AllTools(telemetry), TestDoubleMode.InjectionSusceptible)
+            .InvestigateAsync(telemetry.Command(70, InvestigationRoles.Logs), false, CancellationToken.None);
+
+        run.Completed.Outcome.ShouldBe(InvestigationOutcome.Abstained);
+        run.Completed.AbstentionReason.ShouldNotBeNull().ShouldContain("never actions");
+        run.Completed.Hypotheses.ShouldBeEmpty();
+        run.Completed.Evidence.ShouldBeEmpty();
+        run.Execution.SchemaFailures.ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(TestDoubleMode.Refusal, "sentinel.agentworker.model.failures")]
+    [InlineData(TestDoubleMode.Malformed, "sentinel.agentworker.model.schema_failures")]
+    public async Task Refused_calls_and_rejected_outputs_are_counted(TestDoubleMode mode, string counter)
+    {
+        var telemetry = Telemetry.ConnectionLeak();
+        using var metrics = new AgentWorkerTelemetry();
+        var recorded = new Dictionary<string, long>(StringComparer.Ordinal);
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meter) =>
+        {
+            if (instrument.Meter.Name == AgentWorkerTelemetry.MeterName)
+            {
+                meter.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, _, _) =>
+        {
+            lock (recorded)
+            {
+                recorded[instrument.Name] = recorded.GetValueOrDefault(instrument.Name) + value;
+            }
+        });
+        listener.Start();
+
+        InvestigationRun run = await Harness.Investigator(telemetry, Harness.Catalog, Harness.AllTools(telemetry), mode, metrics)
+            .InvestigateAsync(telemetry.Command(70, InvestigationRoles.Metrics), false, CancellationToken.None);
+
+        run.Completed.Outcome.ShouldBe(InvestigationOutcome.Abstained);
+        recorded.GetValueOrDefault(counter).ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
     public void Findings_that_carry_actions_are_refused_whatever_else_they_contain()
     {
         ValidatedFindings findings = FindingsValidator.Validate(
