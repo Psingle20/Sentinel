@@ -4,20 +4,6 @@ using Npgsql;
 
 namespace CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests;
 
-public sealed record OrderPlaced(Guid OrderId, decimal Amount);
-
-/// <summary>Controls how many deliveries fail before handling succeeds.</summary>
-public sealed class BillingBehavior
-{
-    private int _attempts;
-
-    public int FailFirst { get; init; }
-
-    public int Attempts => _attempts;
-
-    internal bool NextAttemptFails() => Interlocked.Increment(ref _attempts) <= FailFirst;
-}
-
 /// <summary>The consuming service: writes an invoice in the same transaction as its inbox record.</summary>
 internal sealed class CreateInvoiceOnOrderPlaced(IPostgresTransaction transaction, BillingBehavior behavior)
     : IIntegrationMessageHandler<OrderPlaced>

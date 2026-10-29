@@ -1,27 +1,5 @@
 namespace CleanArchitecture.BuildingBlocks.Configuration;
 
-/// <summary>A configuration document that names its own version.</summary>
-public interface IVersionedDocument
-{
-    string Version { get; }
-}
-
-/// <summary>The document in effect: the newest published version, or the deployment's seed when none is published.</summary>
-public sealed record DocumentState<TDocument>(TDocument Document, DocumentVersion Version, bool Published)
-    where TDocument : class;
-
-/// <summary>Why a publish was refused.</summary>
-public static class VersionedDocumentErrors
-{
-    public static readonly Error VersionConflict = Error.Conflict("Configuration.VersionConflict", "The configuration changed since it was read; reload it and apply the change again.");
-
-    public static readonly Error VersionUnchanged = Error.Problem("Configuration.VersionUnchanged", "A published configuration needs a new version.");
-
-    public static readonly Error DuplicateVersion = Error.Conflict("Configuration.DuplicateVersion", "That version was published before; versions are never reused.");
-
-    public static Error Invalid(IReadOnlyList<string> problems) => Error.Problem("Configuration.Invalid", string.Join(" ", problems));
-}
-
 /// <summary>
 /// Publishing rules shared by every control-plane document: a change names the version it was read
 /// as, gets a version of its own, passes the owner's validation, and is appended only if nothing was

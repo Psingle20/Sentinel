@@ -1,0 +1,5 @@
+# One type per file is complete in the building blocks (ADR-020, evolution plan Stage E2), so both
+# file rules are errors here while the services migrate under the root list's warnings.
+[*.cs]
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1649.severity = error

@@ -3,13 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace CleanArchitecture.BuildingBlocks.Tests.TestSupport;
 
-internal sealed record LogEntry(LogLevel Level, string Message, IReadOnlyList<object?> Scopes);
-
-internal sealed class LogSink
-{
-    public ConcurrentQueue<LogEntry> Entries { get; } = new();
-}
-
 internal sealed class CapturingLogger<T>(LogSink sink) : ILogger<T>
 {
     private readonly List<object?> _scopes = [];

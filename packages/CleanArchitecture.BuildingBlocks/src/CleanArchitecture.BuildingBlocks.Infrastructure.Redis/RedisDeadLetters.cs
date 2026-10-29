@@ -3,17 +3,6 @@ using StackExchange.Redis;
 
 namespace CleanArchitecture.BuildingBlocks.Infrastructure.Redis;
 
-/// <summary>One dead-lettered entry: the message and why its consumer gave up on it.</summary>
-public sealed record DeadLetter(
-    string EntryId,
-    string Stream,
-    Guid? MessageId,
-    string? MessageType,
-    string Reason,
-    string ConsumerGroup,
-    string SourceEntryId,
-    DateTimeOffset? FailedAt);
-
 /// <summary>
 /// Operator controls for <c>&lt;stream&gt;.dlq</c>: list what failed, and replay an entry after the
 /// cause is fixed. A replayed message goes back to its source stream with its original message ID,

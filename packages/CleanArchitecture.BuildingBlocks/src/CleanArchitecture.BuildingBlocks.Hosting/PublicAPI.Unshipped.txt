@@ -5,3 +5,5 @@ CleanArchitecture.BuildingBlocks.IDependencyModule.RegisterServices(Microsoft.Ex
 CleanArchitecture.BuildingBlocks.Messaging.ValidationFailureMapper
 static CleanArchitecture.BuildingBlocks.BuildingBlocksServiceCollectionExtensions.AddBuildingBlocks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params System.Reflection.Assembly![]! assemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static CleanArchitecture.BuildingBlocks.Messaging.ValidationFailureMapper.ToValidationError(FluentValidation.Results.ValidationResult! result) -> CleanArchitecture.BuildingBlocks.ValidationError!
+CleanArchitecture.BuildingBlocks.DependencyModuleServiceCollectionExtensions
+static CleanArchitecture.BuildingBlocks.DependencyModuleServiceCollectionExtensions.AddModules(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, params CleanArchitecture.BuildingBlocks.IDependencyModule![]! modules) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

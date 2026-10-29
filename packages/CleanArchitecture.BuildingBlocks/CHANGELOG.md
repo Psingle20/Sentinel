@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.0-alpha.5 – 2026-10-29
+
+Stage E2 of the evolution guide: the inbound seam, module composition and one type per file, for ADR-020.
+
+### Added
+
+- `Application`: `IRequest`, `IRequest<TResult>`, `IProcessor<TRequest>`, `IProcessor<TRequest, TResult>` and `IRequestDispatcher`. A request is what an HTTP endpoint, message consumer or workflow activity asks the application to do; its processor maps it to exactly one command or query and dispatches it. `IRequestDispatcher.SendAsync` resolves the processor by the request's runtime type through a cached invoker, fails naming the request when none is registered, and surfaces a faulting processor's own exception.
+- `Hosting`: `AddBuildingBlocks` registers `IRequestDispatcher` and scans processors with handlers and validators. Each processor is wrapped in request validation, so a request's validators run once, before the processor, and a processor's own code only maps and dispatches. `AddModules` registers `IDependencyModule` instances in the order given, Application, Infrastructure, Api.
+- 15 unit tests for request dispatch, the processor pipeline and module composition.
+
+### Changed
+
+- Reverses the `0.1.0-alpha.2` removal of `IDto`, `IProcessor` and `IRequestHandler`. They were removed because they duplicated the command and query pipeline without a defined role; ADR-020 gives the seam one, the only way inbound adapters reach the application layer, and it returns as `IRequest` and `IRequestDispatcher` so that "handler" keeps meaning the use case.
+- `AddBuildingBlocks` rejects two processors for one request, as it rejects two handlers for one command or query; the error names both cases.
+- Every package file holds one top-level type and is named after it; the nineteen multi-type files are split with namespaces unchanged, so consumers recompile without edits. StyleCop `SA1402` and `SA1649` are errors for the package.
+- `Directory.Build.props` carries `alpha.5`; `alpha.4` was recorded here without a version bump.
+
 ## 0.1.0-alpha.4 – 2026-10-29
 
 Control-plane configuration documents, for Sentinel's Phase 08 control plane.

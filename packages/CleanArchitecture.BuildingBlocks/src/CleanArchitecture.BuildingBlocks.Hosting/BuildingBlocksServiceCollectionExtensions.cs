@@ -13,13 +13,17 @@ public static class BuildingBlocksServiceCollectionExtensions
     [
         typeof(ICommandHandler<>),
         typeof(ICommandHandler<,>),
-        typeof(IQueryHandler<,>)
+        typeof(IQueryHandler<,>),
+        typeof(IProcessor<>),
+        typeof(IProcessor<,>)
     ];
 
     /// <summary>
-    /// Registers the dispatchers, every command and query handler and every validator in
-    /// <paramref name="assemblies"/>, and wraps handlers in a fixed pipeline: logging outside,
-    /// validation inside. Call once per service collection.
+    /// Registers the dispatchers, every command and query handler, every request processor and every
+    /// validator in <paramref name="assemblies"/>. Handlers are wrapped in a fixed pipeline, logging
+    /// outside and validation inside; processors are wrapped in request validation, so the request's
+    /// validators run once, where untrusted input becomes an application message (ADR-020). Call once
+    /// per service collection, from the service's Application dependency module.
     /// </summary>
     public static IServiceCollection AddBuildingBlocks(
         this IServiceCollection services,
@@ -47,6 +51,7 @@ public static class BuildingBlocksServiceCollectionExtensions
         services.AddSingleton<RegistrationMarker>();
         services.AddScoped<ICommandDispatcher, CommandDispatcher>();
         services.AddScoped<IQueryDispatcher, QueryDispatcher>();
+        services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
         RegisterHandlers(services, types);
         new AssemblyScanner(types).ForEach(result => services.AddScoped(result.InterfaceType, result.ValidatorType));
@@ -57,6 +62,8 @@ public static class BuildingBlocksServiceCollectionExtensions
         services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingDecorator.CommandHandler<,>));
         services.TryDecorate(typeof(ICommandHandler<>), typeof(LoggingDecorator.CommandBaseHandler<>));
         services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingDecorator.QueryHandler<,>));
+        services.TryDecorate(typeof(IProcessor<,>), typeof(ValidationDecorator.Processor<,>));
+        services.TryDecorate(typeof(IProcessor<>), typeof(ValidationDecorator.ProcessorBase<>));
 
         return services;
     }
@@ -81,7 +88,7 @@ public static class BuildingBlocksServiceCollectionExtensions
         if (duplicates.Length > 0)
         {
             throw new InvalidOperationException(
-                $"Each command and query must have exactly one handler. Duplicates: {string.Join(", ", duplicates)}.");
+                $"Each command and query must have exactly one handler, and each request exactly one processor. Duplicates: {string.Join(", ", duplicates)}.");
         }
     }
 

@@ -7,29 +7,6 @@ using Microsoft.Extensions.Options;
 
 namespace CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 
-public enum ProcessingOutcome
-{
-    /// <summary>Handled and committed. Acknowledge the delivery.</summary>
-    Processed,
-
-    /// <summary>Already handled by this consumer. Acknowledge without handling again.</summary>
-    Duplicate,
-
-    /// <summary>Handling failed and was rolled back. Leave the delivery for a retry.</summary>
-    Failed,
-
-    /// <summary>Unsupported type or version, or a malformed payload. Dead-letter it; retrying cannot help.</summary>
-    Rejected
-}
-
-public sealed record ProcessingResult(ProcessingOutcome Outcome, string? Reason = null);
-
-/// <summary>Handles one delivered envelope. Transports call this and act on the outcome.</summary>
-public interface IInboundMessageProcessor
-{
-    Task<ProcessingResult> ProcessAsync(MessageEnvelope envelope, CancellationToken cancellationToken);
-}
-
 /// <summary>
 /// Records the message in the inbox, runs its handler and commits both in one unit of work,
 /// so a message's effects happen exactly once even when it is delivered more than once.

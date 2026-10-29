@@ -44,6 +44,45 @@ internal static class ValidationDecorator
         }
     }
 
+    // Request validation (ADR-020): the processor's own code only maps and dispatches.
+    internal sealed class Processor<TRequest, TResult>(
+        IProcessor<TRequest, TResult> innerProcessor,
+        IEnumerable<IValidator<TRequest>> validators)
+        : IProcessor<TRequest, TResult>
+        where TRequest : IRequest<TResult>
+    {
+        public async Task<Result<TResult>> Process(TRequest request, CancellationToken cancellationToken)
+        {
+            ValidationFailure[] validationFailures = await ValidateAsync(request, validators, cancellationToken);
+
+            if (validationFailures.Length == 0)
+            {
+                return await innerProcessor.Process(request, cancellationToken);
+            }
+
+            return Result.Failure<TResult>(CreateValidationError(validationFailures));
+        }
+    }
+
+    internal sealed class ProcessorBase<TRequest>(
+        IProcessor<TRequest> innerProcessor,
+        IEnumerable<IValidator<TRequest>> validators)
+        : IProcessor<TRequest>
+        where TRequest : IRequest
+    {
+        public async Task<Result> Process(TRequest request, CancellationToken cancellationToken)
+        {
+            ValidationFailure[] validationFailures = await ValidateAsync(request, validators, cancellationToken);
+
+            if (validationFailures.Length == 0)
+            {
+                return await innerProcessor.Process(request, cancellationToken);
+            }
+
+            return Result.Failure(CreateValidationError(validationFailures));
+        }
+    }
+
     private static async Task<ValidationFailure[]> ValidateAsync<TCommand>(
         TCommand command,
         IEnumerable<IValidator<TCommand>> validators,

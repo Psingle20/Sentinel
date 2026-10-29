@@ -112,9 +112,3 @@ public sealed class MessagingInfrastructure : IAsyncLifetime
         throw new TimeoutException($"Timed out waiting until {description}.");
     }
 }
-
-[CollectionDefinition(Name)]
-public sealed class MessagingCollection : ICollectionFixture<MessagingInfrastructure>
-{
-    public const string Name = "messaging";
-}

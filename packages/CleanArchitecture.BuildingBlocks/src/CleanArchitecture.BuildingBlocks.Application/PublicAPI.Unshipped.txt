@@ -104,3 +104,12 @@ static CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.In
 static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.DuplicateVersion -> CleanArchitecture.BuildingBlocks.Error!
 static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.VersionConflict -> CleanArchitecture.BuildingBlocks.Error!
 static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.VersionUnchanged -> CleanArchitecture.BuildingBlocks.Error!
+CleanArchitecture.BuildingBlocks.Messaging.IProcessor<TRequest, TResult>
+CleanArchitecture.BuildingBlocks.Messaging.IProcessor<TRequest, TResult>.Process(TRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!
+CleanArchitecture.BuildingBlocks.Messaging.IProcessor<TRequest>
+CleanArchitecture.BuildingBlocks.Messaging.IProcessor<TRequest>.Process(TRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Messaging.IRequest
+CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult>
+CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher
+CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.SendAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.SendAsync<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult>! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!

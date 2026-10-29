@@ -56,29 +56,3 @@ internal sealed class PostgresOutboxStore(NpgsqlDataSource dataSource) : IOutbox
         return age is TimeSpan value ? value : null;
     }
 }
-
-/// <summary>Records handled messages inside the scope's transaction, so the record commits with the handler's writes.</summary>
-internal sealed class PostgresInboxStore(IPostgresTransaction transaction) : IInboxStore
-{
-    public async Task<bool> TryRecordAsync(string consumer, MessageEnvelope envelope, CancellationToken cancellationToken)
-    {
-        NpgsqlTransaction current = await transaction.GetTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(PostgresMessagingSql.RecordInbox, current.Connection, current);
-        command.Parameters.AddWithValue("consumer", consumer);
-        command.Parameters.AddWithValue("message_id", envelope.MessageId);
-        command.Parameters.AddWithValue("message_type", envelope.MessageType);
-        return await command.ExecuteNonQueryAsync(cancellationToken) == 1;
-    }
-}
-
-internal sealed class PostgresMessagingSchema(NpgsqlDataSource dataSource) : IMessagingStoreInitializer
-{
-    public async Task InitializeAsync(CancellationToken cancellationToken)
-    {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(PostgresMessagingSql.CreateSchema, connection, transaction);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-    }
-}

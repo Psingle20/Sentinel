@@ -2,16 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 
-public sealed record MessageRegistration(Type ClrType, string MessageType, int SchemaVersion, string Stream);
-
-internal delegate Task<Result> HandlerInvoker(
-    IServiceProvider services,
-    object message,
-    MessageEnvelope envelope,
-    CancellationToken cancellationToken);
-
-internal sealed record ConsumerRegistration(MessageRegistration Message, HandlerInvoker Invoke);
-
 /// <summary>
 /// Maps message CLR types to their stable names, schema versions and streams. Every service
 /// registers what it produces and consumes explicitly at startup.
