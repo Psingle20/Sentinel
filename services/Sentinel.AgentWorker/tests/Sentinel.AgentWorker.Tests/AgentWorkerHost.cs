@@ -8,10 +8,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Sentinel.AgentWorker.Application.Investigations;
-using Sentinel.AgentWorker.Application.Models;
 using Sentinel.AgentWorker.Domain.Executions;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.AgentWorker.Application.Abstractions.Persistence;
+using Sentinel.AgentWorker.Application.ControlPlane;
 
 namespace Sentinel.AgentWorker.Tests;
 
@@ -58,21 +59,21 @@ public sealed class AgentWorkerHost(string environment, bool operatorEndpoints =
 
     public sealed class InMemoryExecutions : IExecutionStore
     {
-        private readonly ConcurrentDictionary<AgentExecutionId, AgentExecution> _executions = new();
+        private readonly ConcurrentDictionary<AgentExecutionId, AgentExecutionRecord> _executions = new();
         private readonly ConcurrentDictionary<AgentExecutionId, ExecutionInputs> _inputs = new();
 
         public ConcurrentQueue<InvestigationReplayResult> Replays { get; } = new();
 
-        public Task SaveAsync(AgentExecution execution, CancellationToken cancellationToken)
+        public Task SaveAsync(AgentExecutionRecord execution, CancellationToken cancellationToken)
         {
             _executions[execution.AgentExecutionId] = execution;
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<AgentExecution>> ForIncidentAsync(IncidentId incidentId, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<AgentExecution>>([.. _executions.Values.Where(execution => execution.IncidentId == incidentId).OrderBy(execution => execution.StartedAt)]);
+        public Task<IReadOnlyList<AgentExecutionRecord>> ForIncidentAsync(IncidentId incidentId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AgentExecutionRecord>>([.. _executions.Values.Where(execution => execution.IncidentId == incidentId).OrderBy(execution => execution.StartedAt)]);
 
-        public Task<AgentExecution?> GetAsync(AgentExecutionId executionId, CancellationToken cancellationToken) =>
+        public Task<AgentExecutionRecord?> GetAsync(AgentExecutionId executionId, CancellationToken cancellationToken) =>
             Task.FromResult(_executions.GetValueOrDefault(executionId));
 
         public Task SaveInputsAsync(ExecutionInputs inputs, CancellationToken cancellationToken)

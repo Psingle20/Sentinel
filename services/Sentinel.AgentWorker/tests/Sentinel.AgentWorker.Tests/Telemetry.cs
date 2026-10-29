@@ -4,6 +4,7 @@ using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
 
 namespace Sentinel.AgentWorker.Tests;
 

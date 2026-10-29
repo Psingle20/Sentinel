@@ -5,6 +5,7 @@ using Sentinel.AgentWorker.Infrastructure.Models;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Shouldly;
+using Sentinel.AgentWorker.Application.Options;
 
 namespace Sentinel.AgentWorker.Tests;
 

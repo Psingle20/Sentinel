@@ -1,88 +1,202 @@
+using CleanArchitecture.BuildingBlocks;
 using Sentinel.Contracts.Primitives.Identifiers;
 
 namespace Sentinel.AgentWorker.Domain.Executions;
 
-public enum ExecutionResult
-{
-    Completed,
-    Abstained,
-    Failed
-}
-
 /// <summary>
-/// One tool call and the canonical result it returned, kept for audit and for investigation
-/// replay (ADR-007, Phase 07 level 2).
+/// One investigator run while it runs: the model calls and tokens it spends against its budget, the
+/// tool calls it makes, how often its output was rejected, and how it ends. It finishes once, as
+/// <see cref="ExecutionStateTransitions"/> allows, and its <see cref="ToRecord"/> is the audit record
+/// AgentWorker keeps (ADR-007, Phase 07).
 /// </summary>
-public sealed record ToolCallRecord
+public sealed class AgentExecution
 {
-    public required string ToolCallId { get; init; }
+    /// <summary>Rejected structured outputs the model may repair before the run abstains.</summary>
+    public const int MaxRepairs = 1;
 
-    public required string ToolName { get; init; }
+    private readonly List<ToolCallRecord> _toolCalls = [];
 
-    public required string Arguments { get; init; }
+    private AgentExecution(
+        AgentExecutionId agentExecutionId,
+        TenantId tenantId,
+        EnvironmentId environmentId,
+        IncidentId incidentId,
+        InvestigationId investigationId,
+        string investigator,
+        bool shadow,
+        ExecutionModel model,
+        DateTimeOffset startedAt)
+    {
+        AgentExecutionId = agentExecutionId;
+        TenantId = tenantId;
+        EnvironmentId = environmentId;
+        IncidentId = incidentId;
+        InvestigationId = investigationId;
+        Investigator = investigator;
+        Shadow = shadow;
+        Model = model;
+        StartedAt = startedAt;
+    }
 
-    /// <summary>The exact content returned to the model.</summary>
-    public required string Result { get; init; }
+    public AgentExecutionId AgentExecutionId { get; }
 
-    public IReadOnlyList<ObservationId> ObservationIds { get; init; } = [];
+    public TenantId TenantId { get; }
 
-    /// <summary>True when the data behind the result was incomplete, truncated or stale.</summary>
-    public bool Partial { get; init; }
+    public EnvironmentId EnvironmentId { get; }
 
-    public string? Error { get; init; }
+    public IncidentId IncidentId { get; }
 
-    public required DateTimeOffset StartedAt { get; init; }
+    public InvestigationId InvestigationId { get; }
 
-    public required TimeSpan Duration { get; init; }
-}
+    public string Investigator { get; }
 
-/// <summary>
-/// The audit record of one investigator run: who ran, with which model and prompt, which tools it
-/// called, what it cost and how it ended. A shadow execution ran alongside the primary one for
-/// comparison and was never sent to Runtime.
-/// </summary>
-public sealed record AgentExecution
-{
-    public required AgentExecutionId AgentExecutionId { get; init; }
+    /// <summary>A shadow execution runs alongside the primary one for comparison and is never sent to Runtime.</summary>
+    public bool Shadow { get; }
 
-    public required TenantId TenantId { get; init; }
+    public ExecutionModel Model { get; }
 
-    public required EnvironmentId EnvironmentId { get; init; }
+    public ExecutionState State { get; private set; } = ExecutionState.Running;
 
-    public required IncidentId IncidentId { get; init; }
+    /// <summary>Why the run abstained or failed.</summary>
+    public string? AbstentionReason { get; private set; }
 
-    public required InvestigationId InvestigationId { get; init; }
+    public IReadOnlyList<ToolCallRecord> ToolCalls => _toolCalls;
 
-    public required string Investigator { get; init; }
+    public int ModelCalls { get; private set; }
 
-    public required bool Shadow { get; init; }
+    public int InputTokens { get; private set; }
 
-    public required string ModelProvider { get; init; }
+    public int OutputTokens { get; private set; }
 
-    public required string Model { get; init; }
+    public int SchemaFailures { get; private set; }
 
-    public string? ModelVersion { get; init; }
+    public DateTimeOffset StartedAt { get; }
 
-    public required string PromptVersion { get; init; }
+    public DateTimeOffset? CompletedAt { get; private set; }
 
-    public required ExecutionResult Result { get; init; }
+    public static AgentExecution Start(
+        AgentExecutionId agentExecutionId,
+        TenantId tenantId,
+        EnvironmentId environmentId,
+        IncidentId incidentId,
+        InvestigationId investigationId,
+        string investigator,
+        bool shadow,
+        ExecutionModel model,
+        DateTimeOffset startedAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(investigator);
+        ArgumentNullException.ThrowIfNull(model);
 
-    public string? AbstentionReason { get; init; }
+        return new AgentExecution(agentExecutionId, tenantId, environmentId, incidentId, investigationId, investigator, shadow, model, startedAt);
+    }
 
-    public IReadOnlyList<ToolCallRecord> ToolCalls { get; init; } = [];
+    /// <summary>
+    /// A model call returned. Its tokens count against <paramref name="tokenBudget"/>, and a call that
+    /// takes the run past it is refused: the run must abstain rather than spend more.
+    /// </summary>
+    public Result RecordModelCall(int inputTokens, int outputTokens, int tokenBudget)
+    {
+        if (State != ExecutionState.Running)
+        {
+            return Result.Failure(AgentExecutionErrors.Finished);
+        }
 
-    public int ModelCalls { get; init; }
+        ModelCalls++;
+        InputTokens += inputTokens;
+        OutputTokens += outputTokens;
+        return InputTokens + OutputTokens > tokenBudget ? Result.Failure(AgentExecutionErrors.TokenBudgetExhausted) : Result.Success();
+    }
 
-    public int InputTokens { get; init; }
+    /// <summary>Whether another tool call fits <paramref name="maxToolCalls"/>; past it, the tool is refused and the model told to conclude.</summary>
+    public bool HasToolBudget(int maxToolCalls) => _toolCalls.Count < maxToolCalls;
 
-    public int OutputTokens { get; init; }
+    /// <summary>A tool call ran, or was refused, and returned <paramref name="call"/>'s result to the model.</summary>
+    public Result RecordToolCall(ToolCallRecord call)
+    {
+        ArgumentNullException.ThrowIfNull(call);
 
-    public int SchemaFailures { get; init; }
+        if (State != ExecutionState.Running)
+        {
+            return Result.Failure(AgentExecutionErrors.Finished);
+        }
 
-    /// <summary>The findings as sent (or, for a shadow run, as they would have been sent), in contract JSON.</summary>
-    public required string Findings { get; init; }
+        _toolCalls.Add(call);
+        return Result.Success();
+    }
 
-    public required DateTimeOffset StartedAt { get; init; }
+    /// <summary>
+    /// The model's structured output was rejected. Up to <see cref="MaxRepairs"/> rejections it may
+    /// repair; the next is refused, and the run must abstain.
+    /// </summary>
+    public Result RecordSchemaFailure()
+    {
+        if (State != ExecutionState.Running)
+        {
+            return Result.Failure(AgentExecutionErrors.Finished);
+        }
 
-    public required DateTimeOffset CompletedAt { get; init; }
+        SchemaFailures++;
+        return SchemaFailures > MaxRepairs ? Result.Failure(AgentExecutionErrors.InvalidOutputAfterRepair) : Result.Success();
+    }
+
+    public Result Complete(DateTimeOffset completedAt) => Finish(ExecutionState.Completed, null, completedAt);
+
+    public Result Abstain(string reason, DateTimeOffset completedAt) => Finish(ExecutionState.Abstained, reason, completedAt);
+
+    public Result Fail(string reason, DateTimeOffset completedAt) => Finish(ExecutionState.Failed, reason, completedAt);
+
+    /// <summary>The audit record of the finished run, with its findings as sent, or as they would have been for a shadow run.</summary>
+    public AgentExecutionRecord ToRecord(string findings)
+    {
+        ArgumentNullException.ThrowIfNull(findings);
+
+        if (CompletedAt is not { } completedAt)
+        {
+            throw new InvalidOperationException($"Execution {AgentExecutionId} is still running; only a finished execution has a record.");
+        }
+
+        return new AgentExecutionRecord
+        {
+            AgentExecutionId = AgentExecutionId,
+            TenantId = TenantId,
+            EnvironmentId = EnvironmentId,
+            IncidentId = IncidentId,
+            InvestigationId = InvestigationId,
+            Investigator = Investigator,
+            Shadow = Shadow,
+            ModelProvider = Model.Provider,
+            Model = Model.Model,
+            ModelVersion = Model.ModelVersion,
+            PromptVersion = Model.PromptVersion,
+            Result = State switch
+            {
+                ExecutionState.Completed => ExecutionResult.Completed,
+                ExecutionState.Abstained => ExecutionResult.Abstained,
+                _ => ExecutionResult.Failed
+            },
+            AbstentionReason = AbstentionReason,
+            ToolCalls = [.. _toolCalls],
+            ModelCalls = ModelCalls,
+            InputTokens = InputTokens,
+            OutputTokens = OutputTokens,
+            SchemaFailures = SchemaFailures,
+            Findings = findings,
+            StartedAt = StartedAt,
+            CompletedAt = completedAt
+        };
+    }
+
+    private Result Finish(ExecutionState state, string? reason, DateTimeOffset completedAt)
+    {
+        if (!ExecutionStateTransitions.CanMove(State, state))
+        {
+            return Result.Failure(AgentExecutionErrors.Finished);
+        }
+
+        State = state;
+        AbstentionReason = reason;
+        CompletedAt = completedAt;
+        return Result.Success();
+    }
 }

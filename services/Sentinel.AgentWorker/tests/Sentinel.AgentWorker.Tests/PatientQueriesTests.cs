@@ -5,6 +5,8 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Queries;
 using Shouldly;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
+using Sentinel.AgentWorker.Application.Options;
 
 namespace Sentinel.AgentWorker.Tests;
 

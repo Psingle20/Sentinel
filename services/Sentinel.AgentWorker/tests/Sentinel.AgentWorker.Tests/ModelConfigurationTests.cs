@@ -2,10 +2,16 @@ using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Configuration;
 using Sentinel.AgentWorker.Application.Investigations;
-using Sentinel.AgentWorker.Application.Models;
 using Sentinel.AgentWorker.Application.Tools;
 using Sentinel.Contracts.Messaging;
 using Shouldly;
+using Sentinel.AgentWorker.Application.ControlPlane;
+using Sentinel.AgentWorker.Application.Options;
+using Sentinel.AgentWorker.Api.Controllers;
+using Sentinel.AgentWorker.Application.Abstractions.Configuration;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
+using Sentinel.AgentWorker.Application.BusinessTasks.Commands.Configuration;
+using Sentinel.AgentWorker.Application.BusinessTasks.Queries.Configuration;
 
 namespace Sentinel.AgentWorker.Tests;
 
@@ -30,15 +36,33 @@ public sealed class ModelConfigurationTests
         }
     }
 
-    private static ModelConfigurationDocument Seed()
+    private sealed class ConfiguredProviders(IReadOnlyCollection<string> configured) : IModelRouter
+    {
+        public IReadOnlyCollection<string> Configured => configured;
+
+        public IModelProvider For(string role) => throw new NotSupportedException("Publishing never routes a role.");
+    }
+
+    private sealed class RecordingActivator : IModelConfigurationActivator
+    {
+        public List<PublishedDocument<ModelConfigurationDocument>> Activated { get; } = [];
+
+        public void Activate(PublishedDocument<ModelConfigurationDocument> published) => Activated.Add(published);
+    }
+
+    private static readonly ModelDeploymentOptions Deployment = new(Routing, () => new InvestigationOptions(), () => new ModelPricingOptions { InputPerMillionTokens = 0.2, OutputPerMillionTokens = 0.6 });
+
+    private static ModelRoutingOptions Routing()
     {
         var routing = new ModelRoutingOptions();
         routing.Routing["logs"] = ModelRoutingOptions.TestDouble;
-        return ModelConfigurationMapping.From(routing, new InvestigationOptions(), new ModelPricingOptions { InputPerMillionTokens = 0.2, OutputPerMillionTokens = 0.6 });
+        return routing;
     }
 
-    private static ModelConfigurationService Service(InMemoryStore store, IReadOnlyCollection<string> providers) =>
-        new(new VersionedDocumentPublisher<ModelConfigurationDocument>(store, TimeProvider.System), Seed, providers);
+    private static ModelConfigurationDocument Seed() => Deployment.Seed();
+
+    private static PublishModelConfigurationCommandHandler Publisher(InMemoryStore store, RecordingActivator activator) =>
+        new(new VersionedDocumentPublisher<ModelConfigurationDocument>(store, TimeProvider.System), Deployment, new ConfiguredProviders(TestDoubleOnly), activator);
 
     [Fact]
     public void The_document_carries_routing_prompt_budget_baseline_and_prices()
@@ -92,31 +116,34 @@ public sealed class ModelConfigurationTests
     public async Task An_operator_moves_a_role_to_another_prompt_version_through_a_new_version()
     {
         var store = new InMemoryStore();
-        ModelConfigurationService service = Service(store, TestDoubleOnly);
+        var activator = new RecordingActivator();
 
-        Result<PublishedDocument<ModelConfigurationDocument>> published = await service.PublishAsync(
-            Seed() with { Version = "models-2026.10.29.1", PromptVersion = InvestigatorPrompt.Versions[0] },
-            ModelConfigurationMapping.DeploymentVersion,
-            "operator@example.test",
+        Result<DocumentVersion> published = await Publisher(store, activator).Handle(
+            new PublishModelConfigurationCommand(
+                Seed() with { Version = "models-2026.10.29.1", PromptVersion = InvestigatorPrompt.Versions[0] },
+                ModelConfigurationMapping.DeploymentVersion,
+                "operator@example.test"),
             CancellationToken.None);
 
-        published.IsSuccess.ShouldBeTrue();
-        (await service.CurrentAsync(CancellationToken.None)).Document.PromptVersion.ShouldBe(InvestigatorPrompt.Versions[0]);
+        published.Value.Version.ShouldBe("models-2026.10.29.1");
+        activator.Activated.ShouldHaveSingleItem().Document.PromptVersion.ShouldBe(InvestigatorPrompt.Versions[0]);
+        DocumentState<ModelConfigurationDocument> current = (await new GetModelConfigurationQueryHandler(new VersionedDocumentPublisher<ModelConfigurationDocument>(store, TimeProvider.System), Deployment)
+            .Handle(new GetModelConfigurationQuery(), CancellationToken.None)).Value;
+        current.Document.PromptVersion.ShouldBe(InvestigatorPrompt.Versions[0]);
     }
 
     [Fact]
     public async Task A_document_routing_to_an_unconfigured_provider_is_never_published()
     {
         var store = new InMemoryStore();
-        ModelConfigurationService service = Service(store, TestDoubleOnly);
+        var activator = new RecordingActivator();
 
-        Result<PublishedDocument<ModelConfigurationDocument>> refused = await service.PublishAsync(
-            Seed() with { Version = "models-meta", DefaultProvider = "meta" },
-            ModelConfigurationMapping.DeploymentVersion,
-            "operator@example.test",
+        Result<DocumentVersion> refused = await Publisher(store, activator).Handle(
+            new PublishModelConfigurationCommand(Seed() with { Version = "models-meta", DefaultProvider = "meta" }, ModelConfigurationMapping.DeploymentVersion, "operator@example.test"),
             CancellationToken.None);
 
         refused.Error.Code.ShouldBe("Configuration.Invalid");
         store.Versions.ShouldBeEmpty();
+        activator.Activated.ShouldBeEmpty();
     }
 }

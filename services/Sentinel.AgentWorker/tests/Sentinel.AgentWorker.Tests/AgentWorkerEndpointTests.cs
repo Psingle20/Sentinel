@@ -21,7 +21,7 @@ public sealed class AgentWorkerEndpointTests
     public async Task An_incidents_executions_are_listed_and_read_with_their_tool_calls()
     {
         await using var host = new AgentWorkerHost(AgentWorkerHost.Testing);
-        AgentExecution execution = Execution(IncidentId.New());
+        AgentExecutionRecord execution = Execution(IncidentId.New());
         await host.Executions.SaveAsync(execution, CancellationToken.None);
         using HttpClient client = host.CreateClient();
 
@@ -62,7 +62,7 @@ public sealed class AgentWorkerEndpointTests
     public async Task An_execution_recorded_without_its_inputs_replays_as_not_reproducible()
     {
         await using var host = new AgentWorkerHost(AgentWorkerHost.Testing);
-        AgentExecution execution = Execution(IncidentId.New());
+        AgentExecutionRecord execution = Execution(IncidentId.New());
         await host.Executions.SaveAsync(execution, CancellationToken.None);
         using HttpClient client = host.CreateClient();
 
@@ -82,7 +82,7 @@ public sealed class AgentWorkerEndpointTests
     public async Task A_replay_at_another_services_level_or_an_unknown_prompt_is_a_bad_request()
     {
         await using var host = new AgentWorkerHost(AgentWorkerHost.Testing);
-        AgentExecution execution = Execution(IncidentId.New());
+        AgentExecutionRecord execution = Execution(IncidentId.New());
         await host.Executions.SaveAsync(execution, CancellationToken.None);
         using HttpClient client = host.CreateClient();
 
@@ -146,7 +146,7 @@ public sealed class AgentWorkerEndpointTests
         read.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
-    private static AgentExecution Execution(IncidentId incidentId) => new()
+    private static AgentExecutionRecord Execution(IncidentId incidentId) => new()
     {
         AgentExecutionId = AgentExecutionId.New(),
         TenantId = TenantId.From("acme"),

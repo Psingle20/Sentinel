@@ -1,5 +1,6 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using Sentinel.AgentWorker.Api.Controllers;
 using Sentinel.Testing.Architecture;
 using Shouldly;
 
@@ -43,10 +44,7 @@ public sealed class LayerDependencyTests
         "Sentinel.Executor"
     ];
 
-    // Rules 8 to 10 (ADR-020): the consumers, inline endpoints and building-block registration AgentWorker's own step (6) migrates.
-    private static readonly string[] PendingConsumers = [
-        "Sentinel.AgentWorker.Infrastructure.InvestigateIncidentHandler"
-    ];
+    private static readonly string[] PendingConsumers = [];
 
     [Fact]
     public void Domain_references_only_core_building_blocks_and_contract_primitives()
@@ -109,12 +107,16 @@ public sealed class LayerDependencyTests
         ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", PendingConsumers).ShouldBeEmpty();
 
     [Fact]
-    public void Program_still_maps_its_endpoints_until_they_move_to_controllers() =>
-        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/Program.cs"), pending: true).ShouldBeEmpty();
+    public void Controllers_derive_from_the_api_controller_and_send_requests() =>
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.AgentWorker.Domain"], []).ShouldBeEmpty();
+
+    [Fact]
+    public void Program_maps_no_endpoint_itself() =>
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/Program.cs")).ShouldBeEmpty();
 
     [Fact]
     public void Only_the_application_module_registers_the_building_blocks() =>
-        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, ["Program"]).ShouldBeEmpty();
+        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, []).ShouldBeEmpty();
 
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {

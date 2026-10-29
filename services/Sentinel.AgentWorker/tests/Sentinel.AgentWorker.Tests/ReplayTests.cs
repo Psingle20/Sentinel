@@ -2,7 +2,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Sentinel.AgentWorker.Application.Investigations;
-using Sentinel.AgentWorker.Application.Models;
 using Sentinel.AgentWorker.Application.Tools;
 using Sentinel.AgentWorker.Domain.Executions;
 using Sentinel.AgentWorker.Infrastructure.Models;
@@ -12,6 +11,12 @@ using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
 using Shouldly;
+using Sentinel.AgentWorker.Application.Abstractions.Persistence;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
+using Sentinel.AgentWorker.Application.Capture;
+using Sentinel.AgentWorker.Application.Diagnostics;
+using Sentinel.AgentWorker.Application.Options;
+using Sentinel.AgentWorker.Application.BusinessTasks.Commands.Replays;
 
 namespace Sentinel.AgentWorker.Tests;
 
@@ -23,11 +28,11 @@ public sealed class ReplayTests
     {
         var telemetry = Telemetry.ConnectionLeak();
         var store = new InMemoryExecutionStore();
-        AgentExecution execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
+        AgentExecutionRecord execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
         var offline = new OfflineProviders();
 
         InvestigationReplayResult replay = (await Replayer(store, offline, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())))
-            .ReplayAsync(execution.AgentExecutionId, new InvestigationReplayRequest(), CancellationToken.None))!;
+            .Handle(new ReplayInvestigationCommand(execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
 
         replay.Level.ShouldBe(ReplayLevel.Investigation);
         replay.InputsReproduced.ShouldBeTrue(string.Join("; ", replay.ToolCallMismatches.Select(mismatch => mismatch.Reason)));
@@ -46,11 +51,11 @@ public sealed class ReplayTests
         var telemetry = Telemetry.ConnectionLeak();
         var store = new InMemoryExecutionStore();
         var live = new NondeterministicModel(new DeterministicModelProvider(Options.Create(new TestDoubleOptions())));
-        AgentExecution execution = await RecordAsync(telemetry, store, live, InvestigationRoles.Metrics);
+        AgentExecutionRecord execution = await RecordAsync(telemetry, store, live, InvestigationRoles.Metrics);
         int callsBefore = live.Calls;
 
         InvestigationReplayResult replay = (await Replayer(store, new OfflineProviders(), live)
-            .ReplayAsync(execution.AgentExecutionId, new InvestigationReplayRequest(), CancellationToken.None))!;
+            .Handle(new ReplayInvestigationCommand(execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
 
         live.Calls.ShouldBe(callsBefore);
         replay.InputsReproduced.ShouldBeTrue();
@@ -64,10 +69,10 @@ public sealed class ReplayTests
     {
         var telemetry = Telemetry.ConnectionLeak();
         var store = new InMemoryExecutionStore();
-        AgentExecution execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
+        AgentExecutionRecord execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
 
         InvestigationReplayResult replay = (await Replayer(store, new OfflineProviders(), new DeterministicModelProvider(Options.Create(new TestDoubleOptions())))
-            .ReplayAsync(execution.AgentExecutionId, new InvestigationReplayRequest { Level = ReplayLevel.ModelReevaluation, PromptVersion = InvestigatorPrompt.V2 }, CancellationToken.None))!;
+            .Handle(new ReplayInvestigationCommand(execution.AgentExecutionId, new InvestigationReplayRequest { Level = ReplayLevel.ModelReevaluation, PromptVersion = InvestigatorPrompt.V2 }), CancellationToken.None)).Value!;
 
         replay.Level.ShouldBe(ReplayLevel.ModelReevaluation);
         replay.Replayed.ShouldNotBeNull().Model.PromptVersion.ShouldBe($"{InvestigatorPrompt.V2}/{InvestigationRoles.Metrics}");
@@ -80,13 +85,13 @@ public sealed class ReplayTests
     {
         var telemetry = Telemetry.ConnectionLeak();
         var store = new InMemoryExecutionStore();
-        AgentExecution execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
+        AgentExecutionRecord execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
         ExecutionInputs inputs = (await store.GetInputsAsync(execution.AgentExecutionId, CancellationToken.None))!;
         await store.SaveInputsAsync(inputs with { Responses = [.. inputs.Responses.Skip(1)] }, CancellationToken.None);
         var offline = new OfflineProviders();
 
         InvestigationReplayResult replay = (await Replayer(store, offline, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())))
-            .ReplayAsync(execution.AgentExecutionId, new InvestigationReplayRequest(), CancellationToken.None))!;
+            .Handle(new ReplayInvestigationCommand(execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
 
         replay.InputsReproduced.ShouldBeFalse();
         replay.UncapturedQueries.ShouldBeGreaterThan(0);
@@ -108,15 +113,15 @@ public sealed class ReplayTests
 
         var replayCapture = new InvestigationCapture();
         var offline = new OfflineProviders();
-        var replayer = new InvestigationReplayService(
+        var replayer = new ReplayInvestigationCommandHandler(
             store,
             [new AdversarialVerifier(new CapturingObservationQueries(offline, replayCapture), TimeProvider.System)],
             [],
             new FixedRouter(new DeterministicModelProvider(Options.Create(new TestDoubleOptions()))),
             replayCapture,
             TimeProvider.System,
-            NullLogger<InvestigationReplayService>.Instance);
-        InvestigationReplayResult replay = (await replayer.ReplayAsync(run.Execution.AgentExecutionId, new InvestigationReplayRequest(), CancellationToken.None))!;
+            NullLogger<ReplayInvestigationCommandHandler>.Instance);
+        InvestigationReplayResult replay = (await replayer.Handle(new ReplayInvestigationCommand(run.Execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
 
         replay.FindingsMatch.ShouldBe(true, string.Join("; ", replay.Differences));
         replay.Deterministic.ShouldBeTrue();
@@ -128,11 +133,11 @@ public sealed class ReplayTests
     {
         var telemetry = Telemetry.ConnectionLeak();
         var store = new InMemoryExecutionStore();
-        AgentExecution execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
+        AgentExecutionRecord execution = await RecordAsync(telemetry, store, new DeterministicModelProvider(Options.Create(new TestDoubleOptions())), InvestigationRoles.Metrics);
         store.ForgetInputs(execution.AgentExecutionId);
 
         InvestigationReplayResult replay = (await Replayer(store, new OfflineProviders(), new DeterministicModelProvider(Options.Create(new TestDoubleOptions())))
-            .ReplayAsync(execution.AgentExecutionId, new InvestigationReplayRequest(), CancellationToken.None))!;
+            .Handle(new ReplayInvestigationCommand(execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
 
         replay.InputsReproduced.ShouldBeFalse();
         replay.Deterministic.ShouldBeFalse();
@@ -153,7 +158,7 @@ public sealed class ReplayTests
         InvestigatorPrompt.System(new Dictionary<string, string>(StringComparer.Ordinal), Specialists.Generalist, InvestigatorPrompt.V2).ShouldNotContain("similarIncidents");
     }
 
-    private static async Task<AgentExecution> RecordAsync(Telemetry telemetry, InMemoryExecutionStore store, IModelProvider model, string role)
+    private static async Task<AgentExecutionRecord> RecordAsync(Telemetry telemetry, InMemoryExecutionStore store, IModelProvider model, string role)
     {
         var capture = new InvestigationCapture();
         ModelInvestigator investigator = Investigator(new CapturingObservationQueries(telemetry, capture), new CapturingKnowledgeQueries(telemetry, capture), model, capture);
@@ -178,19 +183,19 @@ public sealed class ReplayTests
         }, CancellationToken.None);
     }
 
-    private static InvestigationReplayService Replayer(InMemoryExecutionStore store, OfflineProviders offline, IModelProvider model)
+    private static ReplayInvestigationCommandHandler Replayer(InMemoryExecutionStore store, OfflineProviders offline, IModelProvider model)
     {
         var capture = new InvestigationCapture();
         var queries = new CapturingObservationQueries(offline, capture);
         var knowledge = new CapturingKnowledgeQueries(offline, capture);
-        return new InvestigationReplayService(
+        return new ReplayInvestigationCommandHandler(
             store,
             [Investigator(queries, knowledge, model, capture)],
             Tools(queries, knowledge),
             new FixedRouter(model),
             capture,
             TimeProvider.System,
-            NullLogger<InvestigationReplayService>.Instance);
+            NullLogger<ReplayInvestigationCommandHandler>.Instance);
     }
 
     private static ModelInvestigator Investigator(IObservationQueries queries, IKnowledgeQueries knowledge, IModelProvider model, InvestigationCapture capture) =>
@@ -223,6 +228,8 @@ public sealed class ReplayTests
 
     private sealed class FixedRouter(IModelProvider model) : IModelRouter
     {
+        public IReadOnlyCollection<string> Configured => [model.Provider];
+
         public IModelProvider For(string role) => model;
     }
 
@@ -264,23 +271,23 @@ public sealed class ReplayTests
 
     private sealed class InMemoryExecutionStore : IExecutionStore
     {
-        private readonly Dictionary<AgentExecutionId, AgentExecution> _executions = [];
+        private readonly Dictionary<AgentExecutionId, AgentExecutionRecord> _executions = [];
         private readonly Dictionary<AgentExecutionId, ExecutionInputs> _inputs = [];
 
         public List<InvestigationReplayResult> Replays { get; } = [];
 
         public void ForgetInputs(AgentExecutionId executionId) => _inputs.Remove(executionId);
 
-        public Task SaveAsync(AgentExecution execution, CancellationToken cancellationToken)
+        public Task SaveAsync(AgentExecutionRecord execution, CancellationToken cancellationToken)
         {
             _executions[execution.AgentExecutionId] = execution;
             return Task.CompletedTask;
         }
 
-        public Task<IReadOnlyList<AgentExecution>> ForIncidentAsync(IncidentId incidentId, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<AgentExecution>>([.. _executions.Values.Where(execution => execution.IncidentId == incidentId)]);
+        public Task<IReadOnlyList<AgentExecutionRecord>> ForIncidentAsync(IncidentId incidentId, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AgentExecutionRecord>>([.. _executions.Values.Where(execution => execution.IncidentId == incidentId)]);
 
-        public Task<AgentExecution?> GetAsync(AgentExecutionId executionId, CancellationToken cancellationToken) =>
+        public Task<AgentExecutionRecord?> GetAsync(AgentExecutionId executionId, CancellationToken cancellationToken) =>
             Task.FromResult(_executions.GetValueOrDefault(executionId));
 
         public Task SaveInputsAsync(ExecutionInputs inputs, CancellationToken cancellationToken)

@@ -2,12 +2,14 @@ using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Sentinel.AgentWorker.Application.Investigations;
-using Sentinel.AgentWorker.Application.Models;
 using Sentinel.AgentWorker.Application.Tools;
 using Sentinel.AgentWorker.Infrastructure.Models;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Shouldly;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
+using Sentinel.AgentWorker.Application.Diagnostics;
+using Sentinel.AgentWorker.Application.Options;
 
 namespace Sentinel.AgentWorker.Tests;
 
@@ -53,6 +55,8 @@ internal static class Harness
 
     private sealed class FixedRouter(IModelProvider model) : IModelRouter
     {
+        public IReadOnlyCollection<string> Configured => [model.Provider];
+
         public IModelProvider For(string role) => model;
     }
 }

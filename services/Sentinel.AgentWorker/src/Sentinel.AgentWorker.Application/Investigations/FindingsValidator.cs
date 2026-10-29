@@ -6,18 +6,6 @@ using Sentinel.Contracts.Primitives.Identifiers;
 
 namespace Sentinel.AgentWorker.Application.Investigations;
 
-/// <summary>What the model produced, once validated: findings with Sentinel IDs, or the reasons it was refused.</summary>
-public sealed record ValidatedFindings(
-    IReadOnlyList<EvidenceFinding> Evidence,
-    IReadOnlyList<HypothesisFinding> Hypotheses,
-    bool Abstained,
-    string? AbstentionReason,
-    IReadOnlyList<string> Errors,
-    IReadOnlyList<string>? Unknowns = null)
-{
-    public bool IsValid => Errors.Count == 0;
-}
-
 /// <summary>
 /// Validates the model's structured output (ADR-015). Model output is an untrusted proposal: every
 /// field is checked, and every cited observation must have been returned by a tool call in this

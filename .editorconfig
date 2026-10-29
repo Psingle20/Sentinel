@@ -393,74 +393,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/FindingsValidator.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/InvestigationReplay.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/InvestigationService.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/Investigators.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/Specialists.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Models/ModelConfiguration.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Models/ModelContracts.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Models/ModelRouting.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Tools/Capture.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Tools/InvestigationTools.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Tools/PatientObservationQueries.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Tools/SignalTools.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Domain/Executions/AgentExecution.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Domain/Executions/ExecutionInputs.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/AgentWorkerInfrastructure.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/Models/DeterministicModelProvider.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/Models/MetaModelProvider.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/SpecialistTests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -670,10 +602,6 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/TemporalFixture.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 

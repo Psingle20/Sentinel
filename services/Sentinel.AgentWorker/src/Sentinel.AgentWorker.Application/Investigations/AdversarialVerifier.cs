@@ -8,6 +8,7 @@ using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
+using Sentinel.AgentWorker.Application.Abstractions.Providers;
 
 namespace Sentinel.AgentWorker.Application.Investigations;
 
@@ -29,7 +30,7 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
     public const string LoadRose = "load-rose-before-onset";
     public const string Untestable = "no-falsifier";
 
-    private static readonly ModelMetadata Metadata = new("sentinel", InvestigatorName, "1", PromptVersion);
+    private static readonly ExecutionModel Code = new("sentinel", InvestigatorName, "1", PromptVersion);
 
     public string Name => InvestigatorName;
 
@@ -72,9 +73,14 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
 
         SearchAlternatives(output, command, connections, latency, deployments, onset);
 
-        InvestigationRun run = InvestigationRecords.Build(
-            command, Name, shadow, Metadata, InvestigationOutcome.Completed, null,
-            output.Evidence, output.Alternatives, reads.ToolCalls, 0, 0, 0, 0, started, time.GetUtcNow());
+        AgentExecution execution = InvestigationRecords.Start(command, Name, shadow, Code, started);
+        foreach (ToolCallRecord call in reads.ToolCalls)
+        {
+            execution.RecordToolCall(call);
+        }
+
+        InvestigationRecords.Finish(execution, InvestigationOutcome.Completed, null, time.GetUtcNow());
+        InvestigationRun run = InvestigationRecords.Build(command, execution, output.Evidence, output.Alternatives);
         return run.WithCompleted(run.Completed with { Challenges = output.Challenges });
     }
 
