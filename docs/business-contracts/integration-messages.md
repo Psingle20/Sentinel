@@ -13,14 +13,14 @@ Every message travels in the building-block envelope over Redis Streams, with te
 | `runtime.decision.recorded` | 1 | `sentinel.incidents` | Runtime | (later phases) | Runtime diagnosed or abstained, with confidence, completeness and calibration. |
 | `runtime.remediation-plan.proposed` | 1 | `sentinel.incidents` | Runtime | (later phases) | A versioned, hashed plan with Executor's plan-time policy evaluation. |
 | `runtime.recovery.evaluated` | 1 | `sentinel.incidents` | Runtime | (later phases) | Recovery was judged from telemetry. |
-| `agentworker.investigation.completed` | 1 | `sentinel.investigations` | AgentWorker | Runtime | Findings (or abstention) for one investigation, with the investigator's role, keyed hypotheses, unknowns and, from the verifier, challenges. Proposals until Runtime accepts them. Added fields are optional and omitted when empty, so schema 1 still holds. |
+| `agentworker.investigation.completed` | 1 | `sentinel.investigations` | AgentWorker | Runtime | Findings (or abstention) for one investigation, with the investigator's role, keyed hypotheses, unknowns, the tool catalog version and, from the verifier, challenges. Proposals until Runtime accepts them. Added fields are optional and omitted when empty, so schema 1 still holds. |
 | `executor.remediation.executed` | 1 | `sentinel.remediation` | Executor | Runtime | The execution's result. `outcomeUnknown` is followed by a final result after reconciliation. |
 
 ## Commands
 
 | Message | Schema | Stream | Sender | Handler | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `agentworker.investigate-incident` | 1 | `sentinel.agentworker.commands` | Runtime | AgentWorker | Investigate one question within a budget and time window, as a specialist role, with the symptom onset; the verifier also receives the hypotheses to challenge and the accepted evidence. |
+| `agentworker.investigate-incident` | 1 | `sentinel.agentworker.commands` | Runtime | AgentWorker | Investigate one question within a budget and time window, as a specialist role, with the symptom onset; the verifier also receives the hypotheses to challenge and the accepted evidence. From Phase 07 it may carry similarIncidents: remembered incidents of the same tenant with their shared features, as hints that are never evidence (ADR-019). Optional and omitted when empty, so schema 1 still holds. |
 | `runtime.record-approval` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver approved an exact plan version; carries Api's signed attestation. |
 | `runtime.record-rejection` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver rejected a plan version, with a reason. |
 | `runtime.record-revocation` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver withdrew an approval before execution started; Runtime escalates the incident and refuses any start confirmation. |

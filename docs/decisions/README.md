@@ -24,3 +24,4 @@ Each decision should record status, context, constraints, considered options, de
 - [ADR-016: Event time, watermarks and late data](ADR-016-event-time-and-late-data.md) — Accepted
 - [ADR-017: Runtime actor and workflow hosting](ADR-017-runtime-actor-and-workflow-hosting.md) — Accepted
 - [ADR-018: Observation publication scope](ADR-018-observation-publication-scope.md) — Accepted
+- [ADR-019: Incident memory, replay and retention](ADR-019-incident-memory-replay-and-retention.md) — Accepted
