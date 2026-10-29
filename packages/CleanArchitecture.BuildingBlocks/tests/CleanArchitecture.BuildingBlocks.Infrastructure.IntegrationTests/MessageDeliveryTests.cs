@@ -1,5 +1,6 @@
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Redis;
 using CleanArchitecture.BuildingBlocks.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -178,6 +179,33 @@ public sealed class MessageDeliveryTests(MessagingInfrastructure infrastructure)
         behavior.Attempts.ShouldBe(3);
         (await PendingAsync(services.Stream)).ShouldBe(0);
         (await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from invoices")).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_dead_letter_replayed_after_the_cause_is_fixed_is_handled_once()
+    {
+        // Fails for exactly the three deliveries the test host allows, so it is dead-lettered and then succeeds.
+        BillingBehavior behavior = new() { FailFirst = 3 };
+        await using Services services = await StartAsync(behavior);
+        IDatabase redis = infrastructure.Redis.GetDatabase();
+        var orderId = Guid.NewGuid();
+
+        await PlaceOrderAsync(services.Orders, orderId);
+        await MessagingInfrastructure.EventuallyAsync(async () => await redis.StreamLengthAsync(services.Stream + ".dlq") == 1, "the message is dead-lettered");
+
+        RedisDeadLetters deadLetters = services.Billing.Services.GetRequiredService<RedisDeadLetters>();
+        DeadLetter failed = (await deadLetters.ListAsync(services.Stream, 10)).ShouldHaveSingleItem();
+        failed.MessageType.ShouldBe(MessageType);
+        failed.Reason.ShouldStartWith("Failed after 3 deliveries");
+
+        (await deadLetters.ReplayAsync(services.Stream, failed.EntryId)).ShouldBeTrue();
+        await MessagingInfrastructure.EventuallyAsync(
+            async () => await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from invoices") == 1,
+            "the replayed message is handled");
+
+        (await redis.StreamLengthAsync(services.Stream + ".dlq")).ShouldBe(0);
+        (await deadLetters.ReplayAsync(services.Stream, failed.EntryId)).ShouldBeFalse("a replayed entry leaves the dead-letter stream");
+        behavior.Attempts.ShouldBe(4);
     }
 
     [Fact]
