@@ -153,6 +153,21 @@ public sealed class ExecutionTests : IDisposable
     }
 
     [Fact]
+    public async Task A_target_that_cannot_be_inspected_is_refused_with_the_reason_and_nothing_runs()
+    {
+        _target.InspectionFailure = new HttpRequestException("Response status code does not indicate success: 404 (Not Found).");
+
+        await ExecuteAsync(Commands.Execute(_signer, key: "uninspectable"));
+
+        RemediationExecuted reported = _outbox.Messages.OfType<RemediationExecuted>().Last();
+        reported.Outcome.ShouldBe(ExecutionOutcome.Rejected);
+        reported.Detail.ShouldNotBeNull().ShouldContain("could not be inspected before executing: Response status code does not indicate success: 404");
+        (await _store.FindAsync("uninspectable", CancellationToken.None)).ShouldNotBeNull().HasFinalOutcome.ShouldBeTrue();
+        _start.Calls.ShouldBe(0);
+        _target.Executions.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task A_denied_plan_is_rejected_even_with_a_valid_attestation()
     {
         RemediationPlan plan = Commands.Plan(target: "payments-service");

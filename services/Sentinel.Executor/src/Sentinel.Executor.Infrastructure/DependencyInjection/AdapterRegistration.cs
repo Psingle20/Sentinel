@@ -22,7 +22,9 @@ internal static class AdapterRegistration
             : throw new InvalidOperationException("Executor:Adapters:DeployController:Token is not configured. Supply it through secret configuration or the orchestrator.");
 
 #pragma warning disable EXTEXP0001
-        services.AddHttpClient<IRemediationAdapter, DeployControllerRollbackAdapter>(client =>
+        // Both adapters are typed clients of IRemediationAdapter, and a typed client takes its service type's name unless
+        // given one; sharing a name, the batch adapter's address and headers replaced the rollback adapter's.
+        services.AddHttpClient<IRemediationAdapter, DeployControllerRollbackAdapter>(nameof(DeployControllerRollbackAdapter), client =>
         {
             client.BaseAddress = deployController;
             client.Timeout = TimeSpan.FromSeconds(10);
@@ -33,7 +35,7 @@ internal static class AdapterRegistration
         if (configuration["Executor:Adapters:ReportingWorker:Endpoint"] is { Length: > 0 } reporting
             && configuration["Executor:Adapters:ReportingWorker:ControlToken"] is { Length: > 0 } controlToken)
         {
-            services.AddHttpClient<IRemediationAdapter, ReportingBatchAdapter>(client =>
+            services.AddHttpClient<IRemediationAdapter, ReportingBatchAdapter>(nameof(ReportingBatchAdapter), client =>
             {
                 client.BaseAddress = new Uri(reporting);
                 client.Timeout = TimeSpan.FromSeconds(10);

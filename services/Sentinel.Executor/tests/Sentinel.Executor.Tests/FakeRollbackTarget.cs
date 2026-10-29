@@ -38,8 +38,13 @@ internal sealed class FakeRollbackTarget : IRemediationAdapter
     public IReadOnlyDictionary<string, string> CapabilityLimits(RemediationAction action) =>
         new Dictionary<string, string>(StringComparer.Ordinal) { ["to"] = ((RollbackAction)action).ToRevision };
 
+    /// <summary>When set, inspecting the target fails with this exception, as an unreachable or misaddressed target does.</summary>
+    public Exception? InspectionFailure { get; set; }
+
     public Task<TargetInspection> InspectAsync(RemediationAction action, string idempotencyKey, CancellationToken cancellationToken) =>
-        Task.FromResult(new TargetInspection(Serving, Operation, $"serving {Serving}, operation {Operation}"));
+        InspectionFailure is { } failure
+            ? Task.FromException<TargetInspection>(failure)
+            : Task.FromResult(new TargetInspection(Serving, Operation, $"serving {Serving}, operation {Operation}"));
 
     public Task<AdapterResult> ExecuteAsync(RemediationAction action, Capability capability, string idempotencyKey, CancellationToken cancellationToken)
     {

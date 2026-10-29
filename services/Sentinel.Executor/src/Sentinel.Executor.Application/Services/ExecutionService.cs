@@ -109,7 +109,19 @@ public sealed class ExecutionService(
                 return Refuse($"No adapter executes {PolicyService.ActionKind(action)} actions.");
             }
 
-            TargetInspection target = await adapter.InspectAsync(action, command.IdempotencyKey, cancellationToken);
+            // Fail closed: a target that cannot be inspected cannot be shown to meet the preconditions, and nothing has
+            // run yet. Letting the exception escape would leave the request received but never reserved, for
+            // reconciliation to refuse later under a misleading reason.
+            TargetInspection target;
+            try
+            {
+                target = await adapter.InspectAsync(action, command.IdempotencyKey, cancellationToken);
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+            {
+                return Refuse($"{action.TargetServiceId} could not be inspected before executing: {exception.Message}");
+            }
+
             if (action is RollbackAction rollback && target.ServingRevision != rollback.FromRevision)
             {
                 return Refuse($"Precondition failed: {rollback.TargetServiceId} serves {target.ServingRevision ?? "nothing"}, not {rollback.FromRevision}.");
