@@ -1,6 +1,8 @@
 using System.Reflection;
+using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 using CleanArchitecture.BuildingBlocks.Messaging;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
