@@ -26,7 +26,7 @@ The result is that a reader cannot answer, for any feature, the five questions b
 
 1. Where does the request enter? A controller action in the Api project or a consumer in Infrastructure, one file per capability.
 2. Which application type represents it? `<Operation>Request` in `BusinessProcesses/<Capability>/`.
-3. Which processor accepts it and which command or query does it become? `<Operation>Processor` beside the request; `<Operation>Command` in `Commands/<Capability>/` or `<Operation>Query` in `Queries/<Capability>/`.
+3. Which processor accepts it and which command or query does it become? `<Operation>Processor` beside the request; `<Operation>Command` in `BusinessTasks/Commands/<Capability>/` or `<Operation>Query` in `BusinessTasks/Queries/<Capability>/`.
 4. Which handler owns the use case and which ports does it need? `<Operation>CommandHandler` or `<Operation>QueryHandler` beside its message; its constructor lists the ports, one interface per file under `Abstractions/`.
 5. Which layer registers the implementation? The owning layer's dependency module.
 
@@ -215,15 +215,16 @@ services/Sentinel.<Service>/src/
 │   │       ├── <Operation>Request.cs
 │   │       ├── <Operation>Processor.cs
 │   │       └── <Operation>Response.cs           what a request returns, when it is a type of its own
-│   ├── Commands/
-│   │   └── <Capability>/
-│   │       ├── <Operation>Command.cs
-│   │       ├── <Operation>CommandHandler.cs
-│   │       └── <Capability>Mapping.cs           beside the handlers that use it
-│   ├── Queries/
-│   │   └── <Capability>/
-│   │       ├── <Operation>Query.cs
-│   │       └── <Operation>QueryHandler.cs
+│   ├── BusinessTasks/
+│   │   ├── Commands/
+│   │   │   └── <Capability>/
+│   │   │       ├── <Operation>Command.cs
+│   │   │       ├── <Operation>CommandHandler.cs
+│   │   │       └── <Capability>Mapping.cs       beside the handlers that use it
+│   │   └── Queries/
+│   │       └── <Capability>/
+│   │           ├── <Operation>Query.cs
+│   │           └── <Operation>QueryHandler.cs
 │   ├── Validators/
 │   │   └── <Capability>/
 │   │       └── <Operation>RequestValidator.cs
@@ -262,11 +263,11 @@ services/Sentinel.<Service>/src/
 
 ### Application layout
 
-**Decided by the owner on 2026-10-29.** An Application project has one root folder per kind of application message, each split by capability: `BusinessProcesses/<Capability>/` holds the requests, their processors and what they return; `Commands/<Capability>/` and `Queries/<Capability>/` hold the commands and queries with their handlers; `Validators/<Capability>/` holds the request validators. `Abstractions/`, `Options/` and `Services/` stay at the root. A capability is a business area such as `Approvals`, `Remediation` or `Execution`, the same name in every root folder, so every process, command, query and validator of a service can be listed at a glance and one operation is the files with its name across them. This replaces the job engine's feature folder per operation, which the first draft of this guide followed.
+**Decided by the owner on 2026-10-29.** An Application project separates what a caller asks from the work that carries it out, each split by capability: `BusinessProcesses/<Capability>/` holds the requests, their processors and what they return; `BusinessTasks/Commands/<Capability>/` and `BusinessTasks/Queries/<Capability>/` hold the commands and queries a processor dispatches, with their handlers; `Validators/<Capability>/` holds the request validators. `Abstractions/`, `Options/` and `Services/` stay at the root. A capability is a business area such as `Approvals`, `Remediation` or `Execution`, the same name in every root folder, so every process, command, query and validator of a service can be listed at a glance and one operation is the files with its name across them. This replaces the job engine's feature folder per operation, which the first draft of this guide followed.
 
-The layout keeps rule 6 checkable by namespace: a request and its processor share `BusinessProcesses.<Capability>`, a command and its handler share `Commands.<Capability>`, a query and its handler share `Queries.<Capability>`. An error that no aggregate owns sits beside the handlers that return it; aggregate errors stay in Domain (rule 12).
+The layout keeps rule 6 checkable by namespace: a request and its processor share `BusinessProcesses.<Capability>`, a command and its handler share `BusinessTasks.Commands.<Capability>`, a query and its handler share `BusinessTasks.Queries.<Capability>`. An error that no aggregate owns sits beside the handlers that return it; aggregate errors stay in Domain (rule 12).
 
-Tests mirror the structure: the approval handlers' tests sit in `Commands/Approvals/` and the aggregate's in `Domain/`.
+Tests mirror the structure: the approval handlers' tests sit in `BusinessTasks/Commands/Approvals/` and the aggregate's in `Domain/`.
 
 ## One type per file
 
@@ -337,7 +338,7 @@ Integration contracts in `Sentinel.Contracts` never implement `IRequest`, `IComm
 
 CQRS is the application pattern. It does not replace the actor and workflow models.
 
-- **Orleans.** `IncidentGrain` remains the single writer. A Runtime command handler validates and coordinates, then sends an `IncidentCommand` through `IIncidentOwner`. `IncidentCommand` is the aggregate-level command set serialized to the grain; `ICommand` is the in-process application message. They are different things with different lifetimes, and renaming one to avoid the shared word is not worth the churn. The namespaces `Application.Incidents.Commands` (aggregate) and `Application.Commands.*` (application) keep them apart.
+- **Orleans.** `IncidentGrain` remains the single writer. A Runtime command handler validates and coordinates, then sends an `IncidentCommand` through `IIncidentOwner`. `IncidentCommand` is the aggregate-level command set serialized to the grain; `ICommand` is the in-process application message. They are different things with different lifetimes, and renaming one to avoid the shared word is not worth the churn. The namespaces `Application.Incidents.Commands` (aggregate) and `Application.BusinessTasks.Commands.*` (application) keep them apart.
 - **Temporal.** Workflow code performs no I/O and never touches the container. Activities may send requests through `IRequestDispatcher`; that is the only place an activity reaches the application layer.
 - **Long-running operations.** A handler may start a durable operation and return an accepted identifier. It never waits for a workflow to finish.
 - **Trust path.** Approval goes Api to Runtime to Executor (ADR-006). Moving the approval use case into a processor and handler changes where the code lives, not who signs, who relays and who verifies.
@@ -385,7 +386,7 @@ Sentinel.Gateway.Application/BusinessProcesses/Approvals/
     ApprovalReceipt.cs
 Sentinel.Gateway.Application/Validators/Approvals/
     ApprovePlanRequestValidator.cs   approver present; version and hash are judged by the aggregate
-Sentinel.Gateway.Application/Commands/Approvals/
+Sentinel.Gateway.Application/BusinessTasks/Commands/Approvals/
     ApprovePlanCommand.cs          : ICommand<ApprovalReceipt>
     ApprovePlanCommandHandler.cs     the body of today's ApprovalService.ApproveAsync
     ApprovalMapping.cs
@@ -405,13 +406,13 @@ Sentinel.Runtime.Infrastructure/Messaging/Consumers/RecordApprovalConsumer.cs
     sends new RecordApprovalRequest(message) through IRequestDispatcher
 Sentinel.Runtime.Application/BusinessProcesses/Remediation/
     RecordApprovalRequest.cs, RecordApprovalProcessor.cs
-Sentinel.Runtime.Application/Commands/Remediation/
+Sentinel.Runtime.Application/BusinessTasks/Commands/Remediation/
     RecordApprovalCommand.cs, RecordApprovalCommandHandler.cs
         verifies plan currency, sends ApprovePlanCommand (the IncidentCommand) via IIncidentOwner,
         signals the workflow via IIncidentWorkflows
 ```
 
-Executor keeps `AttestationVerifier` and the policy engine as they are; its `ExecuteRemediation` consumer becomes a request in `BusinessProcesses/Execution/` and a command in `Commands/Execution/`.
+Executor keeps `AttestationVerifier` and the policy engine as they are; its `ExecuteRemediation` consumer becomes a request in `BusinessProcesses/Execution/` and a command in `BusinessTasks/Commands/Execution/`.
 
 The characterization tests that must stay green: approval negative tests (missing, expired, wrong hash, forged, replayed), the Api to Runtime contract test, the duplicate-delivery test, and the end-to-end golden path.
 
@@ -425,10 +426,10 @@ The files below are the ones to split first. Counts are top-level types per file
 
 | Service | File | Types | Target |
 | --- | --- | --- | --- |
-| Api | `Application/Approvals/ApprovalService.cs` | 11 | Three abstractions files, `Options/ApprovalOptions.cs`, `BusinessProcesses/Approvals/` (requests, processors, `ApprovalReceipt.cs`), `Commands/Approvals/` and `Validators/Approvals/` for approve, reject and revoke; `ApprovalErrors.cs` in Domain |
+| Api | `Application/Approvals/ApprovalService.cs` | 11 | Three abstractions files, `Options/ApprovalOptions.cs`, `BusinessProcesses/Approvals/` (requests, processors, `ApprovalReceipt.cs`), `BusinessTasks/Commands/Approvals/` and `Validators/Approvals/` for approve, reject and revoke; `ApprovalErrors.cs` in Domain |
 | Api | `Infrastructure/ApiInfrastructure.cs` | 14 | `DependencyInjection/` module and registrations; `Clients/` six client files; `Persistence/` three store files plus schema; `Security/LocalApprovalSigner.cs`; `Options/SigningOptions.cs` moves to Application |
 | Api | `Infrastructure/LiveInfrastructure.cs` | 13 | `Messaging/Consumers/` six consumers; `Persistence/PostgresLiveEventStore.cs`; live-update registration file |
-| Api | `Application/ControlPlane/ApiConfiguration.cs`, `ControlPlaneService.cs` | 8, 8 | `BusinessProcesses/ControlPlane/`, `Commands/ControlPlane/` and `Queries/ControlPlane/` for the publish, read and history operations |
+| Api | `Application/ControlPlane/ApiConfiguration.cs`, `ControlPlaneService.cs` | 8, 8 | `BusinessProcesses/ControlPlane/`, `BusinessTasks/Commands/ControlPlane/` and `BusinessTasks/Queries/ControlPlane/` for the publish, read and history operations |
 | Api | `Api/Program.cs` | 27 endpoints | `Controllers/` with `ApiController` plus `IncidentsController`, `ApprovalsController`, `PostmortemsController`, `LiveController`, `AdminController`; `Contracts/` one body per file; `Filters/IncidentTenantAttribute.cs`; `DependencyContainer.cs` |
 | Runtime | `Application/Ports.cs` | 14 | `Abstractions/Persistence/` three stores; `Abstractions/Runtime/` four coordination ports; `Abstractions/Providers/` two peer ports; `StoredEvent`, `IncidentSignal`, `ServiceContext` beside their owners |
 | Runtime | `Application/Incidents/IncidentCommands.cs` | 25 | `Incidents/Commands/` one file per command plus the base |
@@ -447,15 +448,15 @@ The files below are the ones to split first. Counts are top-level types per file
 | Runtime | `Infrastructure/RuntimeInfrastructure.cs` | 1, registers 14 Application types | Module plus `DependencyInjection/` registrations; Application registrations move to `ApplicationDependencyModule` |
 | Runtime | `Api/Program.cs` | 16 endpoints | `Controllers/` with `ApiController` plus `IncidentsController`, `HistoryController`, `RemediationController`, `ConfigurationController`, `AdminController` |
 | Executor | `Application/Ports.cs` | 11 | `Abstractions/Persistence/` three stores; `Abstractions/Security/IApprovalKeyResolver.cs`; `Abstractions/Providers/IStartConfirmation.cs`; `Abstractions/Remediation/` adapter contract and its three result types |
-| Executor | `Application/ExecutorServices.cs` | 3 | `Options/ExecutorOptions.cs`; `Policy` and `Execution` capabilities under `BusinessProcesses/`, `Commands/` and `Queries/` for policy evaluation, execution and reconciliation |
+| Executor | `Application/ExecutorServices.cs` | 3 | `Options/ExecutorOptions.cs`; `Policy` and `Execution` capabilities under `BusinessProcesses/` and `BusinessTasks/` for policy evaluation, execution and reconciliation |
 | Executor | `Infrastructure/ExecutorInfrastructure.cs` | 8 | Module, `Persistence/`, `Messaging/Consumers/ExecuteRemediationConsumer.cs` |
 | Executor | `Domain/Policy/PolicyEngine.cs` | 10 | One type per file under `Domain/Policy/` |
 | AgentWorker | `Infrastructure/AgentWorkerInfrastructure.cs` | 7 | Module, `Models/ModelRouter.cs`, `Clients/` two files, `Messaging/Consumers/InvestigateIncidentConsumer.cs`, `Persistence/` schema and store |
 | AgentWorker | `Application/Models/ModelContracts.cs` | 9 | `Abstractions/Providers/IModelProvider.cs` plus one file per request and response record |
 | AgentWorker | `Application/Tools/InvestigationTools.cs`, `SignalTools.cs` | 8, 5 | One tool per file under `Tools/` |
 | Ingestion | `Application/Ports.cs`, `Providers/ProviderContracts.cs`, `SignalProviders.cs` | 4, 6, 8 | `Abstractions/Persistence/`, `Abstractions/Providers/` one interface per file, `Abstractions/Diagnostics/IIngestionMetrics.cs` |
-| Reference deploy controller | `Deployments.cs`, `Program.cs` (113 lines, inline endpoints) | 14 | Full template: Domain `Revisions/` aggregate and events; Application `Deployments` (deploy, roll back, reset) and `Services` (get service) capabilities under `BusinessProcesses/`, `Commands/` and `Queries/`; Api `Controllers/`, `DependencyContainer`; may reference the building blocks |
-| Reference scenario runner | `ScenarioManifest.cs`, `ScenarioRunner.cs`, `TrafficGenerator.cs` | 15, 5, 2 | Full template: manifest types one per file under Domain `Scenarios/`; Application `Runs` capability (start, stop, reset, stop batch, set traffic) under `BusinessProcesses/` and `Commands/`; Api `Controllers/` |
+| Reference deploy controller | `Deployments.cs`, `Program.cs` (113 lines, inline endpoints) | 14 | Full template: Domain `Revisions/` aggregate and events; Application `Deployments` (deploy, roll back, reset) and `Services` (get service) capabilities under `BusinessProcesses/` and `BusinessTasks/`; Api `Controllers/`, `DependencyContainer`; may reference the building blocks |
+| Reference scenario runner | `ScenarioManifest.cs`, `ScenarioRunner.cs`, `TrafficGenerator.cs` | 15, 5, 2 | Full template: manifest types one per file under Domain `Scenarios/`; Application `Runs` capability (start, stop, reset, stop batch, set traffic) under `BusinessProcesses/` and `BusinessTasks/Commands/`; Api `Controllers/` |
 | Reference workload services | `Checkout.cs`, `Orders.cs`, `ReportingBatch.cs`, `Common/Control/FailureControl.cs`, `Common/Redis/RespConnection.cs` | 8, 6, 5, 4, 3 | File rules only: one type per file in folders per concern, with the injected fault in its own clearly named file (`CheckoutSessionLeak.cs`, `SlowOrderLookup.cs`, `ReportingConnectionFanOut.cs`); no layering, no building blocks |
 
 Ingestion is the least cluttered service and the best place to confirm the shape cheaply after the approval slice. The reference deploy controller is the right place to prove the template outside Sentinel's own services, because the end-to-end suite exercises it on every golden-path run.
@@ -474,7 +475,7 @@ Refactor by vertical behaviour and keep the end-to-end path green after each ste
 8. **Reference system**: deploy controller and scenario runner in full, workload services for file rules only, per ADR-011.
 9. **Cleanup.** Remove transitional files, raise the file rules to error, remove the StyleCop suppression file, update the building-blocks evolution plan and this guide's **Current** notes.
 
-Each step: characterization tests first, move the outcome-deciding rules for the capability into the aggregate or a domain policy with their errors and transition table, create the capability folders under `BusinessProcesses/`, `Commands/` or `Queries/` and `Validators/`, move interfaces without changing semantics, move registrations to the owning module, move endpoints into controllers or consumers into `Messaging/Consumers`, delete the old service when no caller remains, run the service tests and the affected scenario. Domain tests for the moved rules come first, because they are the cheapest tests to write and the ones that outlive the structure. Routes, status codes and response bodies do not change when an endpoint becomes an action; the Playwright and contract tests are the check.
+Each step: characterization tests first, move the outcome-deciding rules for the capability into the aggregate or a domain policy with their errors and transition table, create the capability folders under `BusinessProcesses/`, `BusinessTasks/Commands/` or `BusinessTasks/Queries/` and `Validators/`, move interfaces without changing semantics, move registrations to the owning module, move endpoints into controllers or consumers into `Messaging/Consumers`, delete the old service when no caller remains, run the service tests and the affected scenario. Domain tests for the moved rules come first, because they are the cheapest tests to write and the ones that outlive the structure. Routes, status codes and response bodies do not change when an endpoint becomes an action; the Playwright and contract tests are the check.
 
 ## Enforceable rules
 
