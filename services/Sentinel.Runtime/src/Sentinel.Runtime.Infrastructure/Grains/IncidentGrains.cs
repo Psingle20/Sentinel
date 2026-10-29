@@ -6,6 +6,7 @@ using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Application.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Infrastructure.Grains;
 

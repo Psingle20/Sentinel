@@ -12,6 +12,7 @@ using Sentinel.Contracts.Queries;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Application.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Infrastructure;
 
@@ -53,24 +54,6 @@ public sealed class InvestigationCompletedHandler(RemediationControlService cont
 {
     public Task<Result> HandleAsync(InvestigationCompleted message, MessageEnvelope envelope, CancellationToken cancellationToken) =>
         control.HandleInvestigationAsync(message, cancellationToken);
-}
-
-public sealed class RecordApprovalHandler(RemediationControlService control) : IIntegrationMessageHandler<RecordApproval>
-{
-    public Task<Result> HandleAsync(RecordApproval message, MessageEnvelope envelope, CancellationToken cancellationToken) =>
-        control.HandleApprovalAsync(message, cancellationToken);
-}
-
-public sealed class RecordRejectionHandler(RemediationControlService control) : IIntegrationMessageHandler<RecordRejection>
-{
-    public Task<Result> HandleAsync(RecordRejection message, MessageEnvelope envelope, CancellationToken cancellationToken) =>
-        control.HandleRejectionAsync(message, cancellationToken);
-}
-
-public sealed class RecordRevocationHandler(RemediationControlService control) : IIntegrationMessageHandler<RecordRevocation>
-{
-    public Task<Result> HandleAsync(RecordRevocation message, MessageEnvelope envelope, CancellationToken cancellationToken) =>
-        control.HandleRevocationAsync(message, cancellationToken);
 }
 
 public sealed class RemediationExecutedHandler(RemediationControlService control) : IIntegrationMessageHandler<RemediationExecuted>

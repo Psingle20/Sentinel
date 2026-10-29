@@ -6,6 +6,7 @@ using Sentinel.Contracts.Queries;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Domain.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Application;
 

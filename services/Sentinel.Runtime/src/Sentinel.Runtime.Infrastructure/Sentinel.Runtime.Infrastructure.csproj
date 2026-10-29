@@ -20,6 +20,7 @@
         <ProjectReference Include="..\Sentinel.Runtime.Application\Sentinel.Runtime.Application.csproj" />
         <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql\CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql.csproj" />
         <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Infrastructure.Redis\CleanArchitecture.BuildingBlocks.Infrastructure.Redis.csproj" />
+        <ProjectReference Include="..\..\..\..\packages\Sentinel.ServiceDefaults\src\Sentinel.ServiceDefaults\Sentinel.ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

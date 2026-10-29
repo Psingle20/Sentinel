@@ -11,6 +11,7 @@ using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Domain.Incidents;
 using ContractRecoveryEvaluated = Sentinel.Contracts.Incidents.RecoveryEvaluated;
 using DomainRecoveryEvaluated = Sentinel.Runtime.Domain.Incidents.RecoveryEvaluated;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Application.Incidents;
 

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CleanArchitecture.BuildingBlocks.Integration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -15,12 +16,13 @@ using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Application.Memory;
 using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Tests;
 
 /// <summary>
-/// Runtime's application services over in-memory stores: the real command executor, detection,
-/// workflow steps and control path, with the single writer, workflows and Executor faked at the ports.
+/// Runtime's application layer over in-memory stores: the real command executor, detection,
+/// workflow steps, processes and control path, with the single writer, workflows and Executor faked at the ports.
 /// </summary>
 internal sealed class InMemoryRuntime : IDisposable
 {
@@ -44,19 +46,10 @@ internal sealed class InMemoryRuntime : IDisposable
         services.AddSingleton<IServiceCatalog, InMemoryCatalog>();
         services.AddSingleton<IncidentLocks>();
         services.AddSingleton<IIncidentOwner, LocalIncidentOwner>();
-        services.AddSingleton<ServiceTopologyCache>();
-        services.AddScoped<IncidentCommandExecutor>();
-        services.AddScoped<IncidentSteps>();
-        services.AddScoped<RecoveryAssessor>();
-        services.AddScoped<DetectionService>();
-        services.AddScoped<RemediationControlService>();
-        services.AddScoped<ProjectionRebuilder>();
-        services.AddScoped<IncidentQueryService>();
         services.AddSingleton<IIncidentMemoryStore>(Memory);
-        services.AddScoped<IncidentMemoryRecorder>();
-        services.AddScoped<IncidentMemoryService>();
-        services.AddScoped<DomainReplayService>();
-        services.AddScoped<PostmortemService>();
+
+        // Runtime's own application module: the processes, tasks and services exactly as the host registers them.
+        new ApplicationDependencyModule().RegisterServices(services, new ConfigurationBuilder().Build());
         services.AddOptions<RuntimeOptions>().Configure(Configure);
         configure?.Invoke(services);
         Services = services.BuildServiceProvider();

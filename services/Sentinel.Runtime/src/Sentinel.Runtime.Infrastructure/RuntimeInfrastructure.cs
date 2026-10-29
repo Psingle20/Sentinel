@@ -20,9 +20,11 @@ using Sentinel.Runtime.Infrastructure.Grains;
 using Sentinel.Runtime.Infrastructure.Storage;
 using Sentinel.Runtime.Infrastructure.Workflows;
 using Temporalio.Extensions.OpenTelemetry;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Infrastructure;
 
+/// <summary>Runtime's infrastructure not yet split into capability registrations (ADR-020, Runtime's own step).</summary>
 public static class RuntimeInfrastructure
 {
     /// <summary>The activity sources Runtime's actor runtime and workflow engine trace with.</summary>
@@ -51,8 +53,6 @@ public static class RuntimeInfrastructure
         services.AddSingleton(provider => new RuntimeDeploymentOptions(() => provider.GetRequiredService<IOptionsFactory<RuntimeOptions>>().Create(DeploymentOptions)));
         services.AddSingleton<IVersionedDocumentStore<RuntimeConfigurationDocument>>(provider =>
             new PostgresVersionedDocumentStore<RuntimeConfigurationDocument>(provider.GetRequiredService<NpgsqlDataSource>(), RuntimeSchema.ConfigurationTable, SentinelJson.Options));
-        services.AddSingleton<VersionedDocumentPublisher<RuntimeConfigurationDocument>>();
-        services.AddSingleton<RuntimeConfigurationService>();
         services.AddManagedDocument<RuntimeOptions, RuntimeConfigurationDocument>(RuntimeConfigurationMapping.Apply);
         services.AddOptions<TemporalOptions>()
             .Bind(configuration.GetSection(TemporalOptions.Section))
@@ -63,19 +63,7 @@ public static class RuntimeInfrastructure
         services.AddSingleton<IMessagingStoreInitializer, RuntimeSchema>();
         services.AddScoped<IIncidentStore, PostgresIncidentStore>();
         services.AddScoped<ICorrelationStore, PostgresCorrelationStore>();
-        services.AddScoped<IncidentCommandExecutor>();
-        services.AddScoped<IncidentSteps>();
-        services.AddScoped<RecoveryAssessor>();
-        services.AddScoped<DetectionService>();
-        services.AddScoped<RemediationControlService>();
-        services.AddScoped<IncidentQueryService>();
-        services.AddScoped<ProjectionRebuilder>();
         services.AddScoped<IIncidentMemoryStore, PostgresIncidentMemoryStore>();
-        services.AddScoped<IncidentMemoryRecorder>();
-        services.AddScoped<IncidentMemoryService>();
-        services.AddScoped<DomainReplayService>();
-        services.AddScoped<PostmortemService>();
-        services.AddSingleton<ServiceTopologyCache>();
 
         // The single writers are grains (ADR-004).
         services.AddSingleton<IIncidentOwner, GrainIncidentOwner>();

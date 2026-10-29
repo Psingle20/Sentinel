@@ -9,6 +9,7 @@ using Temporalio.Client;
 using Temporalio.Exceptions;
 using Temporalio.Extensions.OpenTelemetry;
 using Temporalio.Worker;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Infrastructure.Workflows;
 

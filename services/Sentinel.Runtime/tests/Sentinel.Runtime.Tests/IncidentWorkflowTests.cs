@@ -13,6 +13,9 @@ using Temporalio.Client;
 using Temporalio.Worker;
 using Temporalio.Workflows;
 using ContractDirection = Sentinel.Contracts.Investigations.EvidenceDirection;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
+using CleanArchitecture.BuildingBlocks.Messaging;
+using Sentinel.Runtime.Application.BusinessProcesses.Remediation;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -299,34 +302,17 @@ internal sealed class WorkflowHarness : IDisposable
     public async Task ApproveAsync(IncidentId incidentId)
     {
         RemediationPlan plan = Runtime.Outbox.Of<RemediationPlanProposed>().Single(proposed => proposed.IncidentId == incidentId).Plan;
-        await Runtime.InScopeAsync(provider => provider.GetRequiredService<RemediationControlService>().HandleApprovalAsync(new RecordApproval
-        {
-            TenantId = InMemoryRuntime.Tenant,
-            EnvironmentId = InMemoryRuntime.Environment,
-            IncidentId = incidentId,
-            PlanId = plan.PlanId,
-            PlanVersion = plan.PlanVersion,
-            PlanHash = plan.PlanHash,
-            ApproverId = "responder@example.test",
-            Attestation = "header.claims.signature",
-            ApprovedAt = IncidentScenario.Start
-        }, CancellationToken.None));
+        await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
+            new RecordApprovalRequest(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", "header.claims.signature"),
+            CancellationToken.None));
     }
 
     public async Task RejectAsync(IncidentId incidentId)
     {
         RemediationPlan plan = Runtime.Outbox.Of<RemediationPlanProposed>().Single(proposed => proposed.IncidentId == incidentId).Plan;
-        await Runtime.InScopeAsync(provider => provider.GetRequiredService<RemediationControlService>().HandleRejectionAsync(new RecordRejection
-        {
-            TenantId = InMemoryRuntime.Tenant,
-            EnvironmentId = InMemoryRuntime.Environment,
-            IncidentId = incidentId,
-            PlanId = plan.PlanId,
-            PlanVersion = plan.PlanVersion,
-            RejectedBy = "responder@example.test",
-            Reason = "Not this change.",
-            RejectedAt = IncidentScenario.Start
-        }, CancellationToken.None));
+        await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
+            new RecordRejectionRequest(incidentId, plan.PlanId, plan.PlanVersion, "responder@example.test", "Not this change."),
+            CancellationToken.None));
     }
 
     /// <summary>Plays Executor: wait for the request, confirm the start, report the outcome.</summary>

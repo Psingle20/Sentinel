@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
@@ -8,10 +9,12 @@ using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Application;
+using Sentinel.Runtime.Application.BusinessProcesses.Remediation;
 using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using ContractDirection = Sentinel.Contracts.Investigations.EvidenceDirection;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -116,7 +119,7 @@ public sealed class RuntimeFlowTests : IDisposable
         _runtime.Policy.Calls.ShouldBe(1);
         RemediationPlan plan = _runtime.Outbox.Of<RemediationPlanProposed>().ShouldHaveSingleItem().Plan;
 
-        await ControlAsync(control => control.HandleApprovalAsync(Approval(incidentId, plan), CancellationToken.None));
+        await RequestAsync(Approval(incidentId, plan));
         await StepsAsync(steps => steps.RequestExecutionAsync(incidentId, CancellationToken.None));
         IncidentSnapshot executing = await StepsAsync(steps => steps.RequestExecutionAsync(incidentId, CancellationToken.None));
         ExecuteRemediation execute = _runtime.Outbox.Of<ExecuteRemediation>().ShouldHaveSingleItem();
@@ -181,6 +184,9 @@ public sealed class RuntimeFlowTests : IDisposable
     private Task<T> StepsAsync<T>(Func<IncidentSteps, Task<T>> step) =>
         _runtime.InScopeAsync(provider => step(provider.GetRequiredService<IncidentSteps>()));
 
+    private Task<Result> RequestAsync(IRequest request) =>
+        _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
+
     private Task<T> ControlAsync<T>(Func<RemediationControlService, Task<T>> step) =>
         _runtime.InScopeAsync(provider => step(provider.GetRequiredService<RemediationControlService>()));
 
@@ -241,18 +247,8 @@ public sealed class RuntimeFlowTests : IDisposable
         };
     }
 
-    private static RecordApproval Approval(IncidentId incidentId, RemediationPlan plan) => new()
-    {
-        TenantId = InMemoryRuntime.Tenant,
-        EnvironmentId = InMemoryRuntime.Environment,
-        IncidentId = incidentId,
-        PlanId = plan.PlanId,
-        PlanVersion = plan.PlanVersion,
-        PlanHash = plan.PlanHash,
-        ApproverId = "responder@example.test",
-        Attestation = "header.claims.signature",
-        ApprovedAt = IncidentScenario.Start.AddMinutes(3)
-    };
+    private static RecordApprovalRequest Approval(IncidentId incidentId, RemediationPlan plan) =>
+        new(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", "header.claims.signature");
 
     private static RemediationExecuted Executed(IncidentId incidentId, RemediationPlan plan) => new()
     {

@@ -89,17 +89,6 @@ public interface ICorrelationStore
     Task<IReadOnlyList<(ServiceId Caller, ServiceId Callee)>> GetEdgesAsync(TenantId tenantId, EnvironmentId environmentId, DateTimeOffset seenSince, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// The incident's single writer (ADR-004): IncidentGrain in a running Runtime, an in-process lock in
-/// tests. It serializes every command for one incident and appends with optimistic concurrency.
-/// </summary>
-public interface IIncidentOwner
-{
-    Task<Result<CommandReply>> SendAsync(IncidentId incidentId, IncidentCommand command, CancellationToken cancellationToken);
-
-    /// <summary>The authoritative state, read from the stream rather than the projection.</summary>
-    Task<IncidentSnapshot?> GetAsync(IncidentId incidentId, CancellationToken cancellationToken);
-}
 
 /// <summary>
 /// Serializes correlation for one tenant and environment (CorrelationGrain in a running Runtime),
@@ -110,26 +99,6 @@ public interface ICorrelationPartitions
     Task ObserveAsync(Observation observation, CancellationToken cancellationToken);
 }
 
-public enum IncidentSignalKind
-{
-    InvestigationReported,
-    ApprovalRecorded,
-    PlanRejected,
-    ExecutionReported,
-    Closed
-}
-
-/// <summary>A hint to the incident's workflow that the stream changed; the workflow re-reads the incident to act on it.</summary>
-public sealed record IncidentSignal(IncidentSignalKind Kind, string? Reference = null);
-
-/// <summary>The durable incident workflow (ADR-005), one run per incident cycle.</summary>
-public interface IIncidentWorkflows
-{
-    /// <summary>Starts the cycle's workflow unless it is already running or finished; safe to repeat.</summary>
-    Task EnsureStartedAsync(IncidentSnapshot incident, CancellationToken cancellationToken);
-
-    Task SignalAsync(IncidentSnapshot incident, IncidentSignal signal, CancellationToken cancellationToken);
-}
 
 /// <summary>Hot context for one service (ServiceGrain): catalog facts and observed dependencies. A cache, never authoritative.</summary>
 public sealed record ServiceContext(ServiceId ServiceId, string? Owner, IReadOnlyList<ServiceId> Dependencies, IReadOnlyList<ServiceId> Dependents);

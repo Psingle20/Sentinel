@@ -10,6 +10,7 @@ using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Domain.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Application.Incidents;
 

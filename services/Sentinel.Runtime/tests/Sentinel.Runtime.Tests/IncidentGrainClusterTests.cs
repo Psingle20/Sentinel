@@ -13,6 +13,7 @@ using Sentinel.Runtime.Domain.Incidents;
 using Sentinel.Runtime.Infrastructure;
 using Sentinel.Runtime.Infrastructure.Grains;
 using Shouldly;
+using Sentinel.Runtime.Application.Abstractions.Runtime;
 
 namespace Sentinel.Runtime.Tests;
 
