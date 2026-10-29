@@ -1,4 +1,4 @@
-# Sentinel.Api
+# Sentinel.Gateway
 
 The external API and control-plane edge: authentication, authorization, queries, approvals and live UI delivery. Ownership follows the [production topology](../../docs/implementation/production-topology.md).
 
@@ -23,13 +23,16 @@ The external API and control-plane edge: authentication, authorization, queries,
 
 ```text
 src/
-├── Sentinel.Api.Domain           business rules; references only building-block Core and contract primitives
-├── Sentinel.Api.Application      use cases and the ports they need
-├── Sentinel.Api.Infrastructure   adapters that implement the ports
-└── Sentinel.Api.Host             composition root, endpoints and health checks
+├── Sentinel.Gateway.Domain           business rules, such as the Approval aggregate; references only building-block Core and contract primitives
+├── Sentinel.Gateway.Application      ports under Abstractions/, BusinessProcesses/, BusinessTasks/Commands/ and Queries/, Validators/, Options/
+├── Sentinel.Gateway.Infrastructure   adapters that implement the ports, message registration and consumers, and the layer's module
+└── Sentinel.Gateway.Api              controllers, filters, request bodies, identity, the composition and a Program.cs without endpoints
 tests/
-└── Sentinel.Api.Architecture.Tests   layer and service-boundary rules
+├── Sentinel.Gateway.Tests                 domain, handler and HTTP characterization tests
+└── Sentinel.Gateway.Architecture.Tests    layer, service-boundary, ADR-020 and composition rules
 ```
+
+The layout follows the [application composition guide](../../docs/architecture/application-composition-and-cqrs.md) (ADR-020); approvals are migrated, the other capabilities follow in the Gateway's own refactoring step.
 
 ## Running
 
