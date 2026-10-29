@@ -184,6 +184,35 @@ public sealed class IncidentWorkflowTests(TemporalFixture temporal)
     }
 
     [Fact]
+    public async Task Runtime_and_Temporal_failing_together_lose_no_accepted_approval()
+    {
+        using var harness = new WorkflowHarness(temporal.Address);
+        IncidentId incidentId;
+        await using (WorkerRun first = harness.StartWorker())
+        {
+            incidentId = await harness.OpenAndInvestigateAsync();
+            await harness.WaitForStateAsync(incidentId, IncidentState.AwaitingApproval);
+        }
+
+        // Runtime's worker is gone and so is Temporal. The approval still reaches the incident's stream; only the
+        // signal fails, so the inbound message fails and will be redelivered.
+        await temporal.Temporal.StopAsync();
+        await Should.ThrowAsync<Exception>(() => harness.ApproveAsync(incidentId));
+        (await harness.Runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.Approved.ShouldBeTrue("the stream accepted the approval");
+
+        await temporal.Temporal.StartAsync();
+        await TemporalFixture.WaitUntilServingAsync(temporal.Address);
+        await using WorkerRun second = harness.StartWorker();
+
+        // The redelivery changes nothing in the stream and re-sends the lost signal.
+        await harness.ApproveAsync(incidentId);
+        await harness.ExecuteAsync(incidentId, ExecutionOutcome.ActionVerified);
+
+        (await harness.ResultAsync(incidentId)).ShouldBe("recovery-judged");
+        harness.Runtime.Outbox.Of<ExecuteRemediation>().ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task A_restored_backup_of_the_Temporal_database_resumes_in_flight_runs()
     {
         IncidentId incidentId;
