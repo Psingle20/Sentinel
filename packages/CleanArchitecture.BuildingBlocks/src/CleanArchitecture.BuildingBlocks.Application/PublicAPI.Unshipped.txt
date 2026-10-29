@@ -35,3 +35,72 @@ override CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.GetHashCod
 override CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.ToString() -> string!
 static CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.operator !=(CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? left, CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? right) -> bool
 static CleanArchitecture.BuildingBlocks.Integration.MessageMetadata.operator ==(CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? left, CleanArchitecture.BuildingBlocks.Integration.MessageMetadata? right) -> bool
+~CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.<Clone>$() -> CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>!
+~CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Equals(CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>? other) -> bool
+~static CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.operator !=(CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>? left, CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>? right) -> bool
+~static CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.operator ==(CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>? left, CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>? right) -> bool
+CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome
+CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome.Appended = 0 -> CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome
+CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome.Conflict = 1 -> CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome
+CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome.DuplicateVersion = 2 -> CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.<Clone>$() -> CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion!
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Author.get -> string!
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Author.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.BasedOn.get -> string?
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.BasedOn.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Deconstruct(out string! Version, out string! Author, out System.DateTimeOffset PublishedAt, out string? BasedOn) -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.DocumentVersion(string! Version, string! Author, System.DateTimeOffset PublishedAt, string? BasedOn) -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Equals(CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion? other) -> bool
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.PublishedAt.get -> System.DateTimeOffset
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.PublishedAt.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Version.get -> string!
+CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Version.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocumentStore<TDocument>
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocumentStore<TDocument>.AppendAsync(TDocument! document, CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion! version, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Configuration.AppendOutcome>!
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocumentStore<TDocument>.CurrentAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument!>?>!
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocumentStore<TDocument>.HistoryAsync(int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion!>!>!
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Deconstruct(out TDocument! Document, out CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion! Version) -> void
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Document.get -> TDocument!
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Document.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.PublishedDocument(TDocument! Document, CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion! Version) -> void
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Version.get -> CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion!
+CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Version.init -> void
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.ToString() -> string!
+override CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument>.ToString() -> string!
+static CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.operator !=(CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion? left, CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion? right) -> bool
+static CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion.operator ==(CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion? left, CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion? right) -> bool
+~CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.<Clone>$() -> CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>!
+~CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Equals(CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>? other) -> bool
+~static CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.operator !=(CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>? left, CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>? right) -> bool
+~static CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.operator ==(CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>? left, CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>? right) -> bool
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Deconstruct(out TDocument! Document, out CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion! Version, out bool Published) -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Document.get -> TDocument!
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Document.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.DocumentState(TDocument! Document, CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion! Version, bool Published) -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Published.get -> bool
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Published.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Version.get -> CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion!
+CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Version.init -> void
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocument
+CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocument.Version.get -> string!
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>.CurrentAsync(System.Func<TDocument!>! seed, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument!>!>!
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>.HistoryAsync(System.Func<TDocument!>! seed, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CleanArchitecture.BuildingBlocks.Configuration.DocumentVersion!>!>!
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>.PublishAsync(TDocument! document, string! expectedVersion, string! author, System.Func<TDocument!>! seed, System.Func<TDocument!, System.Collections.Generic.IReadOnlyList<string!>!>! validate, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument!>!>!>!
+CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>.VersionedDocumentPublisher(CleanArchitecture.BuildingBlocks.Configuration.IVersionedDocumentStore<TDocument!>! store, System.TimeProvider! time) -> void
+const CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentPublisher<TDocument>.SeedAuthor = "deployment configuration" -> string!
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.Equals(object? obj) -> bool
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.GetHashCode() -> int
+override CleanArchitecture.BuildingBlocks.Configuration.DocumentState<TDocument>.ToString() -> string!
+static CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.Invalid(System.Collections.Generic.IReadOnlyList<string!>! problems) -> CleanArchitecture.BuildingBlocks.Error!
+static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.DuplicateVersion -> CleanArchitecture.BuildingBlocks.Error!
+static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.VersionConflict -> CleanArchitecture.BuildingBlocks.Error!
+static readonly CleanArchitecture.BuildingBlocks.Configuration.VersionedDocumentErrors.VersionUnchanged -> CleanArchitecture.BuildingBlocks.Error!

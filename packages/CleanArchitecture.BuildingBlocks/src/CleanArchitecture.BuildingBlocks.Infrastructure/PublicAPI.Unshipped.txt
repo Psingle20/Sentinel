@@ -128,3 +128,10 @@ static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.op
 static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.OutboxRecord? right) -> bool
 static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.operator !=(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? right) -> bool
 static CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult.operator ==(CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? left, CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.ProcessingResult? right) -> bool
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocument<TDocument>
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocument<TDocument>.Current.get -> CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument!>?
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocument<TDocument>.GetChangeToken() -> Microsoft.Extensions.Primitives.IChangeToken!
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocument<TDocument>.ManagedDocument() -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocument<TDocument>.Set(CleanArchitecture.BuildingBlocks.Configuration.PublishedDocument<TDocument!>? published) -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocumentServiceCollectionExtensions
+static CleanArchitecture.BuildingBlocks.Infrastructure.Configuration.ManagedDocumentServiceCollectionExtensions.AddManagedDocument<TOptions, TDocument>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<TOptions!, TDocument!>! apply, System.TimeSpan? refreshInterval = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

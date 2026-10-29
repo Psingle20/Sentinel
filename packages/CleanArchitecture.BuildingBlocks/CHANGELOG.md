@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0-alpha.4 – 2026-10-29
+
+Control-plane configuration documents, for Sentinel's Phase 08 control plane.
+
+### Added
+
+- `Application`: `IVersionedDocumentStore<TDocument>`, `DocumentVersion`, `PublishedDocument<TDocument>` and `AppendOutcome`: an append-only, linear history of one configuration document.
+- `Infrastructure.PostgreSql`: `PostgresVersionedDocumentStore<TDocument>`, one table per document; a transaction-scoped advisory lock makes the based-on-newest check and the insert atomic, so concurrent publishes from one version produce exactly one winner.
+- `Infrastructure`: `AddManagedDocument<TOptions, TDocument>`, which applies the current published document over a service's bound options, recomputes them when a new version appears, refreshes on an interval, and makes `IOptions<TOptions>` return the current value.
+- 5 unit tests and 6 integration tests against PostgreSQL.
+
+### Notes
+
+- A failed refresh keeps the version already in effect; before anything is published the deployment configuration applies unchanged.
+- Consumers that copy `IOptions<TOptions>.Value` into a field at construction keep the old value; read `Value` per operation to see a published change.
+
 ## 0.1.0-alpha.3 – 2026-10-28
 
 Stage E of the evolution guide: the infrastructure layer, implementing ADR-012.
