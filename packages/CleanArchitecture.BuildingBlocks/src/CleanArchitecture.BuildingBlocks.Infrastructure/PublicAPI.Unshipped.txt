@@ -63,6 +63,7 @@ CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Consu
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Produces<TMessage>(string! messageType, int schemaVersion, string! stream) -> CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder!
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions
+CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.ContextHeaders.get -> System.Collections.Generic.IDictionary<string!, string!>!
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.MessagingOptions() -> void
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.ServiceName.get -> string!
 CleanArchitecture.BuildingBlocks.Infrastructure.Messaging.MessagingOptions.ServiceName.set -> void

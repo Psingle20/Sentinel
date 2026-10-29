@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.8 – 2026-10-29
+
+### Added
+
+- `Infrastructure`: `MessagingOptions.ContextHeaders` maps envelope headers that say whose business a message is, such as a tenant, to names. The inbound processor sets each header the message carries as a tag on the consumer span and opens a log scope with them around the handler, so a handler's logs and traces carry the tenant without the handler adding it. With no headers mapped, nothing changes.
+- `Directory.Build.props` carries `alpha.8`.
+
 ## 0.1.0-alpha.7 – 2026-10-29
 
 ### Added

@@ -37,6 +37,14 @@ internal sealed class InboundMessageProcessor(
         }
 
         using Activity? activity = MessagingDiagnostics.StartConsumerActivity(envelope);
+        Dictionary<string, object?> context = Context(envelope);
+        foreach ((string name, object? value) in context)
+        {
+            activity?.SetTag(name, value);
+        }
+
+        // The handler and everything it logs run inside this scope, so its logs say whose message it was.
+        using IDisposable? logScope = context.Count > 0 ? logger.BeginScope(context) : null;
 
         try
         {
@@ -65,5 +73,19 @@ internal sealed class InboundMessageProcessor(
             logger.LogWarning(exception, "Handling {MessageType} {MessageId} failed", envelope.MessageType, envelope.MessageId);
             return new ProcessingResult(ProcessingOutcome.Failed, exception.Message);
         }
+    }
+
+    private Dictionary<string, object?> Context(MessageEnvelope envelope)
+    {
+        var context = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach ((string header, string name) in options.Value.ContextHeaders)
+        {
+            if (envelope.Headers.TryGetValue(header, out string? value))
+            {
+                context[name] = value;
+            }
+        }
+
+        return context;
     }
 }
