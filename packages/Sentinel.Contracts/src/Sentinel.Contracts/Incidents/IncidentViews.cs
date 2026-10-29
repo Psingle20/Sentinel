@@ -161,7 +161,8 @@ public enum PlanStatus
     Superseded
 }
 
-public sealed record PlanView(RemediationPlan Plan, PolicyEvaluation PolicyEvaluation, PlanStatus Status, string? ApprovedBy, DateTimeOffset? ApprovedAt);
+/// <summary>A plan with its policy verdict and approval state; <see cref="ApprovalDeadline"/> is when an unanswered approval request expires (Phase 08).</summary>
+public sealed record PlanView(RemediationPlan Plan, PolicyEvaluation PolicyEvaluation, PlanStatus Status, string? ApprovedBy, DateTimeOffset? ApprovedAt, DateTimeOffset? ApprovalDeadline = null);
 
 public sealed record ExecutionView(PlanId PlanId, int PlanVersion, ExecutionOutcome? Outcome, string? Detail, DateTimeOffset RequestedAt, DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt);
 
