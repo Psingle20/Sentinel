@@ -14,18 +14,9 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 ## Status
 
-Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet; both are deliberate for now. The [phase status ledger](docs/implementation/phase-status.md) is the authoritative record of what each phase has delivered, with evidence; the summary below is a guide.
+Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet; both are deliberate for now.
 
-| Area | State |
-| --- | --- |
-| Foundations, reference system and walking skeleton (Phases 00, 01, 01A) | Implemented. CI is deferred. |
-| Telemetry ingestion (Phase 02) | Prometheus, Loki, Jaeger, deploy-controller and runbook providers with freshness, completeness and redaction metadata. |
-| Incident runtime (Phase 03) | Event-sourced incidents, Orleans grains as single writers, Temporal workflows, correlation, projections. |
-| AI investigation (Phase 04) | Six specialist roles with typed read-only tools, findings validation, a hypothesis blackboard and prompt-injection guardrails. |
-| Verification and consensus (Phase 05) | Adversarial verifier with falsifiers, `consensus-v1` with independence families, dissent and abstention. |
-| Safe remediation (Phase 06) | Policy as code, autonomy modes, single-use capabilities, approval revocation, compensation and baseline-aware recovery checks. |
-| Memory, replay and evaluation (Phase 07) | In progress: incident memory, similar-incident hints, domain replay, captured-input investigation replay and postmortems. |
-| Product experience, hardening, scale (Phases 08 to 10) | Not started beyond the Phase 01A screens. |
+Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 00 to 08 all have working implementations on the golden path, and Phases 09 and 10 have not started. Two gaps cut across several phases: there is no recorded outcome for the golden scenario `S1`, and the live model has not yet produced findings.
 
 Models run through Sentinel's own model interface. The default provider is a deterministic test double, so every local run and test is reproducible; the Meta model adapter is used only when it is configured with credentials (see [Getting started](#getting-started)).
 
@@ -128,10 +119,10 @@ flowchart TB
     routing --> channels
 
     classDef planned stroke-dasharray: 6 4
-    class tenants,routing,autonomous,channels planned
+    class tenants,autonomous planned
 ```
 
-Tenant and environment identity already scopes every observation, incident and query; the tenant administration, notification routing and constrained autonomous execution around it are planned. The service catalog, policy document, operator controls, providers, models and SLO rules are configured per service today and become a managed control plane in Phase 08. Incident memory and replay are being built in Phase 07.
+Tenant and environment identity already scopes every observation, incident and query, and the Gateway routes live events to webhook and log channels by event, severity and tenant. Tenant administration and constrained autonomous execution are planned. The Gateway's control-plane API reads, updates and audits each service's configuration, including the service catalog, policy, operator controls, providers, models and SLO rules, with version history; the web pages for editing them are in progress. Incident memory, replay and evaluation are being built in Phase 07.
 
 ### Service topology and trust boundaries
 
