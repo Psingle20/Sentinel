@@ -122,6 +122,17 @@ Every remediation adapter implements:
 | `VerifyAction` | Confirm that the requested action took effect |
 | `Compensate` | Undo or neutralize a partially applied action |
 
+### Amendment, 2026-10-29: every decision is signed, revocation is synchronous, operators are attested
+
+The implementation review of 2026-10-29 found three gaps between this decision and the code: Runtime applied rejections and revocations from the shared message bus without any proof of who decided; the Gateway recorded a revocation before Runtime, the authority on the point of no return, had accepted it; and Executor's operator endpoints trusted an actor named in the request body. Executor also bound an incoming command to its predictable idempotency key before checking its attestation, so an unverified command could occupy the key the genuine one would arrive under. The following refinements close them without changing who signs, who relays and who verifies.
+
+- **Every approver decision is a signed attestation.** The Gateway signs approvals as before (scope `execute-plan`, audience `sentinel-executor`), and now also rejections (`reject-plan`) and revocations (`revoke-approval`), both with audience `sentinel-runtime`. The claims bind the decision to the incident's current plan ID, version and content hash and name the approver. `RecordRejection` and `RecordRevocation` carry the token in an optional `Attestation` field. Runtime must verify the signature against the Gateway's published keys and the claims against the incident before recording a rejection or revocation, and must verify the approval's signature and plan binding before recording an approval, so a message on the shared bus proves nothing by itself.
+- **Revocation is a bounded request, not a message.** The Gateway calls `POST /v1/remediation/revocations` on Runtime with the `RecordRevocation` body and records the revocation only when Runtime answers `RevocationResponse.Accepted`. A refusal, for example because `ExecutionStarted` was already appended, is returned to the approver as a conflict and the approval stands. An unreachable Runtime also leaves the approval standing. The `runtime.record-revocation` message is retired.
+- **Operator actions carry an operator attestation.** For policy publication and control changes the Gateway signs `OperatorAttestationClaims`: the authenticated actor, a scope (`publish-policy` or `set-control`), the resource and a hash of the submitted content, valid for about two minutes and single-use. The token travels in the `X-Sentinel-Operator-Attestation` header. Executor verifies it, consumes it and records the actor from the claims; a body's `Author` or `Actor` field is informational. The same mechanism applies to the other owning services' admin endpoints when they are hardened.
+- **An unauthenticated execute command binds nothing.** Executor checks the plan hash and the attestation before it receives a command under its idempotency key. A command that fails that check is recorded for audit under a key of its own, is not reported to Runtime, and leaves the genuine key free. Policy denials and failed preconditions, which can only follow authentication, are reported as before.
+
+Verification keys are the same key set the Gateway already publishes; Runtime resolves them exactly as Executor does. Service-to-service authentication for the remaining internal calls is a separate decision still to be recorded.
+
 ## Consequences
 
 ### Positive

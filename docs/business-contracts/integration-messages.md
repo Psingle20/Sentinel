@@ -21,9 +21,9 @@ Every message travels in the building-block envelope over Redis Streams, with te
 | Message | Schema | Stream | Sender | Handler | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `agentworker.investigate-incident` | 1 | `sentinel.agentworker.commands` | Runtime | AgentWorker | Investigate one question within a budget and time window, as a specialist role, with the symptom onset; the verifier also receives the hypotheses to challenge and the accepted evidence. From Phase 07 it may carry similarIncidents: remembered incidents of the same tenant with their shared features, as hints that are never evidence (ADR-019). Optional and omitted when empty, so schema 1 still holds. |
-| `runtime.record-approval` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver approved an exact plan version; carries Api's signed attestation. |
-| `runtime.record-rejection` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver rejected a plan version, with a reason. |
-| `runtime.record-revocation` | 1 | `sentinel.runtime.commands` | Api | Runtime | An approver withdrew an approval before execution started; Runtime escalates the incident and refuses any start confirmation. |
+| `runtime.record-approval` | 1 | `sentinel.runtime.commands` | Gateway | Runtime | An approver approved an exact plan version; carries the Gateway's signed `execute-plan` attestation, which Runtime verifies before recording (ADR-006 amendment of 2026-10-29). |
+| `runtime.record-rejection` | 1 | `sentinel.runtime.commands` | Gateway | Runtime | An approver rejected a plan version, with a reason. Since 2026-10-29 carries the Gateway's signed `reject-plan` attestation in the optional `attestation` field; Runtime refuses a rejection without one. Additive within schema 1. |
+| `runtime.record-revocation` | 1 | `sentinel.runtime.commands` | retired | Runtime | Retired on 2026-10-29: a revocation is the bounded request `POST /v1/remediation/revocations` (see synchronous contracts), because its answer must be authoritative. The Gateway no longer produces the message; the type remains as the request body. |
 | `executor.execute-remediation` | 1 | `sentinel.executor.commands` | Runtime | Executor | Run the approved plan with its attestation, fencing token and idempotency key. Api never sends it (ADR-006). |
 
 ## Rules for consumers

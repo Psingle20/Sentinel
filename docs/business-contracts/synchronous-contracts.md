@@ -12,6 +12,7 @@ Bounded request/response calls between services ([ADR-012](../decisions/ADR-012-
 | `POST /v1/policy/evaluations` | Executor | Runtime | `PolicyEvaluationRequest` → `PolicyEvaluation` | Advisory plan-time evaluation with the decision's confidence and the incident's severity; execution time is authoritative (ADR-006). |
 | `GET /v1/policy` | Executor | Operators | The current `PolicyDocument` | Versioned policy as code. |
 | `POST /v1/remediation/start-confirmations` | Runtime | Executor | `RemediationStartRequest` → `RemediationStartResponse` | The point of no return. Refused unless the plan is current, still approved and the fencing token matches; Executor aborts when Runtime is unreachable. |
+| `POST /v1/remediation/revocations` | Runtime | Gateway | `RecordRevocation` → `RevocationResponse` | Withdraws an approval (ADR-006 amendment of 2026-10-29). The body carries the Gateway's `revoke-approval` attestation, which Runtime verifies before the incident's writer decides. Accepted only before `ExecutionStarted`; the reason of a refusal is final. The Gateway records the revocation only on acceptance. Runtime side pending while the Gateway client exists. |
 | `GET /v1/incidents`, `GET /v1/incidents/{id}` | Runtime | Api | `IncidentSummary`, `IncidentDetail` | Rebuildable projections of the incident stream. |
 | `GET /v1/incidents/{id}/state` | Runtime | Api, operators | `IncidentStateView` | The writer's authoritative version beside the projection's: projection lag made visible. |
 | `GET /v1/incidents/{id}/run-record?dataset=` | Runtime | Api, the end-to-end suite | `IncidentRunRecord` schema 2 | The projection, the version manifest and the incident's memory (Phase 07). Schema-1 records stay readable. |
@@ -34,7 +35,7 @@ Served only in Development or when `Sentinel:OperatorEndpoints:Enabled` is set. 
 | `POST /admin/memory/{id}/legal-hold` | Runtime | Body `{ hold, actor }`. Places or lifts a legal hold on an incident's memory. |
 | `POST /admin/memory/{id}/delete` | Runtime | Body `{ actor, reason }`. Privacy deletion: a tombstone replaces the record and its features leave the index. Refused under a legal hold. |
 | `POST /admin/memory/purge` | Runtime | Body `{ actor, dryRun, limit }`. The retention purge; a dry run unless `dryRun` is `false`. |
-| `GET /admin/controls`, `POST /admin/controls/emergency-stop`, `POST /admin/controls/actions/{actionKind}` | Executor | Operator controls independent of every model and workflow path (ADR-006). |
+| `GET /admin/controls`, `POST /admin/controls/emergency-stop`, `POST /admin/controls/actions/{actionKind}`, `PUT /admin/policy` | Executor | Operator controls and policy publication independent of every model and workflow path (ADR-006). Every mutation requires the header `X-Sentinel-Operator-Attestation`: a Gateway-signed `OperatorAttestationClaims` token for the action's scope and resource over a hash of the submitted content (`PolicyPublicationContent` or `ControlChangeContent`), single-use, about two minutes long. Executor records the actor the claims name; the body's `author` or `actor` is informational. Without it: `401`. |
 
 ## Api's external HTTP API
 
@@ -47,7 +48,7 @@ Served only in Development or when `Sentinel:OperatorEndpoints:Enabled` is set. 
 | `GET /api/v1/incidents/{incidentId}/run-record` | responder | The exported run record |
 | `POST /api/v1/incidents/{incidentId}/plans/{planId}/approve` | approver | Body `{ planVersion, planHash }`. Signs a single-use ES256 attestation bound to the plan and relays it to Runtime. |
 | `POST /api/v1/incidents/{incidentId}/plans/{planId}/reject` | approver | Body `{ planVersion, reason }` |
-| `POST /api/v1/incidents/{incidentId}/plans/{planId}/revoke` | approver | Body `{ planVersion, reason }`. Withdraws an approval before execution starts (Phase 06). |
+| `POST /api/v1/incidents/{incidentId}/plans/{planId}/revoke` | approver | Body `{ planVersion, reason }`. Withdraws an approval before execution starts (Phase 06). Asks Runtime synchronously and answers `202` only when Runtime accepted; `409 Approval.ExecutionStarted` or `Approval.RevocationRefused` when it did not, and `503 Approval.RuntimeUnavailable` when it could not be asked. |
 | `GET /api/v1/incidents/{incidentId}/postmortem` | responder | The generated postmortem with the human-written narrative (Phase 07). |
 | `PUT /api/v1/incidents/{incidentId}/postmortem/narrative` | responder | Body `{ markdown, expectedVersion }`. `409` when someone else saved first. |
 | `GET /api/v1/incidents/{incidentId}/similar` | responder | Similar remembered incidents, with provenance. |
