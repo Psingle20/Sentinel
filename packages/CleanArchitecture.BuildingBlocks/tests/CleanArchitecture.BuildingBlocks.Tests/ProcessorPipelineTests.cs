@@ -103,7 +103,7 @@ public sealed class ProcessorPipelineTests
         var (provider, sink, log) = Build(PipelineTypes);
         await using AsyncServiceScope scope = provider.CreateAsyncScope();
 
-        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().SendAsync(new RenameRequest("checkout"), CancellationToken.None);
+        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(new RenameRequest("checkout"), CancellationToken.None);
 
         result.Value.ShouldBe("checkout");
         log.Calls.ShouldBe(["processor", "handler"]);
@@ -116,7 +116,7 @@ public sealed class ProcessorPipelineTests
         var (provider, sink, log) = Build(PipelineTypes);
         await using AsyncServiceScope scope = provider.CreateAsyncScope();
 
-        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().SendAsync(new RenameRequest(string.Empty), CancellationToken.None);
+        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(new RenameRequest(string.Empty), CancellationToken.None);
 
         result.Error.ShouldBeOfType<ValidationError>().Errors.Select(error => error.Code).ShouldBe(["Name.Empty"]);
         log.Calls.ShouldBeEmpty();
@@ -130,8 +130,8 @@ public sealed class ProcessorPipelineTests
         await using AsyncServiceScope scope = provider.CreateAsyncScope();
         IRequestDispatcher requests = scope.ServiceProvider.GetRequiredService<IRequestDispatcher>();
 
-        Result refused = await requests.SendAsync(new ArchiveRequest(string.Empty), CancellationToken.None);
-        Result accepted = await requests.SendAsync(new ArchiveRequest("superseded"), CancellationToken.None);
+        Result refused = await requests.HandleRequestAsync(new ArchiveRequest(string.Empty), CancellationToken.None);
+        Result accepted = await requests.HandleRequestAsync(new ArchiveRequest("superseded"), CancellationToken.None);
 
         refused.Error.ShouldBeOfType<ValidationError>();
         accepted.IsSuccess.ShouldBeTrue();
@@ -144,7 +144,7 @@ public sealed class ProcessorPipelineTests
         var (provider, sink, _) = Build(PipelineTypes);
         await using AsyncServiceScope scope = provider.CreateAsyncScope();
 
-        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().SendAsync(new LookupRequest(7), CancellationToken.None);
+        Result<string> result = await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(new LookupRequest(7), CancellationToken.None);
 
         result.Value.ShouldBe("Item-7");
         sink.Entries.Select(entry => entry.Message).ShouldBe(["Processing query LookupQuery", "Completed query LookupQuery"]);
@@ -157,7 +157,7 @@ public sealed class ProcessorPipelineTests
         await using AsyncServiceScope scope = provider.CreateAsyncScope();
         using CancellationTokenSource cancellation = new();
 
-        await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().SendAsync(new RenameRequest("checkout"), cancellation.Token);
+        await scope.ServiceProvider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(new RenameRequest("checkout"), cancellation.Token);
 
         log.ValidatorToken.ShouldBe(cancellation.Token);
     }

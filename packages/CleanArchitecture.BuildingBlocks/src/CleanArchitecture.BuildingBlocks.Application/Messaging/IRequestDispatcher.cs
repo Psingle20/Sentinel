@@ -7,7 +7,7 @@ namespace CleanArchitecture.BuildingBlocks.Messaging;
 /// </summary>
 public interface IRequestDispatcher
 {
-    Task<Result<TResult>> SendAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken);
+    Task<Result<TResult>> HandleRequestAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken);
 
-    Task<Result> SendAsync(IRequest request, CancellationToken cancellationToken);
+    Task<Result> HandleRequestAsync(IRequest request, CancellationToken cancellationToken);
 }

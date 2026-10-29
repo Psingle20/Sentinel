@@ -8,7 +8,7 @@ internal sealed class RequestDispatcher(IServiceProvider serviceProvider) : IReq
 {
     private static readonly ConcurrentDictionary<(Type RequestType, Type ResultType), ProcessorInvoker> Invokers = new();
 
-    public Task<Result<TResult>> SendAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken)
+    public Task<Result<TResult>> HandleRequestAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -25,7 +25,7 @@ internal sealed class RequestDispatcher(IServiceProvider serviceProvider) : IReq
         return (Task<Result<TResult>>)invoker.Invoke(processor, request, cancellationToken);
     }
 
-    public Task<Result> SendAsync(IRequest request, CancellationToken cancellationToken)
+    public Task<Result> HandleRequestAsync(IRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 

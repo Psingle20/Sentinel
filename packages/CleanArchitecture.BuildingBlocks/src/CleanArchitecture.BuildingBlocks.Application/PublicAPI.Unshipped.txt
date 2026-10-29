@@ -111,5 +111,5 @@ CleanArchitecture.BuildingBlocks.Messaging.IProcessor<TRequest>.Process(TRequest
 CleanArchitecture.BuildingBlocks.Messaging.IRequest
 CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult>
 CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher
-CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.SendAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
-CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.SendAsync<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult>! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!
+CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.HandleRequestAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result!>!
+CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher.HandleRequestAsync<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult>! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<CleanArchitecture.BuildingBlocks.Result<TResult>!>!

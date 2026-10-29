@@ -1,12 +1,19 @@
 # Changelog
 
+## 0.1.0-alpha.6 – 2026-10-29
+
+### Changed
+
+- **Breaking (prerelease):** `IRequestDispatcher.SendAsync` is now `IRequestDispatcher.HandleRequestAsync`, both overloads, by the owner's decision, so an inbound adapter's one call reads as handing the application a request. Behaviour is unchanged: the processor is still resolved by the request's runtime type. Callers rename the call.
+- `Directory.Build.props` carries `alpha.6`.
+
 ## 0.1.0-alpha.5 – 2026-10-29
 
 Stage E2 of the evolution guide: the inbound seam, module composition and one type per file, for ADR-020.
 
 ### Added
 
-- `Application`: `IRequest`, `IRequest<TResult>`, `IProcessor<TRequest>`, `IProcessor<TRequest, TResult>` and `IRequestDispatcher`. A request is what an HTTP endpoint, message consumer or workflow activity asks the application to do; its processor maps it to exactly one command or query and dispatches it. `IRequestDispatcher.SendAsync` resolves the processor by the request's runtime type through a cached invoker, fails naming the request when none is registered, and surfaces a faulting processor's own exception.
+- `Application`: `IRequest`, `IRequest<TResult>`, `IProcessor<TRequest>`, `IProcessor<TRequest, TResult>` and `IRequestDispatcher`. A request is what an HTTP endpoint, message consumer or workflow activity asks the application to do; its processor maps it to exactly one command or query and dispatches it. `IRequestDispatcher.SendAsync` (`HandleRequestAsync` from `alpha.6`) resolves the processor by the request's runtime type through a cached invoker, fails naming the request when none is registered, and surfaces a faulting processor's own exception.
 - `Hosting`: `AddBuildingBlocks` registers `IRequestDispatcher` and scans processors with handlers and validators. Each processor is wrapped in request validation, so a request's validators run once, before the processor, and a processor's own code only maps and dispatches. `AddModules` registers `IDependencyModule` instances in the order given, Application, Infrastructure, Api.
 - 15 unit tests for request dispatch, the processor pipeline and module composition.
 

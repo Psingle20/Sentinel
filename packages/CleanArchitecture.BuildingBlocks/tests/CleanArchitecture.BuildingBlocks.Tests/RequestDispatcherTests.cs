@@ -44,7 +44,7 @@ public sealed class RequestDispatcherTests
         ServiceProvider provider = new ServiceCollection().AddSingleton<IProcessor<ShoutRequest, string>>(processor).BuildServiceProvider();
         using CancellationTokenSource cancellation = new();
 
-        Result<string> result = await new RequestDispatcher(provider).SendAsync(new ShoutRequest("approve"), cancellation.Token);
+        Result<string> result = await new RequestDispatcher(provider).HandleRequestAsync(new ShoutRequest("approve"), cancellation.Token);
 
         result.Value.ShouldBe("APPROVE");
         processor.Token.ShouldBe(cancellation.Token);
@@ -55,7 +55,7 @@ public sealed class RequestDispatcherTests
     {
         ServiceProvider provider = new ServiceCollection().AddScoped<IProcessor<ForgetRequest>, ForgetProcessor>().BuildServiceProvider();
 
-        Result result = await new RequestDispatcher(provider).SendAsync(new ForgetRequest("x"), CancellationToken.None);
+        Result result = await new RequestDispatcher(provider).HandleRequestAsync(new ForgetRequest("x"), CancellationToken.None);
 
         result.IsSuccess.ShouldBeTrue();
     }
@@ -66,7 +66,7 @@ public sealed class RequestDispatcherTests
         ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
 
         InvalidOperationException missing = await Should.ThrowAsync<InvalidOperationException>(
-            () => new RequestDispatcher(provider).SendAsync(new UnhandledRequest(), CancellationToken.None));
+            () => new RequestDispatcher(provider).HandleRequestAsync(new UnhandledRequest(), CancellationToken.None));
 
         missing.Message.ShouldContain(nameof(UnhandledRequest));
     }
@@ -77,7 +77,7 @@ public sealed class RequestDispatcherTests
         ServiceProvider provider = new ServiceCollection().AddScoped<IProcessor<FaultingRequest, string>, FaultingProcessor>().BuildServiceProvider();
 
         TimeoutException fault = await Should.ThrowAsync<TimeoutException>(
-            () => new RequestDispatcher(provider).SendAsync(new FaultingRequest(), CancellationToken.None));
+            () => new RequestDispatcher(provider).HandleRequestAsync(new FaultingRequest(), CancellationToken.None));
 
         fault.Message.ShouldBe("The processor's own failure.");
     }
