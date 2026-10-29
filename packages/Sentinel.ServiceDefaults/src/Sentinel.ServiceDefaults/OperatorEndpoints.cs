@@ -16,13 +16,24 @@ public sealed record ReplayDeadLetter(string Stream, string EntryId);
 /// </summary>
 public static class OperatorEndpoints
 {
+    public const string EnabledKey = "Sentinel:OperatorEndpoints:Enabled";
+
     private const string StreamPrefix = "sentinel.";
+
+    /// <summary>Whether operator endpoints exist: in Development, or where <see cref="EnabledKey"/> is set.</summary>
+    public static bool AreEnabled(IHostEnvironment environment, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return environment.IsDevelopment() || configuration.GetValue<bool>(EnabledKey);
+    }
 
     public static WebApplication MapOperatorEndpoints(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        if (!app.Environment.IsDevelopment() && !app.Configuration.GetValue<bool>("Sentinel:OperatorEndpoints:Enabled"))
+        if (!AreEnabled(app.Environment, app.Configuration))
         {
             return app;
         }
