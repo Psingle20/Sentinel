@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
+using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Application;
@@ -234,6 +236,24 @@ public sealed class MemoryReplayTests : IDisposable
         record.SchemaVersion.ShouldBe(2);
         record.Versions.ShouldNotBeNull().Dataset.ShouldBe("scenarios-v1");
         record.Memory.ShouldNotBeNull().IncidentId.ShouldBe(incidentId);
+    }
+
+    [Fact]
+    public async Task The_version_manifest_and_memory_are_byte_stable_across_reads_time_and_a_round_trip()
+    {
+        IncidentId incidentId = await ResolveAsync(InMemoryRuntime.Tenant, "a");
+
+        IncidentRunRecord first = (await RequestAsync(new GetRunRecordRequest(incidentId, "scenarios-v1"))).Value!;
+        _runtime.Time.Advance(TimeSpan.FromDays(30));
+        IncidentRunRecord later = (await RequestAsync(new GetRunRecordRequest(incidentId, "scenarios-v1"))).Value!;
+
+        string manifest = JsonSerializer.Serialize(first.Versions, SentinelJson.Options);
+        JsonSerializer.Serialize(later.Versions, SentinelJson.Options).ShouldBe(manifest, "the manifest is rebuilt from the stream, not from the clock");
+        JsonSerializer.Serialize(JsonSerializer.Deserialize<VersionManifest>(manifest, SentinelJson.Options), SentinelJson.Options).ShouldBe(manifest);
+
+        string memory = JsonSerializer.Serialize(first.Memory, SentinelJson.Options);
+        JsonSerializer.Serialize(later.Memory, SentinelJson.Options).ShouldBe(memory, "memory is read as it was stored");
+        JsonSerializer.Serialize(JsonSerializer.Deserialize<IncidentMemoryView>(memory, SentinelJson.Options), SentinelJson.Options).ShouldBe(memory);
     }
 
     [Fact]
