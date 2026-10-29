@@ -77,20 +77,24 @@ public sealed class ExecutionService(
         }
     }
 
-    /// <summary>The plan's hash, the attestation, execution-time policy, an adapter for every action and the preconditions at the target.</summary>
-    internal async Task<Result<ApprovalAttestationClaims>> ValidateAsync(ExecuteRemediation command, CancellationToken cancellationToken)
+    /// <summary>
+    /// Whether the command is genuine: the plan content matches its hash and the attestation was signed by
+    /// the Gateway for exactly this plan. A command that fails here is not Runtime's request at all, so it
+    /// binds nothing and is reported to nobody; policy and preconditions are checked only after this.
+    /// </summary>
+    internal async Task<Result<ApprovalAttestationClaims>> AuthenticateAsync(ExecuteRemediation command, CancellationToken cancellationToken)
     {
         if (!RemediationPlanHash.Matches(command.Plan))
         {
-            return Refuse("The plan hash does not match the plan content.");
+            return Result.Failure<ApprovalAttestationClaims>(Error.Problem("Attestation.Invalid", "The plan hash does not match the plan content."));
         }
 
-        Result<ApprovalAttestationClaims> attestation = await verifier.VerifyAsync(command.Attestation, command, cancellationToken);
-        if (attestation.IsFailure)
-        {
-            return attestation;
-        }
+        return await verifier.VerifyAsync(command.Attestation, command, cancellationToken);
+    }
 
+    /// <summary>Execution-time policy, an adapter for every action and the preconditions at the target, for a command already authenticated.</summary>
+    internal async Task<Result> CheckAsync(ExecuteRemediation command, CancellationToken cancellationToken)
+    {
         // Execution-time policy is authoritative; if it changed since plan time, it wins.
         PolicyEvaluation evaluation = await policy.EvaluateAsync(new PolicyEvaluationRequest(command.TenantId, command.EnvironmentId, command.IncidentId, command.Plan), cancellationToken);
         if (evaluation.Decision is PolicyDecision.Deny or PolicyDecision.SuggestionOnly)
@@ -120,10 +124,9 @@ public sealed class ExecutionService(
             }
         }
 
-        return attestation;
+        return Result.Success();
 
-        static Result<ApprovalAttestationClaims> Refuse(string reason) =>
-            Result.Failure<ApprovalAttestationClaims>(Error.Problem("Execution.Refused", reason));
+        static Result Refuse(string reason) => Result.Failure(Error.Problem("Execution.Refused", reason));
     }
 
     /// <summary>Preconditions Executor can check from an inspection: what is serving, and whether a batch is active.</summary>

@@ -1,19 +1,16 @@
-using System.Buffers.Text;
 using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
-using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Executor.Application.Abstractions.Security;
 
 namespace Sentinel.Executor.Application.Services;
 
 /// <summary>
-/// Verifies Api's approval attestation (ADR-006): an ES256 compact JWS whose signature checks out
-/// against a published key, whose audience is Executor, which has not expired, and whose claims bind
-/// it to exactly this tenant, environment, incident, plan ID, version and content hash.
-/// Single use is enforced separately, when the attestation is consumed.
+/// Verifies what the Gateway signed (ADR-006): an ES256 compact JWS whose signature checks out
+/// against a published key, whose audience is Executor and which has not expired. An approval
+/// attestation must bind to exactly this tenant, environment, incident, plan ID, version and content
+/// hash; an operator attestation to exactly this scope, resource and submitted content. Single use is
+/// enforced separately, when the attestation is consumed.
 /// </summary>
 public sealed class AttestationVerifier(IApprovalKeyResolver keys, TimeProvider time)
 {
@@ -23,48 +20,18 @@ public sealed class AttestationVerifier(IApprovalKeyResolver keys, TimeProvider 
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        string[] parts = (attestation ?? string.Empty).Split('.');
-        if (parts.Length != 3)
+        Result<ApprovalAttestationClaims> signed = await VerifySignedAsync<ApprovalAttestationClaims>(attestation, ApprovalAttestation.TokenType, "approval", cancellationToken);
+        if (signed.IsFailure)
         {
-            return Fail("The attestation is not a compact JWS.");
+            return signed;
         }
 
-        ApprovalAttestationHeader? header;
-        ApprovalAttestationClaims? claims;
-        byte[] signature;
-        try
-        {
-            header = JsonSerializer.Deserialize<ApprovalAttestationHeader>(Base64Url.DecodeFromChars(parts[0]), SentinelJson.Options);
-            claims = JsonSerializer.Deserialize<ApprovalAttestationClaims>(Base64Url.DecodeFromChars(parts[1]), SentinelJson.Options);
-            signature = Base64Url.DecodeFromChars(parts[2]);
-        }
-        catch (Exception exception) when (exception is FormatException or JsonException)
-        {
-            return Fail($"The attestation cannot be decoded: {exception.Message}");
-        }
-
-        if (header is not { Algorithm: ApprovalAttestation.Algorithm, Type: ApprovalAttestation.TokenType } || claims is null)
-        {
-            return Fail("The attestation must be an ES256 Sentinel approval.");
-        }
-
-        ECDsa? key = await keys.ResolveAsync(header.KeyId, cancellationToken);
-        if (key is null)
-        {
-            return Fail($"Key {header.KeyId} is not a published approval key.");
-        }
-
-        byte[] signed = Encoding.ASCII.GetBytes($"{parts[0]}.{parts[1]}");
-        if (!key.VerifyData(signed, signature, HashAlgorithmName.SHA256))
-        {
-            return Fail("The attestation signature is invalid.");
-        }
-
+        ApprovalAttestationClaims claims = signed.Value;
         DateTimeOffset now = time.GetUtcNow();
         string? problem = claims switch
         {
-            { Issuer: not ApprovalAttestation.Issuer } => $"Issuer {claims.Issuer} is not Sentinel.Api.",
-            { Audience: not ApprovalAttestation.Audience } => $"Audience {claims.Audience} is not Sentinel.Executor.",
+            { Issuer: not ApprovalAttestation.Issuer } => $"Issuer {claims.Issuer} is not the Gateway.",
+            { Audience: not ApprovalAttestation.Audience } => $"Audience {claims.Audience} is not Executor.",
             { ApprovalScope: not ApprovalAttestation.ExecutePlanScope } => $"Scope {claims.ApprovalScope} does not permit execution.",
             _ when claims.ExpiresAt <= now - ClockSkew => $"The attestation expired at {claims.ExpiresAt:O}.",
             _ when claims.IssuedAt > now + ClockSkew => "The attestation was issued in the future.",
@@ -75,9 +42,63 @@ public sealed class AttestationVerifier(IApprovalKeyResolver keys, TimeProvider 
             _ => null
         };
 
-        return problem is null ? Result.Success(claims) : Fail(problem);
+        return problem is null ? Result.Success(claims) : Fail<ApprovalAttestationClaims>(problem);
     }
 
-    private static Result<ApprovalAttestationClaims> Fail(string reason) =>
-        Result.Failure<ApprovalAttestationClaims>(Error.Problem("Attestation.Invalid", reason));
+    /// <summary>
+    /// An operator's attestation for one control-plane action: signed by the Gateway for Executor, for
+    /// <paramref name="scope"/> on <paramref name="resource"/>, over exactly <paramref name="contentHash"/>.
+    /// </summary>
+    public async Task<Result<OperatorAttestationClaims>> VerifyOperatorAsync(string? attestation, string scope, string resource, string contentHash, CancellationToken cancellationToken)
+    {
+        Result<OperatorAttestationClaims> signed = await VerifySignedAsync<OperatorAttestationClaims>(attestation, ApprovalAttestation.OperatorTokenType, "operator", cancellationToken);
+        if (signed.IsFailure)
+        {
+            return signed;
+        }
+
+        OperatorAttestationClaims claims = signed.Value;
+        DateTimeOffset now = time.GetUtcNow();
+        string? problem = claims switch
+        {
+            { Issuer: not ApprovalAttestation.Issuer } => $"Issuer {claims.Issuer} is not the Gateway.",
+            { Audience: not ApprovalAttestation.Audience } => $"Audience {claims.Audience} is not Executor.",
+            _ when claims.Scope != scope => $"Scope {claims.Scope} does not permit {scope}.",
+            _ when claims.Resource != resource => $"The attestation is for {claims.Resource}, not {resource}.",
+            _ when claims.ExpiresAt <= now - ClockSkew => $"The attestation expired at {claims.ExpiresAt:O}.",
+            _ when claims.IssuedAt > now + ClockSkew => "The attestation was issued in the future.",
+            _ when !string.Equals(claims.ContentHash, contentHash, StringComparison.Ordinal) => "The attestation covers different content than was submitted.",
+            _ when string.IsNullOrWhiteSpace(claims.ActorId) => "The attestation names no actor.",
+            _ => null
+        };
+
+        return problem is null ? Result.Success(claims) : Fail<OperatorAttestationClaims>(problem);
+    }
+
+    private async Task<Result<TClaims>> VerifySignedAsync<TClaims>(string? attestation, string tokenType, string kind, CancellationToken cancellationToken)
+        where TClaims : class
+    {
+        if (!AttestationToken.TryDecode<TClaims>(attestation, out DecodedAttestation<TClaims> decoded, out string problem))
+        {
+            return Fail<TClaims>(problem);
+        }
+
+        if (decoded.Header is not { Algorithm: ApprovalAttestation.Algorithm } || decoded.Header.Type != tokenType)
+        {
+            return Fail<TClaims>($"The attestation must be an ES256 Sentinel {kind} attestation.");
+        }
+
+        ECDsa? key = await keys.ResolveAsync(decoded.Header.KeyId, cancellationToken);
+        if (key is null)
+        {
+            return Fail<TClaims>($"Key {decoded.Header.KeyId} is not a published approval key.");
+        }
+
+        return AttestationToken.VerifySignature(decoded, key)
+            ? Result.Success(decoded.Claims)
+            : Fail<TClaims>("The attestation signature is invalid.");
+    }
+
+    private static Result<TClaims> Fail<TClaims>(string reason) =>
+        Result.Failure<TClaims>(Error.Problem("Attestation.Invalid", reason));
 }

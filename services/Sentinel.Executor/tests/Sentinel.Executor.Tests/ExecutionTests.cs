@@ -50,7 +50,7 @@ public sealed class ExecutionTests : IDisposable
 
     // The consumer's path: Runtime's message arrives as a command, whose handler verifies and reserves it and hands it to the state machine.
     private Task<Result> ExecuteAsync(ExecuteRemediation command) =>
-        new ExecuteRemediationCommandHandler(_store, Service(), new NoUnitOfWork(), _time).Handle(new ExecuteRemediationCommand(command), CancellationToken.None);
+        new ExecuteRemediationCommandHandler(_store, Service(), new NoUnitOfWork(), _time, NullLogger<ExecuteRemediationCommandHandler>.Instance).Handle(new ExecuteRemediationCommand(command), CancellationToken.None);
 
     private ExecutionOutcome LastOutcome() => _outbox.Messages.OfType<RemediationExecuted>().Last().Outcome;
 
@@ -76,6 +76,27 @@ public sealed class ExecutionTests : IDisposable
 
         _target.Executions.ShouldBe(1);
         _outbox.Messages.OfType<RemediationExecuted>().Count().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task An_unauthenticated_command_binds_no_idempotency_key_and_reaches_Runtime_with_nothing()
+    {
+        // Review F-006: a command that is not the Gateway's must not occupy the predictable key the genuine one arrives under.
+        using var attacker = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        ExecuteRemediation genuine = Commands.Execute(_signer);
+        ExecuteRemediation forged = genuine with { Attestation = _signer.Sign(Commands.Claims(genuine.IncidentId, genuine.Plan), key: attacker) };
+
+        await ExecuteAsync(forged);
+        _outbox.Messages.OfType<RemediationExecuted>().ShouldBeEmpty();
+        _target.Executions.ShouldBe(0);
+
+        await ExecuteAsync(genuine);
+
+        _target.Executions.ShouldBe(1);
+        LastOutcome().ShouldBe(ExecutionOutcome.ActionVerified);
+        _store.All.Count.ShouldBe(2);
+        _store.All.ShouldContain(request => request.IdempotencyKey.Contains(ExecuteRemediationCommandHandler.UnverifiedKeySuffix, StringComparison.Ordinal) && request.State == ExecutionState.Rejected);
+        _store.All.ShouldContain(request => request.IdempotencyKey == genuine.IdempotencyKey && request.State == ExecutionState.ActionVerified);
     }
 
     [Fact]
