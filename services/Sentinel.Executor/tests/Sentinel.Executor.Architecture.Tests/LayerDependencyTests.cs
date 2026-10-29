@@ -1,5 +1,7 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using Sentinel.Executor.Api.Controllers;
+using Sentinel.Testing.Architecture;
 using Shouldly;
 
 namespace Sentinel.Executor.Architecture.Tests;
@@ -40,6 +42,14 @@ public sealed class LayerDependencyTests
         "Sentinel.Ingestion",
         "Sentinel.Runtime",
         "Sentinel.AgentWorker"
+    ];
+
+    // Rule 9 (ADR-020): controllers Executor's own refactoring step migrates.
+    private static readonly string[] PendingControllers =
+    [
+        "Sentinel.Executor.Api.Controllers.PolicyController",
+        "Sentinel.Executor.Api.Controllers.ExecutionsController",
+        "Sentinel.Executor.Api.Controllers.AdminController"
     ];
 
     [Fact]
@@ -89,6 +99,30 @@ public sealed class LayerDependencyTests
             assembly.GetReferencedAssemblies().ShouldNotContain(name => (name.Name ?? string.Empty).StartsWith("Reference.", StringComparison.Ordinal));
         }
     }
+
+    [Fact]
+    public void Every_command_query_and_request_has_one_handler_or_processor_in_its_own_namespace() =>
+        ArchitectureRules.HandlerPlacement(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Processors_depend_only_on_a_validator_and_a_dispatcher() =>
+        ArchitectureRules.ProcessorDependencies(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Consumers_live_in_messaging_consumers_and_send_requests() =>
+        ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", []).ShouldBeEmpty();
+
+    [Fact]
+    public void Controllers_derive_from_the_api_controller_and_send_requests() =>
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Executor.Domain"], PendingControllers).ShouldBeEmpty();
+
+    [Fact]
+    public void Program_maps_no_endpoint_itself() =>
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Executor/src/Sentinel.Executor.Api/Program.cs")).ShouldBeEmpty();
+
+    [Fact]
+    public void Only_the_application_module_registers_the_building_blocks() =>
+        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, []).ShouldBeEmpty();
 
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
