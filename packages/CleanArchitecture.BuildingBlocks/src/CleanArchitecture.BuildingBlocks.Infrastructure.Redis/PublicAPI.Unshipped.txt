@@ -33,6 +33,8 @@ CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ClaimI
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ClaimIdleTime.set -> void
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ConsumerName.get -> string!
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.ConsumerName.set -> void
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxConcurrency.get -> int
+CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxConcurrency.set -> void
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxDeliveries.get -> int
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxDeliveries.set -> void
 CleanArchitecture.BuildingBlocks.Infrastructure.Redis.RedisStreamsOptions.MaxStreamLength.get -> int
