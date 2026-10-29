@@ -14,6 +14,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Shouldly;
 using Testcontainers.PostgreSql;
+using Sentinel.Gateway.Infrastructure.Persistence;
 
 namespace Sentinel.Gateway.Tests;
 

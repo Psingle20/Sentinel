@@ -9,6 +9,7 @@ using Sentinel.Gateway.Application.Abstractions.Security;
 using Sentinel.Gateway.Application.Options;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Remediation;
+using Sentinel.Gateway.Domain.Approvals;
 
 namespace Sentinel.Gateway.Infrastructure.Security;
 

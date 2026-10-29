@@ -2,6 +2,7 @@ using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Remediation;
 using Sentinel.ServiceDefaults;
+using Sentinel.Gateway.Infrastructure.Messaging.Consumers;
 
 namespace Sentinel.Gateway.Infrastructure.Messaging;
 
@@ -16,10 +17,10 @@ public static class GatewayMessages
             .Produces<RecordApproval>()
             .Produces<RecordRejection>()
             .Produces<RecordRevocation>()
-            .Consumes<IncidentOpened, IncidentOpenedHandler>()
-            .Consumes<IncidentStatusChanged, IncidentStatusChangedHandler>()
-            .Consumes<IncidentBlackboardUpdated, IncidentBlackboardUpdatedHandler>()
-            .Consumes<DecisionRecorded, DecisionRecordedHandler>()
-            .Consumes<RemediationPlanProposed, RemediationPlanProposedHandler>()
-            .Consumes<RecoveryEvaluated, RecoveryEvaluatedHandler>();
+            .Consumes<IncidentOpened, IncidentOpenedConsumer>()
+            .Consumes<IncidentStatusChanged, IncidentStatusChangedConsumer>()
+            .Consumes<IncidentBlackboardUpdated, IncidentBlackboardUpdatedConsumer>()
+            .Consumes<DecisionRecorded, DecisionRecordedConsumer>()
+            .Consumes<RemediationPlanProposed, RemediationPlanProposedConsumer>()
+            .Consumes<RecoveryEvaluated, RecoveryEvaluatedConsumer>();
 }

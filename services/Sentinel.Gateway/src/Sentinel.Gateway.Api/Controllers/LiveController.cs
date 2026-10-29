@@ -1,24 +1,36 @@
 using System.Globalization;
+using System.Net.ServerSentEvents;
+using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Sentinel.Gateway.Application.Live;
-using Sentinel.Gateway.Api.Live;
 using Sentinel.Gateway.Api.Identity;
+using Sentinel.Gateway.Application.BusinessProcesses.Live;
+using Sentinel.Gateway.Application.Live;
 
 namespace Sentinel.Gateway.Api.Controllers;
 
 /// <summary>
-/// Live updates (Phase 08): server-sent events for the caller's tenants, resumable from
-/// <c>Last-Event-ID</c>. Each event names what changed; the query endpoints stay the source of truth.
+/// Live incident events as server-sent events (Phase 08), in the caller's tenants; a reconnecting client
+/// resumes after the last event it received.
 /// </summary>
 [Route(Routes.Root + "/events")]
 [Authorize(Roles = Roles.Responder)]
-public sealed class LiveController(ILiveEventStore events) : ApiController
+public sealed class LiveController(IRequestDispatcher requests) : ApiController
 {
     [HttpGet]
-    public IResult Events(long? after, [FromHeader(Name = "Last-Event-ID")] string? lastEventId, CancellationToken cancellationToken)
+    public async Task<IResult> Events(long? after, [FromHeader(Name = "Last-Event-ID")] string? lastEventId, CancellationToken cancellationToken)
     {
         long? resume = long.TryParse(lastEventId, NumberStyles.None, CultureInfo.InvariantCulture, out long resumeAfter) ? resumeAfter : after;
-        return TypedResults.ServerSentEvents(LiveEventStream.ReadAsync(events, User.Tenants(), resume, cancellationToken));
+        Result<IAsyncEnumerable<LiveEvent>> events = await requests.HandleRequestAsync(new StreamLiveEventsRequest(User.Tenants(), resume), cancellationToken);
+        return events.IsSuccess ? TypedResults.ServerSentEvents(Items(events.Value)) : Problem(events.Error);
+    }
+
+    private static async IAsyncEnumerable<SseItem<LiveEvent>> Items(IAsyncEnumerable<LiveEvent> events)
+    {
+        await foreach (LiveEvent live in events)
+        {
+            yield return new SseItem<LiveEvent>(live, "incident") { EventId = live.Sequence.ToString(CultureInfo.InvariantCulture) };
+        }
     }
 }

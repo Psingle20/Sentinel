@@ -4,6 +4,7 @@ using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Gateway.Application.ControlPlane;
 using Sentinel.Gateway.Application.Postmortems;
+using Sentinel.Gateway.Application.Abstractions.Providers;
 
 namespace Sentinel.Gateway.Tests;
 

@@ -5,6 +5,8 @@ using Sentinel.Gateway.Application.Live;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Shouldly;
+using Sentinel.Gateway.Application.Options;
+using Sentinel.Gateway.Api.Controllers;
 
 namespace Sentinel.Gateway.Tests;
 

@@ -10,6 +10,9 @@ using Sentinel.Gateway.Application.ControlPlane;
 using Sentinel.Gateway.Application.Live;
 using Sentinel.Gateway.Application.Postmortems;
 using Shouldly;
+using Sentinel.Gateway.Application.Abstractions.Persistence;
+using Sentinel.Gateway.Api.Identity;
+using Sentinel.Gateway.Application.Incidents;
 
 namespace Sentinel.Gateway.Tests;
 

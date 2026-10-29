@@ -1,33 +1,29 @@
-using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Gateway.Api.Contracts;
 using Sentinel.Gateway.Api.Filters;
-using Sentinel.Gateway.Application.Postmortems;
-using Sentinel.Contracts.Incidents;
-using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Gateway.Api.Identity;
+using Sentinel.Gateway.Application.BusinessProcesses.Postmortems;
 
 namespace Sentinel.Gateway.Api.Controllers;
 
-/// <summary>An incident's postmortem with its narrative (Phase 07).</summary>
+/// <summary>An incident's postmortem (Phase 07): Runtime's generated facts and the responders' versioned narrative.</summary>
 [Route(Routes.Incident + "/postmortem")]
 [Authorize(Roles = Roles.Responder)]
 [IncidentTenant]
-public sealed class PostmortemsController(PostmortemService postmortems) : ApiController
+public sealed class PostmortemsController(IRequestDispatcher requests) : ApiController
 {
     [HttpGet]
     public async Task<IResult> Get(Guid incidentId, CancellationToken cancellationToken) =>
-        await postmortems.GetAsync(IncidentId.From(incidentId), cancellationToken) is { } postmortem ? Results.Ok(postmortem) : Results.NotFound();
+        MatchFound(await requests.HandleRequestAsync(new GetPostmortemRequest(IncidentId.From(incidentId)), cancellationToken));
 
     [HttpPut("narrative")]
     public async Task<IResult> SaveNarrative(Guid incidentId, SaveNarrativeBody body, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        Result<PostmortemNarrative> result = await postmortems.SaveNarrativeAsync(
-            new SaveNarrative(IncidentId.From(incidentId), body.Markdown, body.ExpectedVersion, User.UserId()),
-            cancellationToken);
-        return Match(result);
+        return Match(await requests.HandleRequestAsync(new SaveNarrativeRequest(IncidentId.From(incidentId), body.Markdown, body.ExpectedVersion, User.UserId()), cancellationToken));
     }
 }

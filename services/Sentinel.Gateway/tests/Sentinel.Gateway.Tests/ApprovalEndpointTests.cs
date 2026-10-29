@@ -6,6 +6,8 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Remediation;
 using Shouldly;
+using Sentinel.Gateway.Application.Incidents;
+using Sentinel.Gateway.Domain.Approvals;
 
 namespace Sentinel.Gateway.Tests;
 

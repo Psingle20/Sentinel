@@ -397,46 +397,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Analytics/ProductAnalytics.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/ControlPlane/ApiConfiguration.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/ControlPlane/ControlPlaneService.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Idempotency/IdempotencyStore.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Incidents/Pages.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Live/LiveEvents.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Live/Notifications.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Postmortems/PostmortemService.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Infrastructure/ApiInfrastructure.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Infrastructure/LiveInfrastructure.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.Gateway/tests/Sentinel.Gateway.Tests/IdentityAndLiveTests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none

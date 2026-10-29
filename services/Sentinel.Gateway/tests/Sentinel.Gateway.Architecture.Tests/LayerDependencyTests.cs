@@ -44,26 +44,9 @@ public sealed class LayerDependencyTests
         "Sentinel.Executor"
     ];
 
-    // Rules 8 and 9 (ADR-020): consumers and controllers the Gateway's own refactoring step migrates.
-    private static readonly string[] PendingConsumers =
-    [
-        "Sentinel.Gateway.Infrastructure.IncidentOpenedHandler",
-        "Sentinel.Gateway.Infrastructure.IncidentStatusChangedHandler",
-        "Sentinel.Gateway.Infrastructure.IncidentBlackboardUpdatedHandler",
-        "Sentinel.Gateway.Infrastructure.DecisionRecordedHandler",
-        "Sentinel.Gateway.Infrastructure.RemediationPlanProposedHandler",
-        "Sentinel.Gateway.Infrastructure.RecoveryEvaluatedHandler"
-    ];
+    private static readonly string[] PendingConsumers = [];
 
-    private static readonly string[] PendingControllers =
-    [
-        "Sentinel.Gateway.Api.Controllers.IncidentsController",
-        "Sentinel.Gateway.Api.Controllers.PostmortemsController",
-        "Sentinel.Gateway.Api.Controllers.AgentExecutionsController",
-        "Sentinel.Gateway.Api.Controllers.LiveController",
-        "Sentinel.Gateway.Api.Controllers.AnalyticsController",
-        "Sentinel.Gateway.Api.Controllers.AdminController"
-    ];
+    private static readonly string[] PendingControllers = [];
 
     [Fact]
     public void Domain_references_only_core_building_blocks_and_contract_primitives()

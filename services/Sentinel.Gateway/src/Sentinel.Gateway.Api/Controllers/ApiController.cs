@@ -19,6 +19,20 @@ public abstract class ApiController : ControllerBase
         return result.IsSuccess ? Results.Ok(result.Value) : Problem(result.Error);
     }
 
+    /// <summary>Nothing found is a bare 404, which the status-code pages answer without disclosing why.</summary>
+    protected static IResult MatchFound<TValue>(Result<TValue?> result)
+        where TValue : class
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.IsFailure)
+        {
+            return Problem(result.Error);
+        }
+
+        return result.Value is { } value ? Results.Ok(value) : Results.NotFound();
+    }
+
     protected static IResult MatchAccepted(Result result)
     {
         ArgumentNullException.ThrowIfNull(result);

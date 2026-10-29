@@ -8,6 +8,7 @@ using Sentinel.Gateway.Application.Live;
 using Sentinel.Gateway.Infrastructure;
 using Sentinel.Testing.Composition;
 using Shouldly;
+using Sentinel.Gateway.Application.Abstractions.Providers;
 
 namespace Sentinel.Gateway.Architecture.Tests;
 
@@ -18,8 +19,7 @@ public sealed class CompositionTests : IDisposable
     private static readonly Assembly InfrastructureAssembly = Sentinel.Gateway.Infrastructure.AssemblyReference.Assembly;
     private static readonly Assembly HostAssembly = typeof(ApiDependencyModule).Assembly;
 
-    // Registered by the Infrastructure module until the Gateway's own step splits the control plane into processes, commands and queries.
-    private static readonly string[] PendingInfrastructureRegistrations = ["Sentinel.Gateway.Application.ControlPlane.ApiConfigurationService"];
+    private static readonly string[] PendingInfrastructureRegistrations = [];
 
     private readonly HostComposition<Program> _host = new(new Dictionary<string, string?>
     {

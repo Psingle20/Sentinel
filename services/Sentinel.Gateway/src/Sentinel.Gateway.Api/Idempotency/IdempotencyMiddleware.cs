@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using Sentinel.Gateway.Application.Idempotency;
+using Sentinel.Gateway.Application.Abstractions.Persistence;
 
 namespace Sentinel.Gateway.Api.Idempotency;
 

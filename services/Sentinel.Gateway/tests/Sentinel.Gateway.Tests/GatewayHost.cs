@@ -14,6 +14,7 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
+using Sentinel.Gateway.Domain.Approvals;
 
 namespace Sentinel.Gateway.Tests;
 

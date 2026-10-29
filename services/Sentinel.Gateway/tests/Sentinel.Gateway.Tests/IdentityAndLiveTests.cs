@@ -27,8 +27,12 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Shouldly;
-using Sentinel.Gateway.Api.Live;
 using Sentinel.Gateway.Api.Identity;
+using Sentinel.Gateway.Application.Abstractions.Persistence;
+using Sentinel.Gateway.Application.Options;
+using Sentinel.Gateway.Application.BusinessTasks.Commands.ControlPlane;
+using Sentinel.Gateway.Application.BusinessTasks.Queries.ControlPlane;
+using Sentinel.Gateway.Application.BusinessTasks.Queries.Live;
 
 namespace Sentinel.Gateway.Tests;
 
@@ -201,8 +205,9 @@ public sealed class LiveUpdateTests
         await store.AppendAsync(Draft(Acme, "decision-recorded"), CancellationToken.None);
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(3));
 
-        var received = new List<System.Net.ServerSentEvents.SseItem<LiveEvent>>();
-        await foreach (System.Net.ServerSentEvents.SseItem<LiveEvent> item in LiveEventStream.ReadAsync(store, [Acme], after: 1, stop.Token))
+        var received = new List<LiveEvent>();
+        IAsyncEnumerable<LiveEvent> stream = (await new StreamLiveEventsQueryHandler(store).Handle(new StreamLiveEventsQuery([Acme], 1), stop.Token)).Value;
+        await foreach (LiveEvent item in stream)
         {
             received.Add(item);
             if (received.Count == 1)
@@ -211,9 +216,9 @@ public sealed class LiveUpdateTests
             }
         }
 
-        LiveEvent only = received.ShouldHaveSingleItem().Data;
+        LiveEvent only = received.ShouldHaveSingleItem();
         only.Kind.ShouldBe("decision-recorded");
-        received[0].EventId.ShouldBe("3");
+        only.Sequence.ShouldBe(3);
     }
 
     [Fact]
@@ -271,11 +276,28 @@ public sealed class LiveUpdateTests
 
 public sealed class ControlPlaneTests
 {
+    // The control plane's handlers behind the calls these tests make, composed as the host composes them.
+    private sealed class ControlPlane(IExecutorControlPlane executor, IConfigurationOwners owners, IAuditLog audit, IUnitOfWork unitOfWork, TimeProvider time)
+    {
+        private readonly ControlPlaneAudit _audit = new(audit, unitOfWork, time);
+
+        public async Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string actor, CancellationToken cancellationToken) =>
+            (await new PublishPolicyCommandHandler(executor, _audit).Handle(new PublishPolicyCommand(document, expectedVersion, actor), cancellationToken)).Value;
+
+        public async Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken) =>
+            (await new SetEmergencyStopCommandHandler(executor, _audit).Handle(new SetEmergencyStopCommand(engaged, actor), cancellationToken)).Value;
+
+        public async Task<ControlPlaneResponse> PublishConfigurationAsync(string area, JsonElement document, string expectedVersion, string actor, CancellationToken cancellationToken) =>
+            (await new PublishConfigurationCommandHandler(owners, _audit).Handle(new PublishConfigurationCommand(area, document, expectedVersion, actor), cancellationToken)).Value;
+
+        public async Task<ControlPlaneResponse> ConfigurationAsync(string area, CancellationToken cancellationToken) =>
+            (await new GetConfigurationQueryHandler(owners).Handle(new GetConfigurationQuery(area), cancellationToken)).Value;
+    }
     [Fact]
     public async Task Every_control_plane_change_is_audited_whether_it_succeeded_or_was_refused()
     {
         var audit = new RecordingAudit();
-        var service = new ControlPlaneService(new RefusingExecutor(), new RecordingOwners(), audit, new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
+        var service = new ControlPlane(new RefusingExecutor(), new RecordingOwners(), audit, new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
         using var document = JsonDocument.Parse("""{ "version": "policy-2026.10.3", "rules": [] }""");
 
         ControlPlaneResponse published = await service.PublishPolicyAsync(document.RootElement, "policy-2026.10.2", "operator@example.test", CancellationToken.None);
@@ -291,7 +313,7 @@ public sealed class ControlPlaneTests
     {
         var audit = new RecordingAudit();
         var owners = new RecordingOwners();
-        var service = new ControlPlaneService(new RefusingExecutor(), owners, audit, new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
+        var service = new ControlPlane(new RefusingExecutor(), owners, audit, new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
         using var document = JsonDocument.Parse("""{ "version": "runtime-2026.10.29.1", "detection": [] }""");
 
         ControlPlaneResponse published = await service.PublishConfigurationAsync(ConfigurationAreas.Runtime, document.RootElement, "deployment", "operator@example.test", CancellationToken.None);
@@ -305,7 +327,7 @@ public sealed class ControlPlaneTests
     public async Task An_unknown_configuration_area_reaches_no_service()
     {
         var owners = new RecordingOwners();
-        var service = new ControlPlaneService(new RefusingExecutor(), owners, new RecordingAudit(), new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
+        var service = new ControlPlane(new RefusingExecutor(), owners, new RecordingAudit(), new NoUnitOfWork(), new FakeTimeProvider(DateTimeOffset.UnixEpoch));
         using var document = JsonDocument.Parse("""{ "version": "x" }""");
 
         (await service.ConfigurationAsync("secrets", CancellationToken.None)).StatusCode.ShouldBe(404);

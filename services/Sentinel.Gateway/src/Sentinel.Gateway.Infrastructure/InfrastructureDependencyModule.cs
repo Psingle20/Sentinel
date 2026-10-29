@@ -5,11 +5,14 @@ using Sentinel.Gateway.Infrastructure.DependencyInjection;
 
 namespace Sentinel.Gateway.Infrastructure;
 
-/// <summary>The Gateway's infrastructure: port implementations, options, clients and background work (ADR-020).</summary>
+/// <summary>The Gateway's infrastructure: approvals and signing, configuration, stores, peer clients and notifications (ADR-020).</summary>
 public sealed class InfrastructureDependencyModule : IDependencyModule
 {
     public void RegisterServices(IServiceCollection services, IConfiguration configuration) =>
         services
             .AddApprovals(configuration)
-            .AddApiInfrastructure(configuration);
+            .AddGatewayConfiguration(configuration)
+            .AddGatewayPersistence()
+            .AddGatewayClients(configuration)
+            .AddGatewayNotifications();
 }
