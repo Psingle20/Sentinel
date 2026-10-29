@@ -1,8 +1,14 @@
 using System.Net.Http.Headers;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
+using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Npgsql;
+using Sentinel.Contracts.Messaging;
 using Sentinel.Ingestion.Application;
 using Sentinel.Ingestion.Application.Knowledge;
 using Sentinel.Ingestion.Application.Providers;
@@ -13,6 +19,9 @@ namespace Sentinel.Ingestion.Infrastructure;
 
 public static class IngestionInfrastructure
 {
+    /// <summary>The options name for the deployment configuration without the control-plane document.</summary>
+    public const string DeploymentOptions = "deployment";
+
     /// <summary>
     /// Provider adapters, the observation store and the ingestion worker. Provider endpoints and
     /// credentials come from <c>Ingestion:Providers</c>, supplied by local secret configuration or
@@ -27,6 +36,17 @@ public static class IngestionInfrastructure
             .Validate(options => options.IsValid(), "Ingestion options need a tenant, environment, positive intervals and complete metric series.")
             .ValidateOnStart();
         services.TryAddSingleton(TimeProvider.System);
+
+        // Phase 08 provider configuration: the sources and timings as published through the control plane,
+        // over the deployment configuration, which stays the seed and the base a candidate is validated on.
+        services.AddOptions<IngestionOptions>(DeploymentOptions).Bind(configuration.GetSection(IngestionOptions.Section));
+        services.AddSingleton<IVersionedDocumentStore<SourceConfigurationDocument>>(provider =>
+            new PostgresVersionedDocumentStore<SourceConfigurationDocument>(provider.GetRequiredService<NpgsqlDataSource>(), IngestionStoreInitializer.ConfigurationTable, SentinelJson.Options));
+        services.AddSingleton<VersionedDocumentPublisher<SourceConfigurationDocument>>();
+        services.AddSingleton(provider => new SourceConfigurationService(
+            provider.GetRequiredService<VersionedDocumentPublisher<SourceConfigurationDocument>>(),
+            () => provider.GetRequiredService<IOptionsFactory<IngestionOptions>>().Create(DeploymentOptions)));
+        services.AddManagedDocument<IngestionOptions, SourceConfigurationDocument>(SourceConfigurationMapping.Apply);
 
         services.AddSingleton<IMessagingStoreInitializer, IngestionStoreInitializer>();
         services.AddScoped<IObservationStore, PostgresObservationStore>();

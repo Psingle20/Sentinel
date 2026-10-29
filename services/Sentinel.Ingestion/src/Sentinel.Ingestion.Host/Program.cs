@@ -1,9 +1,12 @@
 using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Queries;
 using Sentinel.Ingestion.Application;
 using Sentinel.Ingestion.Application.Knowledge;
 using Sentinel.Ingestion.Domain.Sources;
+using Sentinel.Ingestion.Host;
 using Sentinel.Ingestion.Infrastructure;
 using Sentinel.ServiceDefaults;
 
@@ -42,6 +45,28 @@ app.MapGet("/v1/sources", async (ISourceStateStore states, CancellationToken can
         state.ConsecutiveFailures,
         Healthy = state.Health == SourceHealth.Healthy
     }));
+
+// Phase 08 provider configuration: the control-plane document and every published version. Api authorizes and audits changes.
+app.MapGet("/v1/configuration", async (SourceConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.CurrentAsync(cancellationToken));
+app.MapGet("/v1/configuration/history", async (SourceConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.HistoryAsync(cancellationToken));
+
+// Until service-to-service authentication (Phase 09), publishing exists only where operator endpoints are enabled.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Sentinel:OperatorEndpoints:Enabled"))
+{
+    app.MapPut("/admin/configuration", async (PublishSourceConfigurationRequest request, SourceConfigurationService configuration, ManagedDocument<SourceConfigurationDocument> current, CancellationToken cancellationToken) =>
+    {
+        Result<PublishedDocument<SourceConfigurationDocument>> published = await configuration.PublishAsync(request.Document, request.ExpectedVersion, request.Author, cancellationToken);
+        if (published.IsFailure)
+        {
+            return published.ToHttpResult();
+        }
+
+        current.Set(published.Value);
+        return Results.Ok(published.Value.Version);
+    });
+}
 
 await app.RunAsync();
 

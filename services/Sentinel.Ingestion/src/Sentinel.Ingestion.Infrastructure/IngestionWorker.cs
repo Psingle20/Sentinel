@@ -10,20 +10,39 @@ using Sentinel.Ingestion.Application.Providers;
 namespace Sentinel.Ingestion.Infrastructure;
 
 /// <summary>
-/// Pulls every configured source once per poll interval, highest priority first: SLO signals before
-/// background data (Phase 02 stream prioritization). Each pull runs in its own scope and unit of
-/// work, so one failing source never blocks the others, and the loop never queues work in memory.
+/// Pulls every configured source once per poll interval, each in its own loop, so a slow or
+/// failing source never delays another: a large log pull cannot hold back the SLO signals
+/// detection depends on (Phase 02 stream prioritization). Loops start in priority order. Each pull
+/// runs in its own scope and unit of work, and no loop queues work in memory. When the control plane
+/// publishes new sources (Phase 08), the loops finish their current pulls and restart with them.
 /// </summary>
 internal sealed class IngestionWorker(
     IServiceScopeFactory scopes,
-    IOptions<IngestionOptions> options,
+    IOptionsMonitor<IngestionOptions> options,
     IngestionTelemetry telemetry,
     TimeProvider time,
     ILogger<IngestionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        IngestionOptions settings = options.Value;
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            using var generation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+            using (options.OnChange(_ => generation.Cancel()))
+            {
+                await RunAsync(options.CurrentValue, generation.Token, stoppingToken);
+            }
+
+            if (!stoppingToken.IsCancellationRequested)
+            {
+                logger.LogInformation("The source configuration changed; restarting the pull loops");
+            }
+        }
+    }
+
+    // Loops end when the generation ends; a pull already started runs to completion under the stopping token.
+    private async Task RunAsync(IngestionOptions settings, CancellationToken generation, CancellationToken stoppingToken)
+    {
         var pulls = new List<(int Priority, string Name, Func<IngestionCycle, IServiceProvider, Task<int>> Pull)>();
         foreach (MetricSeriesDefinition series in settings.MetricSeries)
         {
@@ -47,14 +66,15 @@ internal sealed class IngestionWorker(
         }
 
         (int Priority, string Name, Func<IngestionCycle, IServiceProvider, Task<int>> Pull)[] ordered = [.. pulls.OrderByDescending(pull => pull.Priority)];
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            foreach ((int _, string name, Func<IngestionCycle, IServiceProvider, Task<int>> pull) in ordered)
-            {
-                await PullAsync(name, pull, stoppingToken);
-            }
+        await Task.WhenAll(ordered.Select(pull => LoopAsync(pull.Name, pull.Pull, settings.PollInterval, generation, stoppingToken)));
+    }
 
-            await Task.Delay(settings.PollInterval, time, stoppingToken);
+    private async Task LoopAsync(string source, Func<IngestionCycle, IServiceProvider, Task<int>> pull, TimeSpan interval, CancellationToken generation, CancellationToken stoppingToken)
+    {
+        while (!generation.IsCancellationRequested)
+        {
+            await PullAsync(source, pull, stoppingToken);
+            await Task.Delay(interval, time, generation).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
     }
 

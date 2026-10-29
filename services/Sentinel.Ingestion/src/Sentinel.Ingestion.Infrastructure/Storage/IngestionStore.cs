@@ -16,6 +16,9 @@ namespace Sentinel.Ingestion.Infrastructure.Storage;
 /// <summary>Creates Ingestion's tables in its own database, before messaging and workers start.</summary>
 internal sealed class IngestionStoreInitializer(NpgsqlDataSource dataSource) : IMessagingStoreInitializer
 {
+    /// <summary>Published versions of Ingestion's control-plane document (Phase 08).</summary>
+    public const string ConfigurationTable = "ingestion.configuration_versions";
+
     private const string Schema = """
         select pg_advisory_xact_lock(hashtext('sentinel.ingestion.schema'));
 
@@ -57,7 +60,7 @@ internal sealed class IngestionStoreInitializer(NpgsqlDataSource dataSource) : I
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(Schema, connection, transaction);
+        await using var command = new NpgsqlCommand(Schema + PostgresVersionedDocumentStore<SourceConfigurationDocument>.CreateTableSql(ConfigurationTable), connection, transaction);
         await command.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
