@@ -10,7 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Reference.Common.Control;
 using Shouldly;
-using DeployControllerEntryPoint = Reference.DeployController.DeploymentLedger;
+using Reference.DeployController.Api.Clients;
+using Reference.DeployController.Application.Abstractions;
+using DeployControllerEntryPoint = Reference.DeployController.Api.ApiDependencyModule;
 
 namespace Reference.Tests;
 
@@ -221,7 +223,7 @@ public sealed class DeployControllerEndpointTests : IDisposable
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<FakeRevisions>();
-                services.AddHttpClient<Reference.DeployController.RevisionClient>().ConfigurePrimaryHttpMessageHandler(provider => provider.GetRequiredService<FakeRevisions>());
+                services.AddHttpClient<IRevisionSwitch, RevisionClient>().ConfigurePrimaryHttpMessageHandler(provider => provider.GetRequiredService<FakeRevisions>());
             });
         }
     }

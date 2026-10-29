@@ -44,7 +44,9 @@
   </Folder>
   <Folder Name="/reference-system/" />
   <Folder Name="/reference-system/deploy-controller/">
-    <Project Path="reference-system/deploy-controller/Reference.DeployController/Reference.DeployController.csproj" />
+    <Project Path="reference-system/deploy-controller/Reference.DeployController.Api/Reference.DeployController.Api.csproj" />
+    <Project Path="reference-system/deploy-controller/Reference.DeployController.Application/Reference.DeployController.Application.csproj" />
+    <Project Path="reference-system/deploy-controller/Reference.DeployController.Domain/Reference.DeployController.Domain.csproj" />
   </Folder>
   <Folder Name="/reference-system/deploy/" />
   <Folder Name="/reference-system/deploy/redis-exporter/">

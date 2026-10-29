@@ -68,7 +68,7 @@ internal static class ReferenceSystemExtensions
         IResourceBuilder<ProjectResource> reporting = AddReferenceService<Projects.Reference_ReportingWorker>("reporting-worker");
         AddReferenceService<Projects.Reference_RedisExporter>("redis-exporter");
 
-        IResourceBuilder<ProjectResource> deployController = AddReferenceService<Projects.Reference_DeployController>("deploy-controller")
+        IResourceBuilder<ProjectResource> deployController = AddReferenceService<Projects.Reference_DeployController_Api>("deploy-controller")
             .WithEnvironment("DeployController__DeployToken", deployToken)
             .WithEnvironment("DeployController__ReadToken", readToken)
             .WithReference(checkout)

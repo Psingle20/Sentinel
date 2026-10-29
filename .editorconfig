@@ -341,10 +341,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[reference-system/deploy-controller/Reference.DeployController/Deployments.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [reference-system/scenarios/Reference.Scenarios/ScenarioManifest.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -569,4 +565,7 @@ dotnet_diagnostic.SA1649.severity = none
 # default, as it did before the move to controllers. Requiring the values would change responses, so it is a
 # separate, deliberate change.
 [services/*/src/*.Api/Contracts/*.cs]
+dotnet_diagnostic.S6964.severity = none
+
+[reference-system/*/*.Api/Contracts/*.cs]
 dotnet_diagnostic.S6964.severity = none
