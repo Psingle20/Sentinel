@@ -49,7 +49,8 @@ public sealed class MessagingInfrastructure : IAsyncLifetime
         string serviceName,
         string connectionString,
         Action<MessagingBuilder> declareMessages,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        int maxConcurrency = 1)
     {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
@@ -69,6 +70,7 @@ public sealed class MessagingInfrastructure : IAsyncLifetime
                 streams.PollInterval = TimeSpan.FromMilliseconds(50);
                 streams.ClaimIdleTime = TimeSpan.FromMilliseconds(500);
                 streams.MaxDeliveries = 3;
+                streams.MaxConcurrency = maxConcurrency;
             });
 
         declareMessages(messaging);

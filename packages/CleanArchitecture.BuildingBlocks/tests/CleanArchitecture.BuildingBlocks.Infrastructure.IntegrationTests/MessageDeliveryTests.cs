@@ -25,7 +25,7 @@ public sealed class MessageDeliveryTests(MessagingInfrastructure infrastructure)
         }
     }
 
-    private async Task<Services> StartAsync(BillingBehavior? behavior = null)
+    private async Task<Services> StartAsync(BillingBehavior? behavior = null, int maxConcurrency = 1)
     {
         string stream = $"it.orders.{Guid.NewGuid():N}";
         string ordersDb = await infrastructure.CreateDatabaseAsync("orders");
@@ -38,9 +38,30 @@ public sealed class MessageDeliveryTests(MessagingInfrastructure infrastructure)
             "billing",
             billingDb,
             messages => messages.Consumes<OrderPlaced, CreateInvoiceOnOrderPlaced>(MessageType, 1, stream),
-            services => services.AddSingleton(behavior ?? new BillingBehavior()));
+            services => services.AddSingleton(behavior ?? new BillingBehavior()),
+            maxConcurrency);
 
         return new Services(orders, ordersDb, billing, billingDb, stream);
+    }
+
+    /// <summary>Several orders in one unit of work, so their events are published, and usually read, together.</summary>
+    private static async Task PlaceOrdersAsync(IHost orders, int count)
+    {
+        await using AsyncServiceScope scope = orders.Services.CreateAsyncScope();
+        NpgsqlTransaction transaction = await scope.ServiceProvider.GetRequiredService<IPostgresTransaction>().GetTransactionAsync(CancellationToken.None);
+        for (int order = 0; order < count; order++)
+        {
+            var orderId = Guid.NewGuid();
+            await using (var command = new NpgsqlCommand("insert into orders (order_id) values (@order_id)", transaction.Connection, transaction))
+            {
+                command.Parameters.AddWithValue("order_id", orderId);
+                await command.ExecuteNonQueryAsync();
+            }
+
+            scope.ServiceProvider.GetRequiredService<IOutbox>().Enqueue(new OrderPlaced(orderId, 10m));
+        }
+
+        await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().CommitAsync(CancellationToken.None);
     }
 
     /// <summary>Writes the order and enqueues its event in one unit of work, as an application handler would.</summary>
@@ -65,6 +86,22 @@ public sealed class MessageDeliveryTests(MessagingInfrastructure infrastructure)
     private Task<long> PendingAsync(string stream) =>
         infrastructure.Redis.GetDatabase().StreamGroupInfoAsync(stream)
             .ContinueWith(task => (long)task.Result.Single(group => group.Name == "billing").PendingMessageCount, TaskScheduler.Default);
+
+    [Fact]
+    public async Task With_concurrency_slow_messages_are_handled_side_by_side_and_each_is_acknowledged_once()
+    {
+        var behavior = new BillingBehavior { HandlingTime = TimeSpan.FromMilliseconds(400) };
+        await using Services services = await StartAsync(behavior, maxConcurrency: 4);
+
+        await PlaceOrdersAsync(services.Orders, 4);
+
+        await MessagingInfrastructure.EventuallyAsync(
+            async () => await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from invoices") == 4,
+            "billing invoices every order");
+        behavior.MostInFlight.ShouldBeGreaterThan(1, "entries of one batch overlap");
+        behavior.Attempts.ShouldBe(4, "no entry is handled twice");
+        await MessagingInfrastructure.EventuallyAsync(async () => await PendingAsync(services.Stream) == 0, "every entry is acknowledged");
+    }
 
     [Fact]
     public async Task A_message_crosses_services_once_and_a_redelivered_duplicate_is_suppressed()

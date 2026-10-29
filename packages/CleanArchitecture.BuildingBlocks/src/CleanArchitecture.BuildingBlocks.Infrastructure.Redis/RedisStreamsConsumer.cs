@@ -78,9 +78,19 @@ internal sealed class RedisStreamsConsumer(
         StreamEntry[] fresh = await database.StreamReadGroupAsync(stream, _group, _options.ConsumerName, ">", _options.BatchSize);
 
         StreamEntry[] entries = [.. reclaimed.ClaimedEntries.Where(entry => !entry.IsNull), .. fresh];
-        foreach (StreamEntry entry in entries)
+        if (_options.MaxConcurrency == 1)
         {
-            await HandleAsync(database, stream, entry, cancellationToken);
+            foreach (StreamEntry entry in entries)
+            {
+                await HandleAsync(database, stream, entry, cancellationToken);
+            }
+        }
+        else
+        {
+            await Parallel.ForEachAsync(
+                entries,
+                new ParallelOptions { MaxDegreeOfParallelism = _options.MaxConcurrency, CancellationToken = cancellationToken },
+                async (entry, token) => await HandleAsync(database, stream, entry, token));
         }
 
         return entries.Length;

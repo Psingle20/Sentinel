@@ -17,6 +17,8 @@ internal sealed class CreateInvoiceOnOrderPlaced(IPostgresTransaction transactio
             return Result.Failure(Error.Problem("Billing.Unavailable", "The billing ledger is unavailable."));
         }
 
+        await behavior.HandleAsync(cancellationToken);
+
         NpgsqlTransaction current = await transaction.GetTransactionAsync(cancellationToken);
         await using var command = new NpgsqlCommand("insert into invoices (order_id, amount) values (@order_id, @amount)", current.Connection, current);
         command.Parameters.AddWithValue("order_id", message.OrderId);

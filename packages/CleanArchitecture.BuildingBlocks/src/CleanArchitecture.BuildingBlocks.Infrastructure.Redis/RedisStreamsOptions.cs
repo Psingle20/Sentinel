@@ -10,6 +10,13 @@ public sealed class RedisStreamsOptions
 
     public int BatchSize { get; set; } = 20;
 
+    /// <summary>
+    /// How many entries of one batch are handled at the same time. Each is still acknowledged on its own, and the next
+    /// poll waits for the whole batch, so no entry is reclaimed by this consumer while it is being handled. One keeps a
+    /// stream's entries in order.
+    /// </summary>
+    public int MaxConcurrency { get; set; } = 1;
+
     /// <summary>How long an entry may stay unacknowledged before another consumer reclaims it.</summary>
     public TimeSpan ClaimIdleTime { get; set; } = TimeSpan.FromSeconds(30);
 
@@ -23,6 +30,7 @@ public sealed class RedisStreamsOptions
         MaxStreamLength > 0
         && PollInterval > TimeSpan.Zero
         && BatchSize > 0
+        && MaxConcurrency is > 0 and <= 64
         && ClaimIdleTime > TimeSpan.Zero
         && MaxDeliveries > 0
         && !string.IsNullOrWhiteSpace(ConsumerName);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.7 – 2026-10-29
+
+### Added
+
+- `Redis`: `RedisStreamsOptions.MaxConcurrency` handles up to that many entries of one batch at the same time, for consumers whose messages are slow and independent, such as Sentinel's investigations, which each wait on a model. Each entry is still acknowledged, dead-lettered or left pending on its own, and the next poll waits for the whole batch, so a consumer never reclaims an entry it is still handling. The default of 1 keeps the previous in-order behaviour; values outside 1 to 64 fail validation.
+- `Directory.Build.props` carries `alpha.7`.
+
 ## 0.1.0-alpha.6 – 2026-10-29
 
 ### Changed
