@@ -1,6 +1,7 @@
 using CleanArchitecture.BuildingBlocks;
 using Microsoft.AspNetCore.Mvc;
 using Sentinel.ServiceDefaults;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api;
 

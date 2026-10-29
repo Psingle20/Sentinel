@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Sentinel.Gateway.Application.Idempotency;
 using Sentinel.Gateway.Api;
 using Shouldly;
+using Sentinel.Gateway.Api.Idempotency;
 
 namespace Sentinel.Gateway.Tests;
 

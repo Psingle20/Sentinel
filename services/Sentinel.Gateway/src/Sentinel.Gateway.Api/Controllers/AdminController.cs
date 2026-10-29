@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sentinel.Gateway.Api.Contracts;
 using Sentinel.Gateway.Application.Analytics;
 using Sentinel.Gateway.Application.ControlPlane;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 

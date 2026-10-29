@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Identity;
 
 public static class IdentityExtensions
 {

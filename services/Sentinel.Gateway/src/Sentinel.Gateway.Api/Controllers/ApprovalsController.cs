@@ -5,6 +5,7 @@ using Sentinel.Gateway.Api.Contracts;
 using Sentinel.Gateway.Api.Filters;
 using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 

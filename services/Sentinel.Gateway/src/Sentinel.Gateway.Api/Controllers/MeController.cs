@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 

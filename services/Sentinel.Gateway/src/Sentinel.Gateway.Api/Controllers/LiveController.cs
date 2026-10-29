@@ -2,6 +2,8 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sentinel.Gateway.Application.Live;
+using Sentinel.Gateway.Api.Live;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 
@@ -14,9 +16,9 @@ namespace Sentinel.Gateway.Api.Controllers;
 public sealed class LiveController(ILiveEventStore events) : ApiController
 {
     [HttpGet]
-    public IResult Events(long? after, CancellationToken cancellationToken)
+    public IResult Events(long? after, [FromHeader(Name = "Last-Event-ID")] string? lastEventId, CancellationToken cancellationToken)
     {
-        long? resume = long.TryParse(Request.Headers["Last-Event-ID"].ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out long lastEventId) ? lastEventId : after;
+        long? resume = long.TryParse(lastEventId, NumberStyles.None, CultureInfo.InvariantCulture, out long resumeAfter) ? resumeAfter : after;
         return TypedResults.ServerSentEvents(LiveEventStream.ReadAsync(events, User.Tenants(), resume, cancellationToken));
     }
 }

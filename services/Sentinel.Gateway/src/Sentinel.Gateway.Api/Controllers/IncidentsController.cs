@@ -5,6 +5,7 @@ using Sentinel.Gateway.Application.Abstractions.Providers;
 using Sentinel.Gateway.Application.Incidents;
 using Sentinel.Gateway.Application.Postmortems;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 

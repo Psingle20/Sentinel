@@ -1,4 +1,4 @@
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Identity;
 
 /// <summary>
 /// Configured as <c>Gateway:Identity</c> (Phase 08): an OpenID Connect authority whose access tokens the Gateway

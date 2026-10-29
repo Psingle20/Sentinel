@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Sentinel.Gateway.Application.Live;
 using Sentinel.Contracts.Primitives.Identifiers;
 
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Live;
 
 /// <summary>Live events after a sequence, then new ones as they are recorded, until the client disconnects.</summary>
 public static class LiveEventStream
@@ -14,8 +14,6 @@ public static class LiveEventStream
 
     public static async IAsyncEnumerable<SseItem<LiveEvent>> ReadAsync(ILiveEventStore events, IReadOnlyList<TenantId> tenants, long? after, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(events);
-
         long position = after ?? await events.LatestAsync(cancellationToken);
         while (!cancellationToken.IsCancellationRequested)
         {

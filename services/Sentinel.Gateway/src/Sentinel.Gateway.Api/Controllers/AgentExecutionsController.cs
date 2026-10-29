@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Sentinel.Gateway.Application.Postmortems;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Controllers;
 

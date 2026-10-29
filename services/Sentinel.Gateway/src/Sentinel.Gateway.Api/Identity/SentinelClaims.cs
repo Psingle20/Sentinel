@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Sentinel.Contracts.Primitives.Identifiers;
 
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Identity;
 
 public static class SentinelClaims
 {

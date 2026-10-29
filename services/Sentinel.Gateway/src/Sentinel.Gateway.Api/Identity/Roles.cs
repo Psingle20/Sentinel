@@ -1,4 +1,4 @@
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Identity;
 
 public static class Roles
 {

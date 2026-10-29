@@ -1,6 +1,7 @@
 using Sentinel.Gateway.Api;
 using Sentinel.Gateway.Infrastructure.Messaging;
 using Sentinel.ServiceDefaults;
+using Sentinel.Gateway.Api.Idempotency;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

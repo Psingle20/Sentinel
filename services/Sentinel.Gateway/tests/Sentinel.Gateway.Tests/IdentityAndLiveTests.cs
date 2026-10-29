@@ -27,6 +27,8 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Shouldly;
+using Sentinel.Gateway.Api.Live;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Tests;
 

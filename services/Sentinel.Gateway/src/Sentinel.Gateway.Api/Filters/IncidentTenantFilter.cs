@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Sentinel.Gateway.Application.Abstractions.Providers;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Gateway.Api.Identity;
 
 namespace Sentinel.Gateway.Api.Filters;
 

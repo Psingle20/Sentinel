@@ -1,6 +1,6 @@
 using Sentinel.Gateway.Application.ControlPlane;
 
-namespace Sentinel.Gateway.Api;
+namespace Sentinel.Gateway.Api.Controllers;
 
 /// <summary>Passes a control-plane answer through with its status code and problem.</summary>
 internal static class ControlPlaneResult

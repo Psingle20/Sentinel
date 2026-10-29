@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Sentinel.Gateway.Api;
 using Sentinel.Gateway.Application;
 using Sentinel.Gateway.Application.Live;
-using Sentinel.Gateway.Infrastructure.DependencyInjection;
+using Sentinel.Gateway.Infrastructure;
 using Sentinel.Testing.Composition;
 using Shouldly;
 
