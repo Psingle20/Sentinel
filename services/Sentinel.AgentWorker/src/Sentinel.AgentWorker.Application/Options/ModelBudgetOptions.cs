@@ -14,4 +14,7 @@ public sealed class ModelBudgetOptions
 
     /// <summary>Spend since midnight UTC, so a runaway loop cannot use the total in one day.</summary>
     public double? DailyLimit { get; set; }
+
+    /// <summary>A model's own spend since midnight UTC, by model name, for expensive models kept for demonstrations.</summary>
+    public IDictionary<string, double> ModelDailyLimits { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
 }

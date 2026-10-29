@@ -43,13 +43,27 @@ public sealed class ModelSpendTests
     }
 
     [Fact]
-    public async Task A_free_model_and_an_uncapped_deployment_are_never_refused_or_queried()
+    public async Task An_expensive_model_has_its_own_daily_cap_while_the_others_stay_available()
+    {
+        var spend = new FixedSpend(today: 6, total: 20);
+        spend.TodayByModel["muse-wonder-1.0"] = 5;
+        var budget = new ModelBudgetOptions { TotalLimit = 100, DailyLimit = 15 };
+        budget.ModelDailyLimits["muse-wonder-1.0"] = 5;
+        var guard = new ModelSpendGuard(spend, new StaticBudget(budget), new FakeTimeProvider(Now));
+
+        (await guard.RefusalAsync(new PricedModel(model: "muse-wonder-1.0"), Spark, CancellationToken.None))
+            .ShouldNotBeNull().ShouldContain("daily spend cap for muse-wonder-1.0 is reached ($5.00 of $5.00)");
+        (await guard.RefusalAsync(new PricedModel(), Spark, CancellationToken.None)).ShouldBeNull("muse-spark-1.3 has no cap of its own");
+    }
+
+    [Fact]
+    public async Task A_free_model_is_never_refused_or_queried_and_an_uncapped_deployment_never_refuses()
     {
         var spend = new FixedSpend(today: 1_000, total: 1_000);
 
         (await Guard(spend, total: 100, daily: 15).RefusalAsync(new PricedModel(), new ModelPrice(0, 0, 0), CancellationToken.None)).ShouldBeNull();
-        (await Guard(spend, total: null, daily: null).RefusalAsync(new PricedModel(), Spark, CancellationToken.None)).ShouldBeNull();
         spend.Queries.ShouldBe(0);
+        (await Guard(spend, total: null, daily: null).RefusalAsync(new PricedModel(), Spark, CancellationToken.None)).ShouldBeNull();
     }
 
     [Fact]
@@ -102,11 +116,18 @@ public sealed class ModelSpendTests
 
         public double Total { get; set; } = total;
 
+        public Dictionary<string, double> TodayByModel { get; } = new(StringComparer.Ordinal);
+
         public int Queries { get; private set; }
 
-        public Task<double> SpentSinceAsync(DateTimeOffset since, CancellationToken cancellationToken)
+        public Task<double> SpentSinceAsync(DateTimeOffset since, string? model, CancellationToken cancellationToken)
         {
             Queries++;
+            if (model is not null)
+            {
+                return Task.FromResult(TodayByModel.GetValueOrDefault(model));
+            }
+
             return Task.FromResult(since == DateTimeOffset.MinValue ? Total : Today);
         }
     }
@@ -128,7 +149,7 @@ public sealed class ModelSpendTests
     }
 
     /// <summary>The deterministic double behind a list price, optionally cutting off its first final answer.</summary>
-    private sealed class PricedModel(bool truncateFirstAnswer = false) : IModelProvider
+    private sealed class PricedModel(bool truncateFirstAnswer = false, string model = "muse-spark-1.3") : IModelProvider
     {
         private readonly DeterministicModelProvider _inner = new(Options.Create(new TestDoubleOptions()));
         private bool _truncated;
@@ -141,7 +162,7 @@ public sealed class ModelSpendTests
 
         public string Provider => "meta";
 
-        public string Model => "muse-spark-1.3";
+        public string Model => model;
 
         public string? ModelVersion => null;
 

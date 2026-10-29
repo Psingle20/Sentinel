@@ -440,11 +440,11 @@ To investigate with Meta models instead of the test double, put the API key in A
 | Profile | Model | Effort | Suggested roles |
 | --- | --- | --- | --- |
 | `meta` | `muse-spark-1.3` | medium | metrics, logs, knowledge |
-| `meta-deep` | `muse-spark-1.3` | high | traces, topology |
-| `meta-wonder` | `muse-wonder-1.0` | high | changes, where a misleading deployment is decided |
+| `meta-deep` | `muse-spark-1.3` | high | traces, topology, changes |
+| `meta-wonder` | `muse-wonder-1.0` | high | None by default. It costs about three to five times as much, so route `changes`, where a misleading deployment is decided, to it for demonstrations. |
 | `meta-contributor` | `muse-spark-1.3-contributor` | medium | None by default. Meta may train on prompts and outputs in Contributor mode, so use it only with synthetic data. |
 
-Findings are requested with the findings JSON Schema alongside the tools, so the API shapes the answer, and reasoning gets its own share of the output limit because it counts against it. Every model call is costed at its profile's price and recorded with the execution. `Model:Budget` caps the estimated spend of priced models, by default at $100 in total and $15 a day. At a cap, investigations abstain and say why. An incident's six specialists run side by side (`AgentWorker:InvestigationConcurrency`, default 6).
+Findings are requested with the findings JSON Schema alongside the tools, so the API shapes the answer, and reasoning gets its own share of the output limit because it counts against it. Every model call is costed at its profile's price and recorded with the execution. `Model:Budget` caps the estimated spend of priced models, by default at $100 in total and $15 a day, and `muse-wonder-1.0` at $5 a day of its own. At a cap, investigations abstain and say why. An incident's six specialists run side by side (`AgentWorker:InvestigationConcurrency`, default 6).
 
 ## Commands
 
