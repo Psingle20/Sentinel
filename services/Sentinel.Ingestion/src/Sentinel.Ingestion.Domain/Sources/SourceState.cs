@@ -1,12 +1,5 @@
 namespace Sentinel.Ingestion.Domain.Sources;
 
-public enum SourceHealth
-{
-    Healthy,
-    Degraded,
-    Unavailable
-}
-
 /// <summary>
 /// Progress of one ingestion source, such as one metric series from one provider.
 /// <see cref="Checkpoint"/> is where the next pull starts; <see cref="Watermark"/> is the event
@@ -55,26 +48,43 @@ public sealed record SourceState
         UpdatedAt = now
     };
 
-    /// <summary>A pull succeeded through <paramref name="through"/>. The watermark never moves backwards.</summary>
-    public SourceState Advanced(DateTimeOffset through, DateTimeOffset now) => this with
-    {
-        Checkpoint = through > Checkpoint ? through : Checkpoint,
-        Watermark = through > Watermark ? through : Watermark,
-        Health = SourceHealth.Healthy,
-        LastError = null,
-        ConsecutiveFailures = 0,
-        UpdatedAt = now
-    };
+    /// <summary>Failures in a row after which a source is reported unavailable rather than degraded.</summary>
+    public const int UnavailableAfter = 3;
 
     /// <summary>
-    /// A pull failed. The checkpoint stays, so the range is pulled again; after three failures
-    /// in a row the source is reported unavailable rather than degraded.
+    /// A pull succeeded through <paramref name="through"/>: the checkpoint and the watermark move to it,
+    /// never backwards, and the source recovers.
     /// </summary>
-    public SourceState Failed(string error, DateTimeOffset now) => this with
+    public SourceState Advance(DateTimeOffset through, DateTimeOffset now) => (this with
     {
-        Health = ConsecutiveFailures + 1 >= 3 ? SourceHealth.Unavailable : SourceHealth.Degraded,
-        LastError = error,
-        ConsecutiveFailures = ConsecutiveFailures + 1,
-        UpdatedAt = now
+        Checkpoint = through > Checkpoint ? through : Checkpoint,
+        Watermark = through > Watermark ? through : Watermark
+    }).Recover(now);
+
+    /// <summary>
+    /// A pull failed. The checkpoint stays, so the range is pulled again; after
+    /// <see cref="UnavailableAfter"/> failures in a row the source is unavailable rather than degraded.
+    /// </summary>
+    public SourceState MarkFailed(string error, DateTimeOffset now)
+    {
+        int failures = ConsecutiveFailures + 1;
+        return MoveTo(failures >= UnavailableAfter ? SourceHealth.Unavailable : SourceHealth.Degraded, now) with
+        {
+            LastError = error,
+            ConsecutiveFailures = failures
+        };
+    }
+
+    /// <summary>The source answered: it is healthy, and its failure count and last error are cleared.</summary>
+    public SourceState Recover(DateTimeOffset now) => MoveTo(SourceHealth.Healthy, now) with
+    {
+        LastError = null,
+        ConsecutiveFailures = 0
     };
+
+    // Every reachable state satisfies the table; a move outside it means a stored state was corrupted.
+    private SourceState MoveTo(SourceHealth health, DateTimeOffset now) =>
+        SourceHealthTransitions.CanMove(Health, health)
+            ? this with { Health = health, UpdatedAt = now }
+            : throw new InvalidOperationException($"Source {SourceId} cannot move from {Health} to {health}.");
 }

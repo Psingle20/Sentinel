@@ -5,10 +5,11 @@ using Sentinel.Contracts;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
-using Sentinel.Ingestion.Application.Providers;
 using Sentinel.Ingestion.Domain.Observations;
 using Sentinel.Ingestion.Infrastructure.Providers;
 using Shouldly;
+using Sentinel.Ingestion.Application.Abstractions.Providers;
+using Sentinel.Ingestion.Application.Options;
 
 namespace Sentinel.Ingestion.Tests;
 

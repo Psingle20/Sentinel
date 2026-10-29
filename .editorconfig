@@ -545,42 +545,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Knowledge/KnowledgeSearch.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Ports.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Providers/ProviderContracts.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Providers/SignalProviders.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/SourceConfiguration.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Observations/RedactionPolicy.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Sources/SourceState.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/IngestionWorker.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Storage/IngestionStore.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/IngestionTests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -710,10 +674,6 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/ConfigurationRequests.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 

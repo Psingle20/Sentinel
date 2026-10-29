@@ -10,9 +10,10 @@ using Microsoft.Extensions.Time.Testing;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
-using Sentinel.Ingestion.Application;
-using Sentinel.Ingestion.Application.Knowledge;
 using Sentinel.Ingestion.Domain.Sources;
+using Sentinel.Ingestion.Application.Abstractions.Persistence;
+using Sentinel.Ingestion.Application.Abstractions.Providers;
+using Sentinel.Ingestion.Application.ControlPlane;
 
 namespace Sentinel.Ingestion.Tests;
 

@@ -2,8 +2,11 @@ using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Configuration;
 using Sentinel.Contracts.Messaging;
-using Sentinel.Ingestion.Application;
-using Sentinel.Ingestion.Application.Providers;
+using Sentinel.Ingestion.Application.Abstractions.Configuration;
+using Sentinel.Ingestion.Application.BusinessTasks.Commands.Configuration;
+using Sentinel.Ingestion.Application.BusinessTasks.Queries.Configuration;
+using Sentinel.Ingestion.Application.ControlPlane;
+using Sentinel.Ingestion.Application.Options;
 using Shouldly;
 
 namespace Sentinel.Ingestion.Tests;
@@ -37,8 +40,12 @@ public sealed class SourceConfigurationTests
         return options;
     }
 
-    private static SourceConfigurationService Service(InMemoryStore store) =>
-        new(new VersionedDocumentPublisher<SourceConfigurationDocument>(store, TimeProvider.System), Deployed);
+    private sealed class RecordingActivator : ISourceConfigurationActivator
+    {
+        public List<PublishedDocument<SourceConfigurationDocument>> Activated { get; } = [];
+
+        public void Activate(PublishedDocument<SourceConfigurationDocument> published) => Activated.Add(published);
+    }
 
     [Fact]
     public void Applying_a_document_replaces_the_sources_and_keeps_the_deployment_identity()
@@ -100,18 +107,38 @@ public sealed class SourceConfigurationTests
     [Fact]
     public async Task An_operator_publishes_new_sources_over_the_deployment_configuration()
     {
-        var store = new InMemoryStore();
-        SourceConfigurationService service = Service(store);
-        SourceConfigurationDocument seed = (await service.CurrentAsync(CancellationToken.None)).Document;
+        var publisher = new VersionedDocumentPublisher<SourceConfigurationDocument>(new InMemoryStore(), TimeProvider.System);
+        var deployment = new IngestionDeploymentOptions(Deployed);
+        var activator = new RecordingActivator();
+        var current = new GetSourceConfigurationQueryHandler(publisher, deployment);
+        var history = new GetSourceConfigurationHistoryQueryHandler(publisher, deployment);
+        var publish = new PublishSourceConfigurationCommandHandler(publisher, deployment, activator);
+        SourceConfigurationDocument seed = (await current.Handle(new GetSourceConfigurationQuery(), CancellationToken.None)).Value.Document;
 
-        Result<PublishedDocument<SourceConfigurationDocument>> published = await service.PublishAsync(
-            seed with { Version = "sources-2026.10.29.1", TopologyEnabled = true },
-            SourceConfigurationMapping.DeploymentVersion,
-            "operator@example.test",
+        Result<DocumentVersion> published = await publish.Handle(
+            new PublishSourceConfigurationCommand(seed with { Version = "sources-2026.10.29.1", TopologyEnabled = true }, SourceConfigurationMapping.DeploymentVersion, "operator@example.test"),
             CancellationToken.None);
 
-        published.IsSuccess.ShouldBeTrue();
-        (await service.CurrentAsync(CancellationToken.None)).Document.TopologyEnabled.ShouldBeTrue();
-        (await service.HistoryAsync(CancellationToken.None)).Count.ShouldBe(2);
+        published.Value.Version.ShouldBe("sources-2026.10.29.1");
+        activator.Activated.ShouldHaveSingleItem().Document.TopologyEnabled.ShouldBeTrue();
+        (await current.Handle(new GetSourceConfigurationQuery(), CancellationToken.None)).Value.Document.TopologyEnabled.ShouldBeTrue();
+        (await history.Handle(new GetSourceConfigurationHistoryQuery(), CancellationToken.None)).Value.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task A_version_that_breaks_the_startup_rules_is_refused_and_not_applied()
+    {
+        var publisher = new VersionedDocumentPublisher<SourceConfigurationDocument>(new InMemoryStore(), TimeProvider.System);
+        var deployment = new IngestionDeploymentOptions(Deployed);
+        var activator = new RecordingActivator();
+        var publish = new PublishSourceConfigurationCommandHandler(publisher, deployment, activator);
+        SourceConfigurationDocument seed = SourceConfigurationMapping.From(Deployed());
+
+        Result<DocumentVersion> refused = await publish.Handle(
+            new PublishSourceConfigurationCommand(seed with { Version = "sources-2026.10.29.1", MetricSeries = [] }, SourceConfigurationMapping.DeploymentVersion, "operator@example.test"),
+            CancellationToken.None);
+
+        refused.Error.Code.ShouldBe("Configuration.Invalid");
+        activator.Activated.ShouldBeEmpty();
     }
 }

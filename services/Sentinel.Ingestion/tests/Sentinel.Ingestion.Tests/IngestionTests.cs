@@ -2,13 +2,19 @@ using System.Net;
 using System.Text;
 using CleanArchitecture.BuildingBlocks.Integration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
-using Sentinel.Ingestion.Application;
-using Sentinel.Ingestion.Application.Providers;
+using Sentinel.Ingestion.Application.Abstractions.Diagnostics;
+using Sentinel.Ingestion.Application.Abstractions.Persistence;
+using Sentinel.Ingestion.Application.Abstractions.Providers;
+using Sentinel.Ingestion.Application.BusinessTasks.Queries;
+using Sentinel.Ingestion.Application.BusinessTasks.Queries.Observations;
+using Sentinel.Ingestion.Application.Options;
+using Sentinel.Ingestion.Application.Services;
 using Sentinel.Ingestion.Domain.Sources;
 using Sentinel.Ingestion.Infrastructure.Providers;
 using Shouldly;
@@ -106,12 +112,12 @@ public sealed class IngestionCycleTests
     [Fact]
     public async Task Query_metadata_reports_the_slowest_source_watermark_and_partial_answers()
     {
-        _states.States["prometheus:slo_burn_rate"] = SourceState.Start("prometheus:slo_burn_rate", "prometheus", Now, TimeSpan.FromMinutes(5)).Advanced(Now.AddSeconds(-10), Now);
-        _states.States["prometheus:redis_connections"] = SourceState.Start("prometheus:redis_connections", "prometheus", Now, TimeSpan.FromMinutes(5)).Advanced(Now.AddSeconds(-40), Now).Failed("down", Now);
-        var queries = new ObservationQueryService(_store, _states, _time, Microsoft.Extensions.Options.Options.Create(new IngestionOptions { Tenant = "acme", Environment = "reference" }));
+        _states.States["prometheus:slo_burn_rate"] = SourceState.Start("prometheus:slo_burn_rate", "prometheus", Now, TimeSpan.FromMinutes(5)).Advance(Now.AddSeconds(-10), Now);
+        _states.States["prometheus:redis_connections"] = SourceState.Start("prometheus:redis_connections", "prometheus", Now, TimeSpan.FromMinutes(5)).Advance(Now.AddSeconds(-40), Now).MarkFailed("down", Now);
+        QueryObservationsQueryHandler queries = Queries();
 
-        ObservationQueryResult burn = (await queries.QueryAsync(Query(new Dictionary<string, string> { ["metricName"] = "slo_burn_rate" }), CancellationToken.None)).Value;
-        ObservationQueryResult all = (await queries.QueryAsync(Query([]), CancellationToken.None)).Value;
+        ObservationQueryResult burn = (await queries.Handle(new QueryObservationsQuery(Query(new Dictionary<string, string> { ["metricName"] = "slo_burn_rate" })), CancellationToken.None)).Value;
+        ObservationQueryResult all = (await queries.Handle(new QueryObservationsQuery(Query([])), CancellationToken.None)).Value;
 
         burn.Metadata.ObservedThrough.ShouldBe(Now.AddSeconds(-10));
         burn.Metadata.Completeness.ShouldBe(QueryCompleteness.Complete);
@@ -123,10 +129,16 @@ public sealed class IngestionCycleTests
     [Fact]
     public async Task Queries_are_tenant_scoped_and_need_a_forward_range()
     {
-        var queries = new ObservationQueryService(_store, _states, _time, Microsoft.Extensions.Options.Options.Create(new IngestionOptions { Tenant = "acme", Environment = "reference" }));
+        QueryObservationsQueryHandler queries = Queries();
 
-        (await queries.QueryAsync(Query([]) with { TenantId = TenantId.From("globex") }, CancellationToken.None)).Error.ShouldBe(ObservationQueryService.UnknownScope);
-        (await queries.QueryAsync(Query([]) with { Range = new TimeRange(Now, Now.AddMinutes(-1)) }, CancellationToken.None)).Error.ShouldBe(ObservationQueryService.InvalidRange);
+        (await queries.Handle(new QueryObservationsQuery(Query([]) with { TenantId = TenantId.From("globex") }), CancellationToken.None)).Error.ShouldBe(QueryErrors.UnknownScope);
+        (await queries.Handle(new QueryObservationsQuery(Query([]) with { Range = new TimeRange(Now, Now.AddMinutes(-1)) }), CancellationToken.None)).Error.ShouldBe(QueryErrors.InvalidRange);
+    }
+
+    private QueryObservationsQueryHandler Queries()
+    {
+        IOptions<IngestionOptions> options = Microsoft.Extensions.Options.Options.Create(new IngestionOptions { Tenant = "acme", Environment = "reference" });
+        return new QueryObservationsQueryHandler(_store, _states, new QueryBulkhead(options), _time, options);
     }
 
     private static ObservationQuery Query(Dictionary<string, string> filters) => new()
@@ -177,7 +189,7 @@ public sealed class IngestionCycleTests
 
         CleanArchitecture.BuildingBlocks.Result<int> refused = await bulkhead.RunAsync(token => Task.FromResult(CleanArchitecture.BuildingBlocks.Result.Success(1)), CancellationToken.None);
 
-        refused.Error.ShouldBe(QueryBulkhead.Full);
+        refused.Error.ShouldBe(QueryErrors.BulkheadFull);
         bulkhead.InFlight.ShouldBe(3);
 
         // The ingestion worker never passes the bulkhead: a pull completes while every query slot is taken.
@@ -199,7 +211,7 @@ public sealed class IngestionCycleTests
         var gate = new TaskCompletionSource<CleanArchitecture.BuildingBlocks.Result<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
         Task<CleanArchitecture.BuildingBlocks.Result<int>> holding = bulkhead.RunAsync(token => gate.Task, CancellationToken.None);
 
-        (await bulkhead.RunAsync(token => Task.FromResult(CleanArchitecture.BuildingBlocks.Result.Success(1)), CancellationToken.None)).Error.ShouldBe(QueryBulkhead.Full);
+        (await bulkhead.RunAsync(token => Task.FromResult(CleanArchitecture.BuildingBlocks.Result.Success(1)), CancellationToken.None)).Error.ShouldBe(QueryErrors.BulkheadFull);
 
         gate.SetResult(CleanArchitecture.BuildingBlocks.Result.Success(2));
         (await holding).Value.ShouldBe(2);

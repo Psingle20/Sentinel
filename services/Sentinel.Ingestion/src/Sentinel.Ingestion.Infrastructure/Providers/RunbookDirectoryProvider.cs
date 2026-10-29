@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using Sentinel.Ingestion.Application.Knowledge;
+using Sentinel.Ingestion.Application.Abstractions.Providers;
 
 namespace Sentinel.Ingestion.Infrastructure.Providers;
 

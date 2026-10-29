@@ -1,5 +1,6 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using Sentinel.Ingestion.Api.Controllers;
 using Sentinel.Testing.Architecture;
 using Shouldly;
 
@@ -43,7 +44,7 @@ public sealed class LayerDependencyTests
         "Sentinel.Executor"
     ];
 
-    // Rules 8 to 10 (ADR-020): the consumers, inline endpoints and building-block registration Ingestion's own step (5) migrates.
+    // Ingestion consumes no message; the rule still holds the namespace for any consumer it gains.
     private static readonly string[] PendingConsumers = [];
 
     [Fact]
@@ -107,12 +108,16 @@ public sealed class LayerDependencyTests
         ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", PendingConsumers).ShouldBeEmpty();
 
     [Fact]
-    public void Program_still_maps_its_endpoints_until_they_move_to_controllers() =>
-        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/Program.cs"), pending: true).ShouldBeEmpty();
+    public void Controllers_derive_from_the_api_controller_and_send_requests() =>
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Ingestion.Domain"], []).ShouldBeEmpty();
+
+    [Fact]
+    public void Program_maps_no_endpoint_itself() =>
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/Program.cs")).ShouldBeEmpty();
 
     [Fact]
     public void Only_the_application_module_registers_the_building_blocks() =>
-        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, ["Program"]).ShouldBeEmpty();
+        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, []).ShouldBeEmpty();
 
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
