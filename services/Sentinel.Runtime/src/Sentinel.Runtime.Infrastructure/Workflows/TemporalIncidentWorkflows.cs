@@ -36,7 +36,8 @@ internal sealed class TemporalIncidentWorkflows(
             settings.Workflow.ExecutionTimeout,
             settings.EvaluationLag,
             settings.EvaluationTimeout - settings.EvaluationLag,
-            settings.Workflow.RecoveryRetryInterval));
+            settings.Workflow.RecoveryRetryInterval,
+            settings.Workflow.ReconciliationTimeout));
         try
         {
             await client.StartWorkflowAsync(

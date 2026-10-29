@@ -15,5 +15,8 @@ public sealed class WorkflowOptions
     /// <summary>How long to wait for Executor's result before escalating; Executor reconciles unknown outcomes itself.</summary>
     public TimeSpan ExecutionTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
+    /// <summary>After Executor reports an outcome it could not determine, how long to wait for its reconciled result before escalating.</summary>
+    public TimeSpan ReconciliationTimeout { get; set; } = TimeSpan.FromMinutes(30);
+
     public TimeSpan RecoveryRetryInterval { get; set; } = TimeSpan.FromSeconds(10);
 }

@@ -93,6 +93,40 @@ public sealed class IncidentWorkflowTests(TemporalFixture temporal)
     }
 
     [Fact]
+    public async Task An_unknown_outcome_waits_for_reconciliation_and_a_reconciled_success_still_has_its_recovery_verified()
+    {
+        using var harness = new WorkflowHarness(temporal.Address);
+        await using WorkerRun worker = harness.StartWorker();
+
+        IncidentId incidentId = await harness.OpenAndInvestigateAsync();
+        await harness.WaitForStateAsync(incidentId, IncidentState.AwaitingApproval);
+        await harness.ApproveAsync(incidentId);
+        await harness.ExecuteAsync(incidentId, ExecutionOutcome.OutcomeUnknown);
+        await harness.ReportExecutionAsync(incidentId, ExecutionOutcome.ActionVerified);
+
+        (await harness.ResultAsync(incidentId)).ShouldBe("recovery-judged");
+        IncidentSnapshot incident = (await harness.Runtime.Owner.GetAsync(incidentId, CancellationToken.None))!;
+        incident.Recovery.ShouldBe(RecoveryResult.Recovered);
+        incident.State.ShouldNotBe(IncidentState.Escalated);
+        harness.Runtime.Outbox.Of<ExecuteRemediation>().ShouldHaveSingleItem("reconciliation never executes the action again");
+    }
+
+    [Fact]
+    public async Task An_unknown_outcome_never_reconciled_escalates_when_the_reconciliation_window_closes()
+    {
+        using var harness = new WorkflowHarness(temporal.Address, options => options.Workflow.ReconciliationTimeout = TimeSpan.FromSeconds(3));
+        await using WorkerRun worker = harness.StartWorker();
+
+        IncidentId incidentId = await harness.OpenAndInvestigateAsync();
+        await harness.WaitForStateAsync(incidentId, IncidentState.AwaitingApproval);
+        await harness.ApproveAsync(incidentId);
+        await harness.ExecuteAsync(incidentId, ExecutionOutcome.OutcomeUnknown);
+
+        (await harness.ResultAsync(incidentId)).ShouldBe("execution-timeout");
+        (await harness.Runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.State.ShouldBe(IncidentState.Escalated);
+    }
+
+    [Fact]
     public async Task A_worker_killed_mid_run_resumes_from_its_last_completed_step()
     {
         using var harness = new WorkflowHarness(temporal.Address);

@@ -20,6 +20,9 @@ public sealed class IncidentWorkflow
     /// <summary>Versioning marker (ADR-005): runs started before it skip the re-read before the approval wait.</summary>
     public const string RereadBeforeApprovalPatch = "reread-before-approval-wait";
 
+    /// <summary>Versioning marker (ADR-005): runs that reached the execution result before it escalate an unknown outcome at once.</summary>
+    public const string AwaitReconciliationPatch = "await-reconciliation-after-unknown-outcome";
+
     private static readonly ActivityOptions Step = new()
     {
         StartToCloseTimeout = TimeSpan.FromMinutes(1),
@@ -36,6 +39,7 @@ public sealed class IncidentWorkflow
     private bool _approval;
     private bool _rejected;
     private bool _executed;
+    private int _executionReports;
     private bool _closed;
 
     /// <summary>The step the run is at, for operators and the workflow tests.</summary>
@@ -81,6 +85,7 @@ public sealed class IncidentWorkflow
                 break;
             case "ExecutionReported":
                 _executed = true;
+                _executionReports++;
                 break;
             case "Closed":
                 _closed = true;
@@ -154,7 +159,13 @@ public sealed class IncidentWorkflow
         CurrentStep = "executing";
         await Workflow.ExecuteActivityAsync((IncidentActivities activities) => activities.RequestExecutionAsync(incidentId), Step);
         await Workflow.WaitConditionAsync(() => _executed || _closed, timings.ExecutionTimeout);
+        int reportsRead = _executionReports;
         StepSummary executed = await GetAsync(incidentId);
+        if (executed.Execution is "OutcomeUnknown" && Workflow.Patched(AwaitReconciliationPatch))
+        {
+            executed = await AwaitReconciliationAsync(incidentId, executed, reportsRead, timings.ReconciliationTimeout);
+        }
+
         if (executed.Execution is null or "OutcomeUnknown")
         {
             await Workflow.ExecuteActivityAsync((IncidentActivities activities) => activities.EscalateAsync(incidentId, "Executor reported no conclusive result in time; responders must check the action."), Step);
@@ -189,6 +200,26 @@ public sealed class IncidentWorkflow
 
         CurrentStep = "done";
         return "recovery-judged";
+    }
+
+    /// <summary>
+    /// Executor keeps reconciling an outcome it could not determine and reports again once it can, so an
+    /// unknown outcome is waited on, not escalated, until the reconciliation window closes. Each report is
+    /// re-read from the stream; one that arrived after <paramref name="reportsRead"/> ends the wait at once.
+    /// </summary>
+    private async Task<StepSummary> AwaitReconciliationAsync(Guid incidentId, StepSummary current, int reportsRead, TimeSpan window)
+    {
+        CurrentStep = "awaiting-reconciliation";
+        DateTime until = Workflow.UtcNow + window;
+        while (current.Execution is "OutcomeUnknown" && !_closed && Workflow.UtcNow < until)
+        {
+            int seen = reportsRead;
+            await Workflow.WaitConditionAsync(() => _executionReports > seen || _closed, until - Workflow.UtcNow);
+            reportsRead = _executionReports;
+            current = await GetAsync(incidentId);
+        }
+
+        return current;
     }
 
     /// <summary>Waits for every investigation to report; reports already in the stream count, and stragglers are timed out.</summary>

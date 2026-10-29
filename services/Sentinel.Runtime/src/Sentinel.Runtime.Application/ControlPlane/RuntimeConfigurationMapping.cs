@@ -45,6 +45,7 @@ public static class RuntimeConfigurationMapping
             {
                 ApprovalTimeout = options.Workflow.ApprovalTimeout,
                 ExecutionTimeout = options.Workflow.ExecutionTimeout,
+                ReconciliationTimeout = options.Workflow.ReconciliationTimeout,
                 ObservationWindow = options.ObservationWindow,
                 EvaluationLag = options.EvaluationLag,
                 EvaluationTimeout = options.EvaluationTimeout
@@ -110,6 +111,7 @@ public static class RuntimeConfigurationMapping
 
         options.Workflow.ApprovalTimeout = document.Workflow.ApprovalTimeout;
         options.Workflow.ExecutionTimeout = document.Workflow.ExecutionTimeout;
+        options.Workflow.ReconciliationTimeout = document.Workflow.ReconciliationTimeout;
         options.ObservationWindow = document.Workflow.ObservationWindow;
         options.EvaluationLag = document.Workflow.EvaluationLag;
         options.EvaluationTimeout = document.Workflow.EvaluationTimeout;
@@ -214,6 +216,11 @@ public static class RuntimeConfigurationMapping
         if (workflow.ApprovalTimeout < TimeSpan.FromMinutes(1) || workflow.ApprovalTimeout > TimeSpan.FromDays(1) || workflow.ExecutionTimeout <= TimeSpan.Zero)
         {
             problems.Add("The approval timeout is between 1 minute and 1 day, and the execution timeout is positive.");
+        }
+
+        if (workflow.ReconciliationTimeout < TimeSpan.Zero || workflow.ReconciliationTimeout > TimeSpan.FromDays(1))
+        {
+            problems.Add("The reconciliation timeout is between zero, which escalates an unknown outcome at once, and 1 day.");
         }
 
         if (workflow.ObservationWindow < TimeSpan.FromSeconds(10) || workflow.ObservationWindow > TimeSpan.FromHours(1) || workflow.EvaluationLag < TimeSpan.Zero || workflow.EvaluationTimeout <= workflow.EvaluationLag)

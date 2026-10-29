@@ -100,8 +100,16 @@ internal sealed class WorkflowHarness : IDisposable
         ExecuteRemediation request = await Eventually(() => Runtime.Outbox.Of<ExecuteRemediation>().FirstOrDefault(execute => execute.IncidentId == incidentId), "execution is requested");
         await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
             new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, request.Plan.PlanId, request.Plan.PlanVersion, request.FencingToken), CancellationToken.None));
+        await ReportExecutionAsync(incidentId, outcome);
+    }
+
+    /// <summary>Plays Executor reporting again, as its reconciliation does once an unknown outcome is determined.</summary>
+    public async Task ReportExecutionAsync(IncidentId incidentId, ExecutionOutcome outcome)
+    {
+        ExecuteRemediation request = Runtime.Outbox.Of<ExecuteRemediation>().First(execute => execute.IncidentId == incidentId);
+        string detail = outcome == ExecutionOutcome.OutcomeUnknown ? "Executor could not tell whether the rollback ran." : "Rolled back.";
         await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
-            new RecordExecutionResultRequest(incidentId, request.Plan.PlanId, request.Plan.PlanVersion, outcome.ToDomain(), "Rolled back."), CancellationToken.None));
+            new RecordExecutionResultRequest(incidentId, request.Plan.PlanId, request.Plan.PlanVersion, outcome.ToDomain(), detail), CancellationToken.None));
     }
 
     public async Task<string> ResultAsync(IncidentId incidentId)
