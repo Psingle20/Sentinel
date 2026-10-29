@@ -1,0 +1,7 @@
+{
+  "description": "Model prices in US dollars per million tokens, for cost estimates. Update them from the provider's published prices when a live model is configured.",
+  "models": {
+    "sentinel-test-double/deterministic-analyst": { "inputPerMillion": 0, "outputPerMillion": 0 }
+  },
+  "default": { "inputPerMillion": 0, "outputPerMillion": 0 }
+}

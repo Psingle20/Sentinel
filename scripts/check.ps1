@@ -42,6 +42,9 @@ switch ($Task) {
     'test' {
         Invoke-Step 'dotnet test' { dotnet test $solution }
         Invoke-Step 'playwright (Sentinel.Web)' { npm --prefix $web test }
+        # The Phase 07 evaluation harness is Python standard library only; Linux and macOS often name it python3.
+        $python = if (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { 'python3' }
+        Invoke-Step 'evaluation harness (Python)' { & $python -m unittest discover -s (Join-Path $root 'scripts/evaluation/tests') }
     }
     'lint' {
         Invoke-Step 'dotnet format whitespace' { dotnet format whitespace $solution --verify-no-changes }
