@@ -55,6 +55,12 @@ public class SentinelSystem : IAsyncLifetime
     /// <summary>Sentinel.Ingestion's read-only observation query contract.</summary>
     public HttpClient Ingestion { get; private set; } = null!;
 
+    /// <summary>Sentinel.Runtime, for the run records the evaluation harness scores.</summary>
+    public HttpClient Runtime { get; private set; } = null!;
+
+    /// <summary>The deploy controller's guarded control endpoints, for injecting the Phase 07 failure scenarios' faults.</summary>
+    public HttpClient DeployControllerControl { get; private set; } = null!;
+
     public Uri WebUrl { get; private set; } = null!;
 
     /// <summary>When the current scenario started from a quiet system; incidents before it are ignored.</summary>
@@ -92,6 +98,9 @@ public class SentinelSystem : IAsyncLifetime
             Api = App.CreateHttpClient("api");
             AgentWorker = App.CreateHttpClient("agentworker");
             Ingestion = App.CreateHttpClient("ingestion");
+            Runtime = App.CreateHttpClient("runtime");
+            DeployControllerControl = App.CreateHttpClient("deploy-controller");
+            DeployControllerControl.DefaultRequestHeaders.Add("X-Reference-Control-Token", await ParameterAsync("reference-control-token"));
             WebUrl = App.GetEndpoint("web", "http");
 
             // The browser that performs approvals; already present when Sentinel.Web's own Playwright is installed.
@@ -188,11 +197,23 @@ public class SentinelSystem : IAsyncLifetime
         Api?.Dispose();
         AgentWorker?.Dispose();
         Ingestion?.Dispose();
+        Runtime?.Dispose();
+        DeployControllerControl?.Dispose();
         DeployController?.Dispose();
         Prometheus?.Dispose();
         if (App is not null)
         {
             await App.DisposeAsync();
+        }
+    }
+
+    /// <summary>Stops or starts a resource through Aspire's resource commands, as an operator would from the dashboard.</summary>
+    public async Task CommandAsync(string resource, string command)
+    {
+        ExecuteCommandResult result = await App.ResourceCommands.ExecuteCommandAsync(resource, command, CancellationToken.None);
+        if (!result.Success)
+        {
+            throw new InvalidOperationException($"{command} on {resource} failed: {result.Message}");
         }
     }
 

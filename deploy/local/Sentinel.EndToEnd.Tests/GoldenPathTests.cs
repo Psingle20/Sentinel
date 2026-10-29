@@ -54,6 +54,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
             (await system.SentinelRollbacksAsync("checkout-service")).ShouldBe(1, "the rollback ran exactly once");
 
             await system.RecordOutcomeAsync("S1", resolved, approved: true);
+            await EvaluationRun.WriteAsync(system, "S1", resolved, approved: true);
         }
         catch
         {
@@ -83,7 +84,37 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
 
             // No scripted approval (Phase 01A exit criteria): the outcome is recorded, not asserted.
             await system.RecordOutcomeAsync(scenarioId, incident, approved: false);
+            await EvaluationRun.WriteAsync(system, scenarioId, incident, approved: false);
             incident.Execution.ShouldBeNull("nothing executes without an approval");
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
+    /// <summary>S0, the healthy control: changes and noise without an SLO burn must open no incident.</summary>
+    [Fact]
+    public async Task S0_the_healthy_control_opens_no_incident()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S0");
+        try
+        {
+            await system.WaitForRunToFinishAsync(run.RunId, TimeSpan.FromMinutes(6));
+
+            // Give detection the scenario's full window after the last change before concluding.
+            await Task.Delay(TimeSpan.FromSeconds(60));
+            IReadOnlyList<IncidentSummary> opened = [.. (await system.IncidentsAsync()).Where(incident => incident.OpenedAt >= system.ScenarioStartedAt)];
+            output.WriteLine($"Incidents opened during S0: {opened.Count}");
+            IncidentDetail? first = opened.Count == 0 ? null : await system.Api.GetFromJsonAsync<IncidentDetail>($"/api/v1/incidents/{opened[0].IncidentId}", SentinelJson.Options);
+            await EvaluationRun.WriteAsync(system, "S0", first, approved: false);
+            opened.ShouldBeEmpty("a healthy system with change noise is not an incident");
         }
         catch
         {

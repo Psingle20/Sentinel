@@ -68,10 +68,15 @@ void AddSentinel()
         .WithReference(ingestion)
         .WithReference(executor)
         .WaitFor(temporal);
-    IResourceBuilder<ProjectResource> api = AddService<Projects.Sentinel_Api_Host>("api")
-        .WithReference(runtime);
+    IResourceBuilder<ProjectResource> agentworker = AddService<Projects.Sentinel_AgentWorker_Host>("agentworker")
+        .WithReference(ingestion);
 
-    AddService<Projects.Sentinel_AgentWorker_Host>("agentworker")
+    // Api reads incidents from Runtime and agent executions and replays from AgentWorker (Phase 07), and is the
+    // control plane's edge for Executor's policy and controls and Ingestion's sources (Phase 08).
+    IResourceBuilder<ProjectResource> api = AddService<Projects.Sentinel_Api_Host>("api")
+        .WithReference(runtime)
+        .WithReference(agentworker)
+        .WithReference(executor)
         .WithReference(ingestion);
 
     // Only Executor holds the privileged deploy token (ADR-006). It confirms starts with Runtime and
