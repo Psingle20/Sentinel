@@ -50,7 +50,7 @@ public sealed class ExecutionTests : IDisposable
 
     // The consumer's path: Runtime's message arrives as a command, whose handler verifies and reserves it and hands it to the state machine.
     private Task<Result> ExecuteAsync(ExecuteRemediation command) =>
-        new ExecuteRemediationCommandHandler(_store, Service(), new NoUnitOfWork(), _time, NullLogger<ExecuteRemediationCommandHandler>.Instance).Handle(new ExecuteRemediationCommand(command), CancellationToken.None);
+        new ExecuteRemediationCommandHandler(_store, Service(), new InFlightExecutions(), new NoUnitOfWork(), _time, NullLogger<ExecuteRemediationCommandHandler>.Instance).Handle(new ExecuteRemediationCommand(command), CancellationToken.None);
 
     private ExecutionOutcome LastOutcome() => _outbox.Messages.OfType<RemediationExecuted>().Last().Outcome;
 
@@ -221,6 +221,29 @@ public sealed class ExecutionTests : IDisposable
 
         await Service().ReconcileAsync(request, CancellationToken.None);
 
+        LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
+        _target.Executions.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_request_still_being_handled_is_left_to_its_handler_however_slow_its_steps()
+    {
+        RemediationPlan plan = Commands.Plan();
+        var request = ExecutionRequest.Receive("in-flight", Commands.Tenant, Commands.Environment, IncidentId.New(), plan.PlanId, 1, plan.PlanHash, 7,
+            System.Text.Json.JsonSerializer.Serialize(plan, Sentinel.Contracts.Messaging.SentinelJson.Options), Commands.Now);
+        await _store.SaveAsync(request, CancellationToken.None);
+        var inFlight = new InFlightExecutions();
+        var reconcile = new ReconcileExecutionCommandHandler(_store, Service(), inFlight, NullLogger<ReconcileExecutionCommandHandler>.Instance);
+
+        using (inFlight.Track("in-flight"))
+        {
+            await reconcile.Handle(new ReconcileExecutionCommand("in-flight"), CancellationToken.None);
+            (await _store.FindAsync("in-flight", CancellationToken.None))!.State.ShouldBe(ExecutionState.Received, "its handler is still inspecting the target");
+            _outbox.Messages.OfType<RemediationExecuted>().ShouldBeEmpty();
+        }
+
+        // Once nothing in this process is handling it, it was left behind, as by a crash, and is reconciled.
+        await reconcile.Handle(new ReconcileExecutionCommand("in-flight"), CancellationToken.None);
         LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
         _target.Executions.ShouldBe(0);
     }

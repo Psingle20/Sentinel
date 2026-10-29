@@ -18,5 +18,6 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddScoped<PolicyService>();
         services.AddScoped<AttestationVerifier>();
         services.AddScoped<ExecutionService>();
+        services.AddSingleton<InFlightExecutions>();
     }
 }

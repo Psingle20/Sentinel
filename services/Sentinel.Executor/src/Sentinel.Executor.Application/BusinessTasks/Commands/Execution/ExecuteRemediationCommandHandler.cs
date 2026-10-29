@@ -24,6 +24,7 @@ namespace Sentinel.Executor.Application.BusinessTasks.Commands.Execution;
 public sealed class ExecuteRemediationCommandHandler(
     IExecutionStore store,
     ExecutionService executions,
+    InFlightExecutions inFlight,
     IUnitOfWork unitOfWork,
     TimeProvider time,
     ILogger<ExecuteRemediationCommandHandler> logger) : ICommandHandler<ExecuteRemediationCommand>
@@ -36,6 +37,9 @@ public sealed class ExecuteRemediationCommandHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         ExecuteRemediation message = command.Message;
+
+        // Reconciliation leaves the request alone for as long as it is being handled here.
+        using IDisposable handling = inFlight.Track(message.IdempotencyKey);
         if (await store.FindAsync(message.IdempotencyKey, cancellationToken) is { } existing)
         {
             // A repeated request never runs the action again. A finished one reports its result again;
