@@ -1,0 +1,39 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S1",
+  "version": 1,
+  "kind": "golden",
+  "manifest": "S1",
+  "title": "Deployment leaks Redis connections",
+  "description": "checkout-service v2.4.1 leaks pooled Redis connections until Redis reaches maxclients and checkout's SLO burns. Rolling back to v2.4.0 recovers it.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "resolved",
+    "rootCause": {
+      "service": "checkout-service",
+      "hypothesisKeys": ["change:"],
+      "change": { "service": "checkout-service", "version": "v2.4.1" }
+    },
+    "rejectedCauses": [
+      { "service": "order-service", "description": "order-service regression" },
+      { "service": "reporting-worker", "description": "another Redis client saturated Redis" }
+    ],
+    "abstentionAcceptable": false,
+    "evidence": [
+      { "kind": "deployment", "service": "checkout-service", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_errors", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "error_ratio", "role": "symptom" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "rollback", "service": "checkout-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "order-service" }
+    ]
+  }
+}

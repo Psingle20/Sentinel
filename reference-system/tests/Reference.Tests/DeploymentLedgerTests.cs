@@ -17,6 +17,7 @@ public sealed class DeploymentLedgerTests : IDisposable
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 28, 9, 0, 0, TimeSpan.Zero));
     private readonly FakeServices _services = new();
     private readonly ServiceProvider _provider;
+    private readonly DeploymentFaults _faults = new();
     private readonly DeploymentLedger _ledger;
 
     public DeploymentLedgerTests()
@@ -49,7 +50,8 @@ public sealed class DeploymentLedgerTests : IDisposable
             _provider.GetRequiredService<IServiceScopeFactory>(),
             _time,
             new StoppedNeverLifetime(),
-            NullLogger<DeploymentLedger>.Instance);
+            NullLogger<DeploymentLedger>.Instance,
+            _faults);
     }
 
     public void Dispose()
@@ -129,6 +131,32 @@ public sealed class DeploymentLedgerTests : IDisposable
         first[0].PreviousVersion.ShouldBe("v1.8.0");
         _services.Revisions["order-service"].ShouldBe("v1.7.0");
         second.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_injected_rollback_fault_fails_the_rollout_without_switching_and_reset_clears_it()
+    {
+        _services.Revisions["checkout-service"] = "v2.4.1";
+        _faults.FailRollbacks = true;
+
+        DeployResult result = await _ledger.StartAsync("checkout-service", new DeployRequest("v2.4.0", DeploymentKind.Rollback, "sentinel-executor"), "rollback-faulted", CancellationToken.None);
+        await AdvanceRolloutAsync();
+
+        await EventuallyAsync(() => _ledger.Find(result.Deployment!.DeploymentId)!.Status == DeploymentStatus.Failed);
+        _ledger.Find(result.Deployment!.DeploymentId)!.Error.ShouldNotBeNull().ShouldContain("Injected fault");
+        _services.Revisions["checkout-service"].ShouldBe("v2.4.1");
+
+        await _ledger.ResetAsync(CancellationToken.None);
+        _faults.FailRollbacks.ShouldBeFalse();
+    }
+
+    private async Task AdvanceRolloutAsync()
+    {
+        for (int second = 0; second < 21; second++)
+        {
+            await Task.Delay(10);
+            _time.Advance(TimeSpan.FromSeconds(1));
+        }
     }
 
     private static async Task EventuallyAsync(Func<bool> condition)

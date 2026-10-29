@@ -21,6 +21,7 @@ builder.Services.AddSingleton(new DeployControllerOptionsAccessor(options));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddFailureControl(builder.Configuration, builder.Environment);
 builder.Services.AddHttpClient<RevisionClient>(client => client.Timeout = TimeSpan.FromSeconds(5));
+builder.Services.AddSingleton<DeploymentFaults>();
 builder.Services.AddSingleton<DeploymentLedger>();
 builder.Services.AddHealthChecks();
 
@@ -64,6 +65,15 @@ api.MapPost("/services/{service}/deployments", async (string service, DeployRequ
 if (app.Services.GetRequiredService<FailureControl>() is { Enabled: true } control)
 {
     app.MapPost("/_reference/reset", async (DeploymentLedger ledger, CancellationToken cancellationToken) => await ledger.ResetAsync(cancellationToken))
+        .AddEndpointFilter(async (context, next) =>
+            control.IsAuthorized(context.HttpContext.Request) ? await next(context) : Results.Unauthorized());
+
+    // Phase 07 failure scenarios: make the next rollbacks fail until reset.
+    app.MapPost("/_reference/faults", (DeploymentFaultsRequest request, DeploymentFaults faults) =>
+        {
+            faults.FailRollbacks = request.FailRollbacks;
+            return Results.NoContent();
+        })
         .AddEndpointFilter(async (context, next) =>
             control.IsAuthorized(context.HttpContext.Request) ? await next(context) : Results.Unauthorized());
 }

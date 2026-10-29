@@ -1,0 +1,37 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S5",
+  "version": 1,
+  "kind": "failure",
+  "manifest": "S1",
+  "title": "Golden scenario with a failing rollback",
+  "description": "S1 where the deploy controller refuses the approved rollback. Sentinel must report the failed action, must not claim recovery, and must hand the incident to responders.",
+  "perturbations": [
+    { "kind": "action-failure", "target": "deploy-controller", "action": "rollback" }
+  ],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "escalated",
+    "rootCause": {
+      "service": "checkout-service",
+      "hypothesisKeys": ["change:"],
+      "change": { "service": "checkout-service", "version": "v2.4.1" }
+    },
+    "abstentionAcceptable": false,
+    "evidence": [
+      { "kind": "deployment", "service": "checkout-service", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_errors", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "error_ratio", "role": "symptom" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "rollback", "service": "checkout-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "order-service" }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S4",
+  "version": 1,
+  "kind": "failure",
+  "manifest": "S1",
+  "title": "Golden scenario with the logs provider down",
+  "description": "S1 while Loki is unavailable. Sentinel may still diagnose the deployment from metrics and changes, or abstain, but it must report the logs as missing and must never remediate falsely.",
+  "perturbations": [
+    { "kind": "provider-outage", "target": "loki", "fromSeconds": 0, "untilSeconds": 300 }
+  ],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "resolved",
+    "rootCause": {
+      "service": "checkout-service",
+      "hypothesisKeys": ["change:"],
+      "change": { "service": "checkout-service", "version": "v2.4.1" }
+    },
+    "abstentionAcceptable": true,
+    "evidence": [
+      { "kind": "deployment", "service": "checkout-service", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_errors", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "error_ratio", "role": "symptom" }
+    ],
+    "expectedMissingEvidence": ["logs"],
+    "permittedActions": [
+      { "action": "rollback", "service": "checkout-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "order-service" }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S2",
+  "version": 1,
+  "kind": "counterfactual",
+  "manifest": "S2",
+  "title": "Innocent deployment during Redis saturation",
+  "description": "A reporting-worker batch saturates the shared Redis; a benign checkout-service deployment lands while checkout fails. Rolling checkout back is the false remediation.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "escalated",
+    "rootCause": {
+      "service": "reporting-worker",
+      "hypothesisKeys": ["redis-saturation:reporting-worker", "redis-saturation"]
+    },
+    "rejectedCauses": [
+      { "service": "checkout-service", "description": "checkout-service v2.4.2 deployment" }
+    ],
+    "abstentionAcceptable": true,
+    "evidence": [
+      { "kind": "metric", "service": "reporting-worker", "metric": "redis_connections", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_errors", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "error_ratio", "role": "symptom" },
+      { "kind": "deployment", "service": "checkout-service", "role": "confounder" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "pause-batch", "service": "reporting-worker", "mode": "suggestion-only" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "checkout-service" }
+    ]
+  }
+}

@@ -132,8 +132,10 @@ public sealed class DeploymentLedger(
     IServiceScopeFactory scopes,
     TimeProvider time,
     IHostApplicationLifetime lifetime,
-    ILogger<DeploymentLedger> logger)
+    ILogger<DeploymentLedger> logger,
+    DeploymentFaults? faults = null)
 {
+    private readonly DeploymentFaults _faults = faults ?? new DeploymentFaults();
     private readonly Lock _gate = new();
     private readonly List<DeploymentRecord> _history = [];
     private readonly ConcurrentDictionary<string, string> _byIdempotencyKey = new(StringComparer.Ordinal);
@@ -236,9 +238,10 @@ public sealed class DeploymentLedger(
         return new DeployResult(DeployOutcome.Accepted, record);
     }
 
-    /// <summary>Returns every service to its baseline revision immediately; services already there are untouched.</summary>
+    /// <summary>Clears every injected fault and returns every service to its baseline revision immediately; services already there are untouched.</summary>
     public async Task<IReadOnlyList<DeploymentRecord>> ResetAsync(CancellationToken cancellationToken)
     {
+        _faults.FailRollbacks = false;
         var resets = new List<DeploymentRecord>();
         foreach ((string service, ManagedService managed) in options.Value.Services)
         {
@@ -288,6 +291,11 @@ public sealed class DeploymentLedger(
         try
         {
             await Task.Delay(rollout, time, stopping);
+            if (record.Kind == DeploymentKind.Rollback && _faults.FailRollbacks)
+            {
+                throw new InvalidOperationException($"Injected fault: the rollback of {record.Service} to {record.Version} did not complete.");
+            }
+
             await using AsyncServiceScope scope = scopes.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<RevisionClient>().SwitchAsync(record.Service, record.Version, stopping);
             finished = record with { Status = DeploymentStatus.Completed, CompletedAt = time.GetUtcNow() };
@@ -306,6 +314,23 @@ public sealed class DeploymentLedger(
         }
     }
 }
+
+/// <summary>
+/// Faults a scenario can inject (Phase 07 failure scenarios). With <see cref="FailRollbacks"/> set, a
+/// rollback is accepted but its rollout fails, as a real rollback can; reset clears every fault.
+/// </summary>
+public sealed class DeploymentFaults
+{
+    private volatile bool _failRollbacks;
+
+    public bool FailRollbacks
+    {
+        get => _failRollbacks;
+        set => _failRollbacks = value;
+    }
+}
+
+public sealed record DeploymentFaultsRequest(bool FailRollbacks);
 
 /// <summary>Holds validated options; the ledger is a singleton and options do not change at runtime.</summary>
 public sealed class DeployControllerOptionsAccessor(DeployControllerOptions value)

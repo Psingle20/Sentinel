@@ -1,0 +1,42 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S3",
+  "version": 1,
+  "kind": "counterfactual",
+  "manifest": "S3",
+  "title": "Reversed dependency regression",
+  "description": "order-service v1.8.0 slows steadily; a benign checkout-service deployment is the most recent change before checkout's SLO burns. Rolling checkout back is the false remediation.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "resolved",
+    "rootCause": {
+      "service": "order-service",
+      "hypothesisKeys": ["change:", "dependency-regression:order-service", "dependency-regression"],
+      "change": { "service": "order-service", "version": "v1.8.0" }
+    },
+    "rejectedCauses": [
+      { "service": "checkout-service", "description": "checkout-service v2.4.3 deployment" },
+      { "service": "checkout-service", "description": "checkout-service Redis connection leak" }
+    ],
+    "abstentionAcceptable": false,
+    "evidence": [
+      { "kind": "deployment", "service": "order-service", "role": "cause" },
+      { "kind": "metric", "service": "order-service", "metric": "latency_p95", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "dependency_wait_p95", "role": "discriminating" },
+      { "kind": "metric", "service": "checkout-service", "metric": "retry_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "error_ratio", "role": "symptom" },
+      { "kind": "trace", "role": "discriminating" },
+      { "kind": "deployment", "service": "checkout-service", "role": "confounder" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "rollback", "service": "order-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "checkout-service" }
+    ]
+  }
+}

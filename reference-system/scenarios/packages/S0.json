@@ -1,0 +1,22 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S0",
+  "version": 1,
+  "kind": "control",
+  "manifest": "S0",
+  "title": "Healthy system with change noise",
+  "description": "A logging change and a benign order-service deployment, with no SLO burn. Sentinel must not open an incident or propose any action.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": false,
+    "expectedOutcome": "no-incident",
+    "abstentionAcceptable": true,
+    "evidence": [],
+    "permittedActions": [],
+    "falseRemediations": [
+      { "action": "rollback", "service": "order-service" },
+      { "action": "rollback", "service": "checkout-service" }
+    ]
+  }
+}
