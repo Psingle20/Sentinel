@@ -449,10 +449,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/ConfigurationRequests.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/AgentWorkerInfrastructure.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -470,10 +466,6 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Analytics/ProductAnalytics.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Approvals/ApprovalService.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
@@ -505,27 +497,11 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Domain/Approvals/ApprovalRecord.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.Gateway/src/Sentinel.Gateway.Api/DevelopmentIdentity.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Idempotency.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Identity.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Program.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Requests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
@@ -558,10 +534,6 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Executor/src/Sentinel.Executor.Domain/Policy/PolicyEngine.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Executor/src/Sentinel.Executor.Api/ControlChange.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
@@ -606,10 +578,6 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Sources/SourceState.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
@@ -705,10 +673,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Runtime/src/Sentinel.Runtime.Api/MemoryRequests.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [services/Sentinel.Runtime/src/Sentinel.Runtime.Infrastructure/Grains/IncidentGrains.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
@@ -750,5 +714,13 @@ dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
 [services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/TemporalFixture.cs]
+dotnet_diagnostic.SA1402.severity = none
+dotnet_diagnostic.SA1649.severity = none
+
+[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/ConfigurationRequests.cs]
+dotnet_diagnostic.SA1402.severity = none
+dotnet_diagnostic.SA1649.severity = none
+
+[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
