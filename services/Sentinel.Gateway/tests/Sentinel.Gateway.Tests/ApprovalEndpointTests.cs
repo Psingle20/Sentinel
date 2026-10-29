@@ -125,7 +125,7 @@ public sealed class ApprovalEndpointTests(GatewayFixture gateway) : IClassFixtur
     }
 
     [Fact]
-    public async Task Another_tenants_incident_or_an_unknown_one_is_not_found_and_nothing_is_decided()
+    public async Task Another_tenants_incident_or_an_unknown_one_is_a_plain_not_found_and_nothing_is_decided()
     {
         IncidentDetail foreign = _host.Runtime.Add("globex");
         RemediationPlan plan = foreign.Plan!.Plan;
@@ -133,9 +133,8 @@ public sealed class ApprovalEndpointTests(GatewayFixture gateway) : IClassFixtur
         using HttpResponseMessage response = await PostAsync(Path(foreign, "approve"), new { planVersion = plan.PlanVersion, planHash = plan.PlanHash });
         using HttpResponseMessage unknown = await PostAsync($"/api/v1/incidents/{Guid.NewGuid()}/plans/{Guid.NewGuid()}/approve", new { planVersion = 1, planHash = plan.PlanHash });
 
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-        (await response.Content.ReadAsStringAsync()).ShouldBeEmpty();
-        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        await ShouldBePlainNotFoundAsync(response);
+        await ShouldBePlainNotFoundAsync(unknown);
         (await RelayedAsync(RecordApproval.MessageType, foreign)).ShouldBeEmpty();
     }
 
@@ -223,6 +222,16 @@ public sealed class ApprovalEndpointTests(GatewayFixture gateway) : IClassFixtur
                 problem.RootElement.GetProperty("detail").GetString().ShouldBe(detail);
             }
         }
+    }
+
+    // A bare 404, which the status-code pages turn into a problem document without an error code, so the incident's existence is not disclosed.
+    private static async Task ShouldBePlainNotFoundAsync(HttpResponseMessage response)
+    {
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+        using JsonDocument problem = await JsonAsync(response);
+        problem.RootElement.GetProperty("title").GetString().ShouldBe("Not Found");
+        problem.RootElement.TryGetProperty("code", out _).ShouldBeFalse();
     }
 
     // What the Gateway enqueued for Runtime about the incident: the producer and the payload of each message.
