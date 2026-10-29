@@ -1,6 +1,8 @@
 using Reference.Common;
 using Reference.Common.Control;
-using Reference.ReportingWorker;
+using Reference.ReportingWorker.Batch;
+using Reference.ReportingWorker.Revisions;
+using Reference.ReportingWorker.Telemetry;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

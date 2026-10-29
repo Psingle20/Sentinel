@@ -4,27 +4,6 @@ using System.Text;
 
 namespace Reference.Common.Redis;
 
-/// <summary>Redis refused or failed a command, for example because maxclients was reached.</summary>
-public sealed class RedisUnavailableException : Exception
-{
-    public RedisUnavailableException()
-    {
-    }
-
-    public RedisUnavailableException(string message)
-        : base(message)
-    {
-    }
-
-    public RedisUnavailableException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
-}
-
-/// <summary>Redis answered a command with an error reply. The connection itself is still in step.</summary>
-public sealed class RedisReplyException(string message) : Exception(message);
-
 /// <summary>
 /// One raw Redis connection speaking RESP2. The reference services use it instead of a pooled client
 /// library so that every connection, and every leak, is explicit and carries a client name.

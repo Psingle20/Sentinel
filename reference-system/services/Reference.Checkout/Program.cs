@@ -1,6 +1,10 @@
-using Reference.Checkout;
 using Reference.Common;
 using Reference.Common.Control;
+using Reference.Checkout.Orders;
+using Reference.Checkout.Processing;
+using Reference.Checkout.Redis;
+using Reference.Checkout.Revisions;
+using Reference.Checkout.Telemetry;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

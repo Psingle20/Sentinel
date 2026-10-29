@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using Reference.Checkout;
 using Reference.Common.Redis;
 using Reference.Common.Revisions;
-using Reference.RedisExporter;
-using Reference.ReportingWorker;
 using Shouldly;
 using Testcontainers.Redis;
+using Reference.Checkout.Redis;
+using Reference.Checkout.Revisions;
+using Reference.ReportingWorker.Batch;
+using Reference.ReportingWorker.Revisions;
+using Reference.RedisExporter.Sampling;
 
 namespace Reference.Tests;
 

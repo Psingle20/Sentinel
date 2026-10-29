@@ -1,6 +1,7 @@
 using Reference.Common.Redis;
 using Reference.Common.Telemetry;
-using Reference.RedisExporter;
+using Reference.RedisExporter.Sampling;
+using Reference.RedisExporter.Telemetry;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

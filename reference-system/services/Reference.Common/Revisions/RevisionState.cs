@@ -1,8 +1,5 @@
 namespace Reference.Common.Revisions;
 
-/// <summary>A revision switch: what was serving, what serves now, and when it changed.</summary>
-public sealed record RevisionChange(string PreviousRevision, string Revision, DateTimeOffset ChangedAt);
-
 /// <summary>
 /// The revision a reference service is serving. The deploy controller switches it to emulate a
 /// deployment; each revision selects a healthy or faulty behaviour inside the service.

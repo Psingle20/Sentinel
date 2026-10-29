@@ -3,12 +3,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Time.Testing;
-using Reference.Checkout;
 using Reference.Common.Control;
 using Reference.Common.Revisions;
-using Reference.Orders;
-using Reference.RedisExporter;
 using Shouldly;
+using Reference.Checkout.Orders;
+using Reference.Checkout.Revisions;
+using Reference.Orders.Revisions;
+using Reference.Orders.Storage;
+using Reference.RedisExporter.Sampling;
 
 namespace Reference.Tests;
 

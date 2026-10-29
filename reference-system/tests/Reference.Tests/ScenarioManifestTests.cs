@@ -1,10 +1,10 @@
-using Reference.Checkout;
-using Reference.Orders;
 using Reference.Scenarios.Api.Contracts;
 using Reference.Scenarios.Api.Manifests;
 using Reference.Scenarios.Application.Runs;
 using Reference.Scenarios.Domain.Scenarios;
 using Shouldly;
+using Reference.Checkout.Revisions;
+using Reference.Orders.Revisions;
 
 namespace Reference.Tests;
 
