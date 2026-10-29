@@ -41,6 +41,22 @@ public sealed class VerifierTests
     }
 
     [Fact]
+    public async Task A_change_replaced_by_a_later_deployment_before_onset_is_falsified_while_the_serving_change_survives()
+    {
+        var telemetry = Telemetry.ReplacedChangeThenLeak();
+        HypothesisFinding replaced = Change("d6");
+        HypothesisFinding leak = Change("d1");
+
+        InvestigationRun run = await Verify(telemetry, 70, replaced, leak);
+
+        Verdict(run, replaced, AdversarialVerifier.ChangeServing).ShouldBe(ChallengeVerdict.Survived);
+        Verdict(run, replaced, AdversarialVerifier.ChangeStillServing).ShouldBe(ChallengeVerdict.Falsified);
+        Verdict(run, leak, AdversarialVerifier.ChangeStillServing).ShouldBe(ChallengeVerdict.Survived);
+        run.Completed.Evidence.ShouldContain(evidence => evidence.HypothesisIds.Contains(replaced.HypothesisId)
+            && evidence.SourceObservationIds.Contains(ObservationId.From("deploy-controller:deployment:d7:completed")));
+    }
+
+    [Fact]
     public async Task In_the_dependency_regression_only_the_dependency_change_shows_a_mechanism()
     {
         var telemetry = Telemetry.DependencyRegression();

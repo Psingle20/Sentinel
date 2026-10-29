@@ -22,9 +22,11 @@ namespace Sentinel.AgentWorker.Application.Investigations;
 public sealed class AdversarialVerifier(IObservationQueries observations, TimeProvider time) : IInvestigator
 {
     public const string InvestigatorName = "adversarial-verifier";
-    public const string PromptVersion = "falsifiers-v1";
+    /// <summary>v2 adds <see cref="ChangeStillServing"/>; executions record the version, so v1 runs replay as v1 did.</summary>
+    public const string PromptVersion = "falsifiers-v2";
 
     public const string ChangeServing = "change-serving-before-onset";
+    public const string ChangeStillServing = "change-still-serving-at-onset";
     public const string MechanismFollowsChange = "mechanism-follows-change";
     public const string CulpritPrecedesOnset = "culprit-shift-precedes-onset";
     public const string LoadRose = "load-rose-before-onset";
@@ -116,6 +118,23 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
 
         DateTimeOffset servedAt = serving.Value;
         output.Challenge(hypothesis.HypothesisId, ChangeServing, ChallengeVerdict.Survived, $"{reported.ServiceId} {reported.Version} served from {servedAt:O}, before onset at {onset:O}.");
+
+        // F1b: a later deployment of the same service that finished before onset replaced the change, so it was not
+        // serving when symptoms began, however well its timing fits otherwise.
+        DeploymentObservation? replacement = deployments
+            .Where(deployment => deployment.ServiceId == reported.ServiceId && deployment.DeploymentId != reported.DeploymentId
+                && deployment.Status == "completed" && deployment.CompletedAt is { } done && done > servedAt && done < onset)
+            .OrderBy(deployment => deployment.CompletedAt)
+            .FirstOrDefault();
+        if (replacement is not null)
+        {
+            EvidenceId replaced = output.Record(hypothesis.HypothesisId, "contradicts", 0.9, [.. cited, replacement.ObservationId], servedAt, replacement.CompletedAt!.Value, "call_verify_deployments", $"deployment:{reported.DeploymentId}",
+                $"{reported.ServiceId} {reported.Version} was replaced by {replacement.Version} at {replacement.CompletedAt:O}, before symptoms began at {onset:O}.");
+            output.Challenge(hypothesis.HypothesisId, ChangeStillServing, ChallengeVerdict.Falsified, "A later deployment replaced the change before symptoms began, so it was not serving when they started.", replaced);
+            return;
+        }
+
+        output.Challenge(hypothesis.HypothesisId, ChangeStillServing, ChallengeVerdict.Survived, $"{reported.ServiceId} {reported.Version} was still serving when symptoms began.");
 
         // The changed service's own signals must move after the change and before onset.
         Shift?[] shifts =

@@ -35,6 +35,15 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         return telemetry;
     }
 
+    /// <summary>S1 after an earlier scenario: checkout v2.4.3 serves from 4 s until a reset replaces it at 10 s, then v2.4.1 leaks as in <see cref="ConnectionLeak"/>.</summary>
+    public static Telemetry ReplacedChangeThenLeak()
+    {
+        Telemetry telemetry = ConnectionLeak();
+        telemetry.Deployment("checkout-service", "v2.4.3", "v2.4.0", "d6", 0, 4);
+        telemetry.Deployment("checkout-service", "v2.4.0", "v2.4.3", "d7", 6, 10);
+        return telemetry;
+    }
+
     /// <summary>S3: order-service v1.8.0 serves from 20 s and slows steadily; a benign checkout deployment serves from 140 s; the SLO burns from 160 s.</summary>
     public static Telemetry DependencyRegression()
     {
