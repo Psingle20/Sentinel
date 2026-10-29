@@ -7,6 +7,7 @@
 //   POST /__reset                     restore the fixtures
 //   POST /__fail { route, status }    answer a route group with an error ("agent-executions", "similar", "admin")
 //   POST /__advance { summary }       append a timeline entry, as Runtime would, and publish it live
+//   GET  /__analytics                 the analytics events Api accepted, oldest first
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
@@ -18,6 +19,27 @@ const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, 
 const incidentFixture = fixture("incident-awaiting-approval.json");
 const historyFixture = fixture("incident-history.json");
 const controlPlaneFixture = fixture("control-plane.json");
+// Api's catalog of approved analytics events and the values each property may take.
+const analyticsCatalog = {
+  "incident.viewed": { status: incidentStatuses(), severity: ["critical", "high", "medium", "low"] },
+  "approval.dialog-opened": { action: ["approve", "reject", "revoke"] },
+  "postmortem.viewed": { status: incidentStatuses() },
+  "narrative.saved": { outcome: ["saved", "conflict", "failed"] },
+  "replay.requested": { outcome: ["reproduced", "differs", "failed"] },
+  "live.state-changed": { state: ["live", "reconnecting", "offline"] },
+  "admin.viewed": { area: adminAreas() },
+  "configuration.published": { area: adminAreas(), outcome: ["published", "refused"] },
+};
+// The author of the version every configuration area starts from, as the services report it.
+const seedAuthor = "deployment configuration";
+
+function incidentStatuses() {
+  return ["detected", "investigating", "awaitingApproval", "remediating", "verifying", "resolved", "escalated"];
+}
+
+function adminAreas() {
+  return ["overview", "policy", "runtime", "models", "sources", "api"];
+}
 
 function initialState() {
   return {
@@ -27,7 +49,14 @@ function initialState() {
     policy: structuredClone(controlPlaneFixture.policy),
     policyHistory: [{ version: controlPlaneFixture.policy.version, author: "repository", publishedAt: "2026-10-27T12:00:00+00:00", source: "file" }],
     controls: { emergencyStop: false, disabledActions: [] },
+    configuration: Object.fromEntries(
+      Object.entries(controlPlaneFixture.configuration).map(([area, document]) => [
+        area,
+        { document: structuredClone(document), history: [{ version: document.version, author: seedAuthor, publishedAt: "0001-01-01T00:00:00+00:00", basedOn: null }] },
+      ]),
+    ),
     audit: [],
+    analytics: [],
     failures: new Map(),
   };
 }
@@ -270,15 +299,105 @@ async function handleAdmin(request, response, url) {
     return send(response, 204);
   }
 
+  const override = /^\/controls\/actions\/([^/]+)$/.exec(path);
+  if (request.method === "POST" && override) {
+    const kind = decodeURIComponent(override[1]);
+    const body = await readBody(request);
+    const others = state.controls.disabledActions.filter((action) => action !== kind);
+    state.controls = { ...state.controls, disabledActions: body.enabled ? [...others, kind] : others };
+    audit(body.enabled ? "controls.action.disable" : "controls.action.enable", `executor/actions/${kind}`, { statusCode: 204 });
+    return send(response, 204);
+  }
+
   if (request.method === "GET" && path === "/sources") {
     return send(response, 200, controlPlaneFixture.sources);
+  }
+
+  const configuration = /^\/configuration\/([^/]+)(\/history)?$/.exec(path);
+  if (configuration) {
+    return handleConfiguration(request, response, configuration[1], Boolean(configuration[2]));
   }
 
   if (request.method === "GET" && path === "/audit") {
     return send(response, 200, state.audit);
   }
 
+  if (request.method === "GET" && path === "/analytics") {
+    return send(response, 200, dailyCounts());
+  }
+
   return problem(response, 404, "Not found", undefined);
+}
+
+// Each area behaves as its owning service does: a publish names the version it started from and
+// must bring a new one, and the service's defaults stay listed as the oldest version.
+async function handleConfiguration(request, response, area, history) {
+  const current = state.configuration[area];
+  if (!current) {
+    return problem(response, 404, "Configuration.UnknownArea", `There is no configuration area '${area}'.`);
+  }
+
+  if (request.method === "GET") {
+    if (history) {
+      return send(response, 200, current.history);
+    }
+    const [latest] = current.history;
+    return send(response, 200, { document: current.document, version: latest, published: latest.author !== seedAuthor });
+  }
+
+  if (request.method !== "PUT" || history) {
+    return problem(response, 404, "Not found", undefined);
+  }
+
+  const body = await readBody(request);
+  const version = typeof body.document?.version === "string" ? body.document.version : "?";
+  const refuse = (status, title, detail) => {
+    audit("configuration.publish", `${area}/${version}`, { expectedVersion: body.expectedVersion, statusCode: status, problem: title });
+    return problem(response, status, title, detail);
+  };
+
+  if (body.expectedVersion !== current.document.version) {
+    return refuse(409, "Configuration.VersionConflict", "The configuration changed since it was read; reload it and apply the change again.");
+  }
+  if (version === "?" || version === current.document.version) {
+    return refuse(400, "Configuration.VersionUnchanged", "A published configuration needs a new version.");
+  }
+  if (current.history.some((entry) => entry.version === version)) {
+    return refuse(409, "Configuration.DuplicateVersion", "That version was published before; versions are never reused.");
+  }
+
+  const published = { version, author: "operator@example.test", publishedAt: new Date().toISOString(), basedOn: current.document.version };
+  state.configuration[area] = { document: body.document, history: [published, ...current.history] };
+  audit("configuration.publish", `${area}/${version}`, { expectedVersion: body.expectedVersion, statusCode: 200 });
+  return send(response, 200, published);
+}
+
+// Today's counts per event and values, the way Api stores them: properties in name order, joined.
+function dailyCounts() {
+  const day = new Date().toISOString().slice(0, 10);
+  const counts = new Map();
+  for (const event of state.analytics) {
+    const dimensions = Object.keys(event.properties)
+      .sort()
+      .map((name) => `${name}=${event.properties[name]}`)
+      .join(";");
+    const key = `${event.name}|${dimensions}`;
+    counts.set(key, { day, event: event.name, dimensions, count: (counts.get(key)?.count ?? 0) + 1 });
+  }
+  return [...counts.values()];
+}
+
+// Api keeps only daily counts of approved events; anything outside the catalog is refused.
+async function handleAnalytics(request, response) {
+  const body = await readBody(request);
+  const allowed = analyticsCatalog[body.name];
+  const properties = body.properties ?? {};
+  if (!allowed || Object.entries(properties).some(([name, value]) => !allowed[name]?.includes(value))) {
+    return problem(response, 400, "Analytics.UnknownEvent", "The event is not in the approved analytics catalog.");
+  }
+
+  state.analytics.push({ name: body.name, properties });
+  return send(response, 202);
 }
 
 function handleEvents(request, response) {
@@ -314,6 +433,14 @@ const server = createServer(async (request, response) => {
     const body = await readBody(request);
     append("note.recorded", body.summary ?? "Runtime recorded a change.");
     return send(response, 204);
+  }
+
+  if (request.method === "GET" && url.pathname === "/__analytics") {
+    return send(response, 200, state.analytics);
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/v1/analytics") {
+    return handleAnalytics(request, response);
   }
 
   if (request.method === "GET" && url.pathname === "/api/v1/events") {

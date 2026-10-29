@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/design-system/patterns/app-shell";
 import { DataState } from "@/design-system/patterns/data-state";
 import { PageHeader } from "@/design-system/patterns/page-header";
+import { TrackView } from "@/features/analytics/track-view";
 import { LiveUpdates } from "@/features/incidents/live-updates";
 import { IncidentDetailView, IncidentHeaderBadges } from "@/features/incidents/incident-detail";
 import type { AgentExecution, SimilarIncident } from "@/lib/api/contracts";
@@ -47,6 +48,7 @@ async function Incident({ params }: { params: Promise<{ incidentId: string }> })
   return (
     <>
       <PageHeader title={incident.summary.title} actions={<LiveUpdates incidentId={incident.summary.incidentId} />} />
+      <TrackView name="incident.viewed" properties={{ status: incident.summary.status, severity: incident.summary.severity }} />
       <IncidentHeaderBadges incident={incident} />
       <IncidentDetailView incident={incident} executions={executions} similar={similar} />
     </>

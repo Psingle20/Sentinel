@@ -1,10 +1,11 @@
 "use client";
 
 import { CircleCheck, CircleX } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { StatusBadge } from "@/design-system/domain/status-badge";
 import { Button } from "@/design-system/primitives/button";
+import { track } from "@/features/analytics/track";
 
 import { replayAction, type ReplayState } from "./actions";
 
@@ -13,6 +14,12 @@ import { replayAction, type ReplayState } from "./actions";
 export function ReplayPanel({ incidentId }: { incidentId: string }) {
   const [state, replay, replaying] = useActionState<ReplayState, FormData>(replayAction, { status: "idle" });
   const result = state.result;
+
+  useEffect(() => {
+    if (state.status !== "idle") {
+      track("replay.requested", { outcome: state.status === "error" ? "failed" : state.reproduced ? "reproduced" : "differs" });
+    }
+  }, [state]);
 
   return (
     <form action={replay} className="flex flex-col gap-3">

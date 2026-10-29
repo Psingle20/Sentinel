@@ -3,57 +3,45 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { StatusBadge } from "@/design-system/domain/status-badge";
-import { AppShell } from "@/design-system/patterns/app-shell";
 import { DataState } from "@/design-system/patterns/data-state";
 import { PageHeader } from "@/design-system/patterns/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/design-system/primitives/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/design-system/primitives/table";
-import { EmergencyStop, PolicyEditor } from "@/features/admin/controls";
+import { ControlPlaneUnavailable } from "@/features/admin/control-plane-unavailable";
+import { ActionOverrides, EmergencyStop } from "@/features/admin/controls";
+import { TrackView } from "@/features/analytics/track-view";
 import { formatDateTime } from "@/features/incidents/presentation";
-import { ApiError, getAudit, getControls, getPolicy, getPolicyHistory, getSources } from "@/lib/api/server";
+import { type AnalyticsCount, remediationActionKinds } from "@/lib/api/contracts";
+import { getAnalytics, getAudit, getControls, getPolicy, getSources } from "@/lib/api/server";
 
 export default function AdminPage() {
   return (
-    <AppShell
-      navigation={
-        <Link href="/" className="text-sm text-text-muted hover:text-text-primary focus-visible:text-text-primary">
-          Incidents
-        </Link>
-      }
-    >
-      <PageHeader title="Control plane" description="Policy, operator controls and provider sources. Every change is audited." />
+    <>
+      <PageHeader title="Control plane" description="Operator controls, provider sources and the audit history. Every change is audited." />
+      <TrackView name="admin.viewed" properties={{ area: "overview" }} />
       <Suspense fallback={<DataState kind="loading" title="Loading the control plane" />}>
         <ControlPlane />
       </Suspense>
-    </AppShell>
+    </>
   );
 }
 
 async function ControlPlane() {
   let data;
   try {
-    data = await Promise.all([getPolicy(), getPolicyHistory(), getControls(), getSources(), getAudit()]);
+    // Usage counts are a side panel: when they cannot be read, the controls still work.
+    data = await Promise.all([getPolicy(), getControls(), getSources(), getAudit(), getAnalytics(30).catch(() => null)]);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 403) {
-      return <DataState kind="permission-denied" title="The control plane is for operators" description="Ask an administrator for the operator role." />;
-    }
-    return <DataState kind="error" title="The control plane is unavailable" description="Sentinel.Api, Executor or Ingestion did not answer." />;
+    return <ControlPlaneUnavailable error={error} owners="Sentinel.Gateway, Executor or Ingestion" />;
   }
 
-  const [policy, history, controls, sources, audit] = data;
-  const version = String(policy.version ?? "");
+  const [policy, controls, sources, audit, counts] = data;
+  // A kind disabled at Executor stays listed even if this web app does not know it yet.
+  const kinds = [...new Set([...remediationActionKinds, ...controls.disabledActions])];
+  const usage = counts === null ? null : totals(counts);
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
-        <Card aria-labelledby="policy-title">
-          <CardHeader>
-            <CardTitle id="policy-title">Remediation policy {version}</CardTitle>
-            <CardDescription>The current policy as code. Publishing a new version takes effect for the next evaluation.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PolicyEditor document={JSON.stringify(policy, null, 2)} version={version} />
-          </CardContent>
-        </Card>
         <Card aria-labelledby="audit-title">
           <CardHeader>
             <CardTitle id="audit-title">Audit history</CardTitle>
@@ -86,37 +74,6 @@ async function ControlPlane() {
             )}
           </CardContent>
         </Card>
-      </div>
-      <div className="flex flex-col gap-6">
-        <Card aria-labelledby="controls-title">
-          <CardHeader>
-            <CardTitle id="controls-title">Operator controls</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <StatusBadge tone={controls.emergencyStop ? "critical" : "stable"} icon={controls.emergencyStop ? OctagonX : ShieldCheck}>
-              {controls.emergencyStop ? "Emergency stop engaged" : "Actions follow policy"}
-            </StatusBadge>
-            {controls.disabledActions.length > 0 ? <p className="text-sm text-text-muted">Disabled actions: {controls.disabledActions.join(", ")}</p> : null}
-            <EmergencyStop engaged={controls.emergencyStop} />
-          </CardContent>
-        </Card>
-        <Card aria-labelledby="history-title">
-          <CardHeader>
-            <CardTitle id="history-title">Policy versions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-2 text-sm" aria-label="Policy versions">
-              {history.map((entry) => (
-                <li key={`${entry.version}-${entry.source}`} className="flex flex-col gap-0.5">
-                  <span className="text-text-primary">{entry.version}</span>
-                  <span className="text-xs text-text-muted">
-                    {entry.source === "file" ? "Repository seed" : `${entry.author}, ${formatDateTime(entry.publishedAt)}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
         <Card aria-labelledby="sources-title">
           <CardHeader>
             <CardTitle id="sources-title">Provider sources</CardTitle>
@@ -142,7 +99,85 @@ async function ControlPlane() {
             )}
           </CardContent>
         </Card>
+        <Card aria-labelledby="usage-title">
+          <CardHeader>
+            <CardTitle id="usage-title">Product usage</CardTitle>
+            <CardDescription>Approved analytics events over the last 30 days. Only daily counts are kept; nothing identifies a person, an incident or a tenant.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {usage === null ? (
+              <DataState kind="error" title="Usage counts are unavailable" description="Sentinel.Gateway did not answer." />
+            ) : usage.length === 0 ? (
+              <DataState kind="empty" title="Nothing counted yet" />
+            ) : (
+              <Table aria-label="Product usage">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Event</TableHead>
+                    <TableHead>Values</TableHead>
+                    <TableHead className="text-right">Count</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usage.map((row) => (
+                    <TableRow key={`${row.event}|${row.dimensions}`}>
+                      <TableCell className="font-mono text-xs">{row.event}</TableCell>
+                      <TableCell className="font-mono text-xs">{row.dimensions.replaceAll(";", ", ") || "None"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{row.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <div className="flex flex-col gap-6">
+        <Card aria-labelledby="controls-title">
+          <CardHeader>
+            <CardTitle id="controls-title">Emergency stop</CardTitle>
+            <CardDescription>Independent of every model and workflow path.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <StatusBadge tone={controls.emergencyStop ? "critical" : "stable"} icon={controls.emergencyStop ? OctagonX : ShieldCheck}>
+              {controls.emergencyStop ? "Emergency stop engaged" : "Actions follow policy"}
+            </StatusBadge>
+            <EmergencyStop engaged={controls.emergencyStop} />
+          </CardContent>
+        </Card>
+        <Card aria-labelledby="overrides-title">
+          <CardHeader>
+            <CardTitle id="overrides-title">Manual overrides</CardTitle>
+            <CardDescription>Take one kind of action out of service, whatever the policy permits.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ActionOverrides kinds={kinds} disabled={controls.disabledActions} />
+          </CardContent>
+        </Card>
+        <Card aria-labelledby="policy-title">
+          <CardHeader>
+            <CardTitle id="policy-title">Remediation policy {String(policy.version ?? "")}</CardTitle>
+            <CardDescription>In force for the next evaluation.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/policy" className="text-sm text-text-primary underline underline-offset-4">
+              Review or publish the policy
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
+}
+
+// One row per event and values over the whole period, most frequent first.
+function totals(counts: AnalyticsCount[]): AnalyticsCount[] {
+  const rows = new Map<string, AnalyticsCount>();
+  for (const count of counts) {
+    const key = `${count.event}|${count.dimensions}`;
+    const row = rows.get(key);
+    rows.set(key, row ? { ...row, count: row.count + count.count } : count);
+  }
+
+  return [...rows.values()].sort((left, right) => right.count - left.count || left.event.localeCompare(right.event));
 }

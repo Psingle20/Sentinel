@@ -128,6 +128,20 @@ test.describe("incidents", () => {
     await expect(page.getByLabel("Incident timeline")).toContainText("Runtime recorded a live change for this test.");
   });
 
+  test("counts an incident view by its status and severity only", async ({ page, request }) => {
+    await openIncident(page);
+    await page.getByRole("button", { name: "Approve plan" }).click();
+
+    await expect
+      .poll(async () => (await request.get(`${mockApi}/__analytics`)).json())
+      .toEqual(
+        expect.arrayContaining([
+          { name: "incident.viewed", properties: { status: "awaitingApproval", severity: "critical" } },
+          { name: "approval.dialog-opened", properties: { action: "approve" } },
+        ]),
+      );
+  });
+
   test("reports an unknown incident without failing the page", async ({ page }) => {
     await page.goto("/incidents/0192f0c4-0000-7000-8000-00000000dead");
 
@@ -193,6 +207,18 @@ test.describe("control plane", () => {
     await expect(page.getByRole("list", { name: "Provider sources" })).toContainText("loki-reference");
   });
 
+  test("moves between its pages and marks the current one", async ({ page }) => {
+    await page.goto("/admin");
+    const navigation = page.getByRole("navigation", { name: "Control plane" });
+    await expect(navigation.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+
+    await navigation.getByRole("link", { name: "Models" }).click();
+
+    await expect(page.getByRole("heading", { level: 1, name: "Models" })).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "Models" })).toHaveAttribute("aria-current", "page");
+    await expect(navigation.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current", "page");
+  });
+
   test("engages the emergency stop and audits it", async ({ page }) => {
     await page.goto("/admin");
     await page.getByRole("button", { name: "Engage emergency stop" }).click();
@@ -203,8 +229,30 @@ test.describe("control plane", () => {
     await expect(page.getByRole("button", { name: "Release emergency stop" })).toBeVisible();
   });
 
-  test("publishes a new policy version", async ({ page }) => {
+  test("takes one action kind out of service and puts it back", async ({ page }) => {
     await page.goto("/admin");
+    const overrides = page.getByRole("list", { name: "Action overrides" });
+    const rollback = overrides.getByRole("listitem").filter({ has: page.getByText("rollback", { exact: true }) });
+    await expect(rollback).toContainText("Follows policy");
+
+    await rollback.getByRole("button", { name: "Disable rollback" }).click();
+    await page.getByRole("dialog", { name: "Disable rollback actions?" }).getByRole("button", { name: "Disable", exact: true }).click();
+
+    await expect(page.getByText("Executor now refuses every rollback action.")).toBeVisible();
+    await expect(rollback).toContainText("Disabled by an operator");
+    await expect(overrides.getByRole("listitem").filter({ has: page.getByText("pause-batch", { exact: true }) })).toContainText("Follows policy");
+    await expect(page.getByRole("table", { name: "Audit history" })).toContainText("controls.action.disable");
+
+    await rollback.getByRole("button", { name: "Enable rollback" }).click();
+    await page.getByRole("dialog", { name: "Enable rollback actions again?" }).getByRole("button", { name: "Enable", exact: true }).click();
+
+    await expect(page.getByText("rollback actions follow policy again.")).toBeVisible();
+    await expect(rollback).toContainText("Follows policy");
+    await expect(page.getByRole("table", { name: "Audit history" })).toContainText("controls.action.enable");
+  });
+
+  test("publishes a new policy version", async ({ page }) => {
+    await page.goto("/admin/policy");
     const editor = page.getByRole("textbox", { name: "Policy document (give it a new version)" });
     const document = await editor.inputValue();
     await editor.fill(document.replace('"policy-2026.10.2"', '"policy-2026.10.3"'));
@@ -212,25 +260,107 @@ test.describe("control plane", () => {
 
     await expect(page.getByText("Published policy policy-2026.10.3.")).toBeVisible();
     await expect(page.getByRole("list", { name: "Policy versions" })).toContainText("policy-2026.10.3");
+
+    await page.getByRole("navigation", { name: "Control plane" }).getByRole("link", { name: "Overview" }).click();
     await expect(page.getByRole("table", { name: "Audit history" })).toContainText("policy.published");
   });
 
   test("refuses a policy without a new version", async ({ page }) => {
-    await page.goto("/admin");
+    await page.goto("/admin/policy");
     await page.getByRole("button", { name: "Publish policy" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "A published policy needs a new version." })).toBeVisible();
   });
 
+  test("publishes a configuration area over the version it was read at", async ({ page }) => {
+    await page.goto("/admin/configuration/runtime");
+    await expect(page.getByRole("heading", { level: 1, name: "SLOs and workflow" })).toBeVisible();
+    await expect(page.getByText("Version runtime-2026.10.1")).toBeVisible();
+    await expect(page.getByText("The deployment's defaults: nothing has been published from the control plane yet.")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Configuration versions" })).toContainText("Deployment defaults");
+
+    const editor = page.getByRole("textbox", { name: "Configuration document (give it a new version)" });
+    const document = await editor.inputValue();
+    await editor.fill(document.replace('"runtime-2026.10.1"', '"runtime-2026.10.2"').replace('"approvalTimeout": "00:30:00"', '"approvalTimeout": "00:20:00"'));
+    await page.getByRole("button", { name: "Publish configuration" }).click();
+
+    await expect(page.getByText("Published version runtime-2026.10.2.")).toBeVisible();
+    await expect(page.getByText("Version runtime-2026.10.2", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Published by operator@example\.test at .*, based on runtime-2026\.10\.1\.$/)).toBeVisible();
+    await expect(page.getByRole("list", { name: "Configuration versions" })).toContainText("runtime-2026.10.2");
+    await expect(editor).toHaveValue(/"approvalTimeout": "00:20:00"/);
+
+    await page.getByRole("navigation", { name: "Control plane" }).getByRole("link", { name: "Overview" }).click();
+    await expect(page.getByRole("table", { name: "Audit history" })).toContainText("runtime/runtime-2026.10.2");
+  });
+
+  test("refuses a configuration someone else changed since it was read", async ({ page, request }) => {
+    await page.goto("/admin/configuration/models");
+    const editor = page.getByRole("textbox", { name: "Configuration document (give it a new version)" });
+    const document = await editor.inputValue();
+
+    const current = (await (await request.get(`${mockApi}/api/v1/admin/configuration/models`)).json()) as { document: Record<string, unknown> };
+    await request.put(`${mockApi}/api/v1/admin/configuration/models`, {
+      data: { document: { ...current.document, version: "models-2026.10.2" }, expectedVersion: "models-2026.10.1" },
+    });
+
+    await editor.fill(document.replace('"models-2026.10.1"', '"models-2026.10.3"'));
+    await page.getByRole("button", { name: "Publish configuration" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "The configuration changed since it was read" })).toBeVisible();
+  });
+
+  test("refuses a configuration without a new version", async ({ page }) => {
+    await page.goto("/admin/configuration/sources");
+    await page.getByRole("button", { name: "Publish configuration" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "A published configuration needs a new version." })).toBeVisible();
+  });
+
+  test("summarizes what a configuration area holds", async ({ page }) => {
+    await page.goto("/admin/configuration/api");
+
+    await expect(page.getByRole("heading", { level: 1, name: "Tenants and notifications" })).toBeVisible();
+    await expect(page.getByRole("definition").filter({ hasText: "1 entry" })).toHaveCount(3);
+  });
+
+  test("reports an unknown configuration area", async ({ page }) => {
+    await page.goto("/admin/configuration/billing");
+
+    await expect(page.getByText("No such configuration area")).toBeVisible();
+  });
+
+  test("counts views and publishes with approved analytics events only", async ({ page, request }) => {
+    await page.goto("/admin/configuration/models");
+    await page.getByRole("button", { name: "Publish configuration" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "A published configuration needs a new version." })).toBeVisible();
+
+    await expect
+      .poll(async () => (await request.get(`${mockApi}/__analytics`)).json())
+      .toEqual(
+        expect.arrayContaining([
+          { name: "admin.viewed", properties: { area: "models" } },
+          { name: "configuration.published", properties: { area: "models", outcome: "refused" } },
+        ]),
+      );
+
+    await page.getByRole("navigation", { name: "Control plane" }).getByRole("link", { name: "Overview" }).click();
+    const usage = page.getByRole("table", { name: "Product usage" });
+    await expect(usage.getByRole("row").filter({ hasText: "configuration.published" })).toContainText("area=models, outcome=refused");
+    await expect(usage.getByRole("row").filter({ hasText: "area=models" }).filter({ hasText: "admin.viewed" })).toContainText("1");
+  });
+
   test("tells a non-operator that the control plane is not theirs", async ({ page, request }) => {
     await request.post(`${mockApi}/__fail`, { data: { route: "admin", status: 403 } });
     await page.goto("/admin");
+    await expect(page.getByText("The control plane is for operators")).toBeVisible();
 
+    await page.goto("/admin/configuration/models");
     await expect(page.getByText("The control plane is for operators")).toBeVisible();
   });
 });
 
-for (const path of ["/", `/incidents/${incidentId}`, `/incidents/${incidentId}/postmortem`, "/admin"]) {
+for (const path of ["/", `/incidents/${incidentId}`, `/incidents/${incidentId}/postmortem`, "/admin", "/admin/policy", "/admin/configuration/runtime"]) {
   for (const theme of ["dark", "light"] as const) {
     test(`has no accessibility violations on ${path} in the ${theme} theme`, async ({ page, request }) => {
       await request.post(`${mockApi}/__reset`);

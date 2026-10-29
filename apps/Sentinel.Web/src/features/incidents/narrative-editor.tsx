@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId } from "react";
 
 import { Button } from "@/design-system/primitives/button";
 import { Textarea } from "@/design-system/primitives/textarea";
+import { track } from "@/features/analytics/track";
 
 import { type NarrativeState, saveNarrativeAction } from "./actions";
 
@@ -12,6 +13,12 @@ import { type NarrativeState, saveNarrativeAction } from "./actions";
 export function NarrativeEditor({ incidentId, markdown, version }: { incidentId: string; markdown: string; version: number }) {
   const [state, save, saving] = useActionState<NarrativeState, FormData>(saveNarrativeAction, { status: "idle", version });
   const fieldId = useId();
+
+  useEffect(() => {
+    if (state.status !== "idle") {
+      track("narrative.saved", { outcome: state.status === "done" ? "saved" : state.conflict ? "conflict" : "failed" });
+    }
+  }, [state]);
 
   return (
     <form action={save} className="flex flex-col gap-3">

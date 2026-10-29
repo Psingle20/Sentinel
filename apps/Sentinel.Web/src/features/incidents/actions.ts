@@ -52,7 +52,7 @@ export async function revoke(_previous: DecisionState, form: FormData): Promise<
   }
 }
 
-export type NarrativeState = DecisionState & { version?: number };
+export type NarrativeState = DecisionState & { version?: number; conflict?: boolean };
 
 // Saves the postmortem narrative over the version the editor started from; a newer save wins and this one is refused.
 export async function saveNarrativeAction(previous: NarrativeState, form: FormData): Promise<NarrativeState> {
@@ -63,18 +63,19 @@ export async function saveNarrativeAction(previous: NarrativeState, form: FormDa
     revalidatePath(`/incidents/${incidentId}/postmortem`);
     return { status: "done", message: `Saved as version ${saved.version}.`, version: saved.version };
   } catch (error) {
-    return { status: "error", message: describe(error), version: expectedVersion };
+    return { status: "error", message: describe(error), version: expectedVersion, conflict: error instanceof ApiError && error.status === 409 };
   }
 }
 
-export type ReplayState = DecisionState & { result?: DomainReplayResult };
+export type ReplayState = DecisionState & { result?: DomainReplayResult; reproduced?: boolean };
 
 export async function replayAction(_previous: ReplayState, form: FormData): Promise<ReplayState> {
   try {
     const result = await replayDomain(String(form.get("incidentId")));
     const decisionsMatch = (result.decisions ?? []).every((decision) => decision.matches);
-    const verdict = result.stateStable && result.projectionMatches && decisionsMatch ? "reproduced exactly" : "differs from what is stored";
-    return { status: "done", message: `Replayed ${result.eventCount} events: the incident ${verdict}.`, result };
+    const reproduced = result.stateStable && result.projectionMatches && decisionsMatch;
+    const verdict = reproduced ? "reproduced exactly" : "differs from what is stored";
+    return { status: "done", message: `Replayed ${result.eventCount} events: the incident ${verdict}.`, result, reproduced };
   } catch (error) {
     return { status: "error", message: describe(error) };
   }

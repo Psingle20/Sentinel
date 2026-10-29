@@ -6,6 +6,7 @@ import { DataState } from "@/design-system/patterns/data-state";
 import { FactList } from "@/design-system/patterns/fact-list";
 import { PageHeader } from "@/design-system/patterns/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/design-system/primitives/card";
+import { TrackView } from "@/features/analytics/track-view";
 import { NarrativeEditor } from "@/features/incidents/narrative-editor";
 import { formatDateTime } from "@/features/incidents/presentation";
 import { ReplayPanel } from "@/features/incidents/replay-panel";
@@ -58,6 +59,7 @@ async function Postmortem({ params }: { params: Promise<{ incidentId: string }> 
         title={`Postmortem: ${postmortem.title}`}
         description={`Generated ${formatDateTime(postmortem.generatedAt)} from stream version ${postmortem.streamVersion}. Every fact links to the history it comes from.`}
       />
+      <TrackView name="postmortem.viewed" properties={{ status: postmortem.status }} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card aria-labelledby="summary-title">

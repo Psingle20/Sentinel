@@ -2,13 +2,20 @@
   "policy": {
     "version": "policy-2026.10.2",
     "defaultMode": "ApprovalRequired",
-    "environmentModes": { "reference": "ApprovalRequired" },
+    "environmentModes": {
+      "reference": "ApprovalRequired"
+    },
     "rules": [
       {
         "id": "rollback.reference-services",
         "action": "rollback",
-        "environments": ["reference"],
-        "targets": ["checkout-service", "order-service"],
+        "environments": [
+          "reference"
+        ],
+        "targets": [
+          "checkout-service",
+          "order-service"
+        ],
         "maxRisk": "medium",
         "minConfidence": 0.5,
         "maxBlastRadius": 2,
@@ -17,8 +24,12 @@
       {
         "id": "pause-batch.reporting-worker",
         "action": "pause-batch",
-        "environments": ["reference"],
-        "targets": ["reporting-worker"],
+        "environments": [
+          "reference"
+        ],
+        "targets": [
+          "reporting-worker"
+        ],
         "maxRisk": "low",
         "minConfidence": 0.5,
         "maxBlastRadius": 1,
@@ -28,7 +39,186 @@
     "freezes": []
   },
   "sources": [
-    { "sourceId": "prometheus-reference", "provider": "prometheus", "watermark": "2026-10-28T09:07:30+00:00", "health": "Healthy" },
-    { "sourceId": "loki-reference", "provider": "loki", "watermark": "2026-10-28T09:06:50+00:00", "health": "Degraded" }
-  ]
+    {
+      "sourceId": "prometheus-reference",
+      "provider": "prometheus",
+      "watermark": "2026-10-28T09:07:30+00:00",
+      "health": "Healthy"
+    },
+    {
+      "sourceId": "loki-reference",
+      "provider": "loki",
+      "watermark": "2026-10-28T09:06:50+00:00",
+      "health": "Degraded"
+    }
+  ],
+  "configuration": {
+    "runtime": {
+      "version": "runtime-2026.10.1",
+      "detection": [
+        {
+          "service": "checkout-service",
+          "metric": "slo_burn_rate",
+          "detectionThreshold": 14.4,
+          "onsetThreshold": 2,
+          "requiredSamples": 3,
+          "lookback": "00:02:00",
+          "clearAfter": "00:05:00"
+        }
+      ],
+      "recovery": {
+        "checkout-service": [
+          {
+            "service": "checkout-service",
+            "metric": "slo_burn_rate",
+            "comparison": "below",
+            "threshold": 1
+          }
+        ]
+      },
+      "catalog": {
+        "dependencies": {
+          "checkout-service": [
+            "redis",
+            "order-service"
+          ],
+          "order-service": [
+            "postgres"
+          ]
+        },
+        "owners": {
+          "checkout-service": "payments-team",
+          "order-service": "orders-team",
+          "reporting-worker": "data-team"
+        },
+        "batchServices": [
+          "reporting-worker"
+        ]
+      },
+      "suppressions": [],
+      "investigation": {
+        "roles": [
+          "metrics",
+          "logs",
+          "traces",
+          "changes",
+          "topology",
+          "knowledge"
+        ],
+        "challenge": true,
+        "window": "00:15:00",
+        "timeout": "00:05:00",
+        "reportGrace": "00:00:30",
+        "maxToolCalls": 12,
+        "maxModelTokens": 200000
+      },
+      "workflow": {
+        "approvalTimeout": "00:30:00",
+        "executionTimeout": "00:10:00",
+        "reconciliationTimeout": "00:30:00",
+        "observationWindow": "00:01:30",
+        "evaluationLag": "00:00:15",
+        "evaluationTimeout": "00:03:00"
+      },
+      "consensus": {
+        "enabled": true,
+        "sourceReliability": {},
+        "defaultReliability": 0.8,
+        "partialWeight": 0.6,
+        "contradictionWeight": 1.2,
+        "abstainBelowConfidence": 0.5,
+        "minimumIndependentSupport": 2,
+        "dissentMargin": 0.25
+      }
+    },
+    "models": {
+      "version": "models-2026.10.1",
+      "defaultProvider": "test-double",
+      "routing": {},
+      "promptVersion": "investigator-v3",
+      "maxModelTurns": 6,
+      "maxOutputTokens": 4000,
+      "shadowBaseline": true,
+      "inputPricePerMillionTokens": 0,
+      "outputPricePerMillionTokens": 0
+    },
+    "sources": {
+      "version": "sources-2026.10.1",
+      "pollInterval": "00:00:05",
+      "metricStep": "00:00:05",
+      "initialLookback": "00:02:00",
+      "maxRangePerPull": "00:05:00",
+      "logLag": "00:00:30",
+      "traceLag": "00:00:30",
+      "lateDataOverlap": "00:00:30",
+      "topologyEnabled": true,
+      "topologyInterval": "00:01:00",
+      "topologyLookback": "00:15:00",
+      "metricSeries": [
+        {
+          "name": "slo_burn_rate",
+          "expression": "sentinel:slo_burn_rate",
+          "serviceLabel": "service",
+          "unit": "ratio",
+          "priority": 0
+        },
+        {
+          "name": "redis_connections",
+          "expression": "redis_connected_clients",
+          "service": "redis",
+          "unit": "connections",
+          "priority": 1
+        }
+      ],
+      "logSources": [
+        {
+          "name": "reference-services",
+          "query": "{namespace=\"reference\"}",
+          "serviceLabel": "service_name",
+          "limit": 500,
+          "priority": 1
+        }
+      ],
+      "traceSources": [
+        {
+          "name": "reference-traces",
+          "services": [
+            "checkout-service",
+            "order-service"
+          ],
+          "slowerThan": "00:00:00.5000000",
+          "slowTraceLimit": 20,
+          "sampleTraceLimit": 3
+        }
+      ]
+    },
+    "api": {
+      "version": "api-2026.10.1",
+      "tenants": [
+        {
+          "id": "reference",
+          "name": "Reference system",
+          "environments": [
+            "reference"
+          ]
+        }
+      ],
+      "channels": [
+        {
+          "name": "operations-log",
+          "kind": "log",
+          "url": null,
+          "secretKey": null
+        }
+      ],
+      "routes": [
+        {
+          "event": "incident.opened",
+          "minimumSeverity": "high",
+          "channel": "operations-log",
+          "tenant": null
+        }
+      ]
+    }
+  }
 }

@@ -122,7 +122,7 @@ flowchart TB
     class tenants,autonomous planned
 ```
 
-Tenant and environment identity already scopes every observation, incident and query, and the Gateway routes live events to webhook and log channels by event, severity and tenant. Tenant administration and constrained autonomous execution are planned. The Gateway's control-plane API reads, updates and audits each service's configuration, including the service catalog, policy, operator controls, providers, models and SLO rules, with version history; the web pages for editing them are in progress. Incident memory, replay and evaluation are being built in Phase 07.
+Tenant and environment identity already scopes every observation, incident and query, and the Gateway routes live events to webhook and log channels by event, severity and tenant. Tenant administration and constrained autonomous execution are planned. The Gateway's control-plane API reads, updates and audits each service's configuration, including the service catalog, policy, operator controls, providers, models and SLO rules, with version history, and the web app has a page for each, plus a manual override that takes one kind of action out of service. Incident memory, replay and evaluation are being built in Phase 07.
 
 ### Service topology and trust boundaries
 

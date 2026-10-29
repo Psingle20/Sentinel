@@ -126,6 +126,9 @@ export type PauseBatchAction = {
 
 export type RemediationAction = RollbackAction | PauseBatchAction;
 
+// Every action kind Executor has an adapter for; an operator can take each one out of service.
+export const remediationActionKinds: readonly RemediationAction["kind"][] = ["rollback", "pause-batch"];
+
 export type PlanPrecondition = { serviceId: string; check: string; expected: string };
 
 export type RecoveryCriterion = {
@@ -401,7 +404,10 @@ export const configurationAreas = ["runtime", "models", "sources", "api"] as con
 
 export type ConfigurationArea = (typeof configurationAreas)[number];
 
-export type DocumentVersion = { version: string; author: string; publishedAt: string; basedOn?: string };
+export type DocumentVersion = { version: string; author: string; publishedAt: string; basedOn?: string | null };
+
+// The author of the version a service starts from, its deployment configuration; history always ends with it.
+export const seedAuthor = "deployment configuration";
 
 export type DocumentState = { document: Record<string, unknown>; version: DocumentVersion; published: boolean };
 

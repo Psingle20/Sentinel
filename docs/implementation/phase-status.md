@@ -248,14 +248,16 @@ Delivered:
 - The control-plane API with audit, and each service's configuration document: [AdminController](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Api/Controllers/AdminController.cs), [ControlPlaneAudit](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Application/ControlPlane/ControlPlaneAudit.cs), [GatewayEndpointTests](../../services/Sentinel.Gateway/tests/Sentinel.Gateway.Tests/GatewayEndpointTests.cs).
 - Notification routing and privacy-safe product analytics: [NotificationRouter](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Live/NotificationRouter.cs), [AnalyticsCatalog](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Application/Analytics/AnalyticsCatalog.cs).
 - Responder, postmortem and admin pages, tested in [incidents.spec.ts](../../apps/Sentinel.Web/tests/e2e/incidents.spec.ts): [incident-detail.tsx](../../apps/Sentinel.Web/src/features/incidents/incident-detail.tsx), [postmortem page](../../apps/Sentinel.Web/src/app/incidents/[incidentId]/postmortem/page.tsx), [admin page](../../apps/Sentinel.Web/src/app/admin/page.tsx).
+- The control plane in the web app: an overview with the emergency stop, a manual override per action kind, the audit history and usage counts; the [policy page](../../apps/Sentinel.Web/src/app/admin/policy/page.tsx); and a [page per configuration area](../../apps/Sentinel.Web/src/app/admin/configuration/[area]/page.tsx) that shows the current version and where it came from, publishes over the version it was read at, and lists every version. The web tests cover publishing, refusals for a stale or unchanged version, overrides and role refusal.
+- Product analytics sent from the web app for every event in the catalog, honouring Global Privacy Control and Do Not Track: [track.ts](../../apps/Sentinel.Web/src/features/analytics/track.ts), [product-analytics.md](../business-contracts/product-analytics.md).
 
 Open:
 
-- The configuration-area and manual-override UI. The server actions exist, but no page uses them yet. Control-plane sub-pages are in progress but not yet in the main tree.
 - Journey tests against the real system. The web tests run against a mock API, and only approval is driven through the UI end to end.
 - A wired identity provider, and an ADR for approver identity.
 - Performance tests for large timelines and evidence graphs.
-- API contract documentation for live events, the admin API, analytics and pages.
+- API contract documentation for live events, the admin API and pages. Analytics is documented.
+- Structured editors for configuration areas. Each area is edited as its JSON document, which the owning service validates.
 
 ## Phase 09 – Production hardening
 

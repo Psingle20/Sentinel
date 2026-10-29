@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/design-system/primitives/dialog";
 import { Textarea } from "@/design-system/primitives/textarea";
+import { track } from "@/features/analytics/track";
 
 import { approve, type DecisionState, reject, revoke } from "./actions";
 
@@ -47,7 +48,7 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-2">
-        <Dialog>
+        <Dialog onOpenChange={(open) => open && track("approval.dialog-opened", { action: "approve" })}>
           <DialogTrigger asChild>
             <Button disabled={approving || rejecting || approval.status === "done"}>Approve plan</Button>
           </DialogTrigger>
@@ -75,7 +76,7 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
           </DialogContent>
         </Dialog>
 
-        <Dialog>
+        <Dialog onOpenChange={(open) => open && track("approval.dialog-opened", { action: "reject" })}>
           <DialogTrigger asChild>
             <Button variant="outline" disabled={approving || rejecting || approval.status === "done"}>
               Reject plan
@@ -124,7 +125,7 @@ export function RevokeApproval({ plan }: { plan: PlanIdentity }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Dialog>
+      <Dialog onOpenChange={(open) => open && track("approval.dialog-opened", { action: "revoke" })}>
         <DialogTrigger asChild>
           <Button variant="outline" className="w-fit" disabled={revoking || result.status === "done"}>
             Revoke approval

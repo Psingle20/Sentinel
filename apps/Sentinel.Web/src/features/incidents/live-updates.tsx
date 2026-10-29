@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { LiveIndicator, type LiveState } from "@/design-system/patterns/live-indicator";
+import { track } from "@/features/analytics/track";
 import type { LiveEvent } from "@/lib/api/contracts";
 
 const offlinePollMs = 15_000;
@@ -16,6 +17,16 @@ const maxBackoffMs = 30_000;
 export function LiveUpdates({ incidentId }: { incidentId?: string }) {
   const router = useRouter();
   const [state, setState] = useState<LiveState>("reconnecting");
+  const connected = useRef(false);
+
+  // Counts changes of the connection once it has first been live, so every page load is not a reconnect.
+  useEffect(() => {
+    if (connected.current) {
+      track("live.state-changed", { state });
+    } else if (state === "live") {
+      connected.current = true;
+    }
+  }, [state]);
 
   useEffect(() => {
     let source: EventSource | undefined;
