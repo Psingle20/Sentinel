@@ -72,4 +72,60 @@ public sealed class AttestationTests : IDisposable
         (await Verify(command with { Attestation = "not-a-jws" })).IsFailure.ShouldBeTrue();
         (await Verify(command with { Attestation = string.Empty })).IsFailure.ShouldBeTrue();
     }
+
+    private Task<CleanArchitecture.BuildingBlocks.Result<OperatorAttestationClaims>> VerifyOperator(string token, string scope = ApprovalAttestation.SetControlScope, string resource = "controls/emergency-stop", string? contentHash = null) =>
+        new AttestationVerifier(_signer, _time).VerifyOperatorAsync(token, scope, resource, contentHash ?? OperatorContentHash.Compute(new ControlChangeContent(resource, true)), CancellationToken.None);
+
+    private static OperatorAttestationClaims OperatorClaims(string scope = ApprovalAttestation.SetControlScope, string resource = "controls/emergency-stop", string? contentHash = null) => new()
+    {
+        AttestationId = AttestationId.New(),
+        ActorId = "operator@example.test",
+        Scope = scope,
+        Resource = resource,
+        ContentHash = contentHash ?? OperatorContentHash.Compute(new ControlChangeContent(resource, true)),
+        IssuedAt = Commands.Now.AddSeconds(-5),
+        ExpiresAt = Commands.Now.AddMinutes(2),
+        Issuer = ApprovalAttestation.Issuer,
+        Audience = ApprovalAttestation.Audience
+    };
+
+    [Fact]
+    public async Task An_operator_attestation_for_this_action_and_content_is_accepted_and_names_the_actor()
+    {
+        CleanArchitecture.BuildingBlocks.Result<OperatorAttestationClaims> verified = await VerifyOperator(_signer.SignOperator(OperatorClaims()));
+
+        verified.IsSuccess.ShouldBeTrue();
+        verified.Value.ActorId.ShouldBe("operator@example.test");
+    }
+
+    [Theory]
+    [InlineData("scope")]
+    [InlineData("resource")]
+    [InlineData("content")]
+    [InlineData("type")]
+    [InlineData("audience")]
+    [InlineData("expired")]
+    public async Task An_operator_attestation_that_does_not_bind_to_this_action_is_refused(string problem)
+    {
+        string token = problem switch
+        {
+            "scope" => _signer.SignOperator(OperatorClaims(scope: ApprovalAttestation.PublishPolicyScope)),
+            "resource" => _signer.SignOperator(OperatorClaims(resource: "controls/actions/rollback")),
+            "content" => _signer.SignOperator(OperatorClaims(contentHash: OperatorContentHash.Compute(new ControlChangeContent("controls/emergency-stop", false)))),
+            "type" => _signer.SignOperator(OperatorClaims(), tokenType: ApprovalAttestation.TokenType),
+            "audience" => _signer.SignOperator(OperatorClaims() with { Audience = ApprovalAttestation.RuntimeAudience }),
+            _ => _signer.SignOperator(OperatorClaims() with { ExpiresAt = Commands.Now.AddMinutes(-1) })
+        };
+
+        (await VerifyOperator(token)).IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task An_execute_attestation_is_not_an_operator_attestation_and_the_reverse()
+    {
+        ExecuteRemediation command = Commands.Execute(_signer);
+
+        (await VerifyOperator(command.Attestation)).Error.Description.ShouldContain("operator");
+        (await Verify(command with { Attestation = _signer.SignOperator(OperatorClaims()) })).Error.Description.ShouldContain("approval");
+    }
 }
