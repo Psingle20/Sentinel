@@ -100,7 +100,8 @@ public sealed class ModelInvestigator(
                         messages.Add(ModelMessage.Assistant(response.ToolCalls));
                         foreach (ModelToolCall call in response.ToolCalls)
                         {
-                            messages.Add(ModelMessage.ToolResult(call.Id, await RunToolAsync(call, permitted, context, command.Budget.MaxToolCalls, state, timeout.Token)));
+                            string result = await RunToolAsync(call, permitted, context, command.Budget.MaxToolCalls, state, timeout.Token);
+                            messages.Add(ModelMessage.ToolResult(call.Id, InvestigatorPrompt.ToolResult(call.Id, result, promptVersion)));
                         }
 
                         break;

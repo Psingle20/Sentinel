@@ -42,7 +42,7 @@ internal static class Harness
         new RunbookSearchTool(telemetry)
     ];
 
-    private static InvestigationOptions CatalogOptions()
+    internal static InvestigationOptions CatalogOptions()
     {
         var options = new InvestigationOptions();
         options.Metrics["slo_burn_rate"] = "SLO burn rate.";

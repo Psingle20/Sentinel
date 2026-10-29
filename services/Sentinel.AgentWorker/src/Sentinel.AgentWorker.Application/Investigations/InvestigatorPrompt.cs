@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Messaging;
 
@@ -18,9 +19,15 @@ public static class InvestigatorPrompt
     /// <summary>Phase 07: v2 plus remembered similar incidents as hints that are never evidence.</summary>
     public const string V3 = "investigator-v3";
 
-    public const string Version = V3;
+    /// <summary>
+    /// v3 with every tool result stating the ID of the call that returned it. A live model asked to cite the call
+    /// behind each evidence item had only the API's internal call IDs to go by, and cited none it could see.
+    /// </summary>
+    public const string V4 = "investigator-v4";
 
-    public static readonly IReadOnlyList<string> Versions = [V2, V3];
+    public const string Version = V4;
+
+    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4];
 
     public static bool IsKnown(string version) => Versions.Contains(version);
 
@@ -56,7 +63,7 @@ public static class InvestigatorPrompt
             - You cannot change systems. You only read telemetry and propose explanations. Never propose actions:
               Runtime and policy decide remediation.
             - Every evidence item must cite observation IDs exactly as a tool returned them, and the tool call
-              that returned them. Never invent an ID.
+              that returned them{(LabelsToolResults(version) ? ", as the toolCallId the tool result states" : string.Empty)}. Never invent an ID.
             {hypotheses}
             - Record evidence that contradicts a hypothesis as well as evidence that supports it.
             - Give every hypothesis a key from this vocabulary so investigators' explanations merge:
@@ -131,5 +138,45 @@ public static class InvestigatorPrompt
 
         return "Your output was rejected. Fix these problems and reply with the corrected JSON document only:" + Environment.NewLine
             + string.Join(Environment.NewLine, errors.Select(error => $"- {error}"));
+    }
+
+    /// <summary>Whether this version's tool results state the ID of the call that returned them.</summary>
+    public static bool LabelsToolResults(string version) => version is not (V2 or V3);
+
+    /// <summary>
+    /// A tool result as the model reads it. From v4 it opens with the call's ID, so evidence can cite the call; earlier
+    /// versions get the result unchanged, so their executions replay exactly as they ran.
+    /// </summary>
+    public static string ToolResult(string toolCallId, string content, string version)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(toolCallId);
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (!LabelsToolResults(version))
+        {
+            return content;
+        }
+
+        var labelled = new JsonObject { ["toolCallId"] = toolCallId };
+        try
+        {
+            if (JsonNode.Parse(content) is JsonObject result)
+            {
+                foreach ((string name, JsonNode? value) in result.ToList())
+                {
+                    result.Remove(name);
+                    labelled[name] = value;
+                }
+
+                return labelled.ToJsonString();
+            }
+        }
+        catch (JsonException)
+        {
+            // A result that is not a JSON object, such as an error message, is carried as text below.
+        }
+
+        labelled["content"] = content;
+        return labelled.ToJsonString();
     }
 }
