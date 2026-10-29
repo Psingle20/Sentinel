@@ -63,8 +63,11 @@ public static class DomainReplay
 
             Decision recorded = made.Decision;
             var prefix = Incident.Rehydrate(history.Take(index).Select(stored => stored.Event));
-            bool consensus = recorded.AlgorithmVersion == ConsensusSettings.AlgorithmVersion;
-            Decision replayed = IncidentCommandProcessor.Evaluate(prefix, consensus, recorded.Settings ?? current, recorded.DecisionId, recorded.DecidedAt);
+            // Each decision replays by the algorithm it was made with, so a newer algorithm never rewrites history.
+            bool consensus = recorded.AlgorithmVersion is ConsensusSettings.AlgorithmV1 or ConsensusSettings.AlgorithmVersion;
+            Decision replayed = consensus
+                ? IncidentCommandProcessor.Evaluate(prefix, true, recorded.Settings ?? current, recorded.DecisionId, recorded.DecidedAt, recorded.AlgorithmVersion)
+                : IncidentCommandProcessor.Evaluate(prefix, false, recorded.Settings ?? current, recorded.DecisionId, recorded.DecidedAt);
             bool matches = replayed.Result == recorded.Result
                 && replayed.LeadingHypothesisId == recorded.LeadingHypothesisId
                 && Math.Abs(replayed.Confidence - recorded.Confidence) < ConfidenceTolerance

@@ -8,7 +8,13 @@ namespace Sentinel.Runtime.Domain.Incidents;
 /// <summary>Configured weights and thresholds for the consensus algorithm (versioned with the decision).</summary>
 public sealed record ConsensusSettings
 {
-    public const string AlgorithmVersion = "consensus-v1";
+    /// <summary>
+    /// The version new decisions are made by. v2 no longer counts a mechanism of a leading change, such as Redis
+    /// saturation caused by the changed service, as a competing explanation; decisions made by v1 replay by v1.
+    /// </summary>
+    public const string AlgorithmVersion = "consensus-v2";
+
+    public const string AlgorithmV1 = "consensus-v1";
 
     /// <summary>Added to the denominator of confidence, so a thinly supported leader is not certain even unopposed.</summary>
     public const double Smoothing = 0.5;

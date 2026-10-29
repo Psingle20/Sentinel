@@ -76,13 +76,13 @@ public static class IncidentCommandProcessor
     /// The decision the incident's current evidence implies. Pure, so a domain replay (Phase 07) can
     /// re-run a recorded decision on the stream prefix it was made from and compare.
     /// </summary>
-    public static Decision Evaluate(Incident incident, bool useConsensus, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now)
+    public static Decision Evaluate(Incident incident, bool useConsensus, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now, string algorithm = ConsensusSettings.AlgorithmVersion)
     {
         ArgumentNullException.ThrowIfNull(incident);
         ArgumentNullException.ThrowIfNull(settings);
 
         Decision decision = useConsensus
-            ? Consensus.Decide(incident, [.. incident.Reports.SelectMany(reported => reported.Report.Challenges)], settings, decisionId, now) with { Settings = settings }
+            ? Consensus.Decide(incident, [.. incident.Reports.SelectMany(reported => reported.Report.Challenges)], settings, decisionId, now, algorithm) with { Settings = settings }
             : FalsificationCheck.Decide(incident, decisionId, now);
         return decision with { MissingEvidence = [.. incident.Reports.SelectMany(reported => reported.Report.Unknowns).Distinct(StringComparer.Ordinal)] };
     }

@@ -130,8 +130,51 @@ public sealed class ConsensusTests
         Consensus.Decide(incident, [], Settings with { AbstainBelowConfidence = 0.99 }, DecisionId.New(), Now).Result.ShouldBe(DecisionResult.Abstained);
     }
 
+    [Fact]
+    public void Redis_saturation_caused_by_the_leading_change_agrees_with_it_instead_of_competing()
+    {
+        var saturation = HypothesisId.New();
+        Incident incident = WithSaturation(saturation, "redis-saturation");
+
+        Decision current = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now);
+        Decision v1 = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now, ConsensusSettings.AlgorithmV1);
+
+        current.Result.ShouldBe(DecisionResult.Diagnosed);
+        current.LeadingHypothesisId.ShouldBe(Lead);
+        current.RejectedHypothesisIds.ShouldNotContain(saturation);
+        current.DissentingHypothesisIds.ShouldNotContain(saturation);
+        v1.Result.ShouldBe(DecisionResult.Abstained, "v1 counted the leak's own mechanism as the runner-up");
+        v1.AlgorithmVersion.ShouldBe(ConsensusSettings.AlgorithmV1);
+        v1.InputsHash.ShouldNotBe(current.InputsHash);
+    }
+
+    [Fact]
+    public void Redis_saturation_blamed_on_another_service_still_competes_with_the_change()
+    {
+        var saturation = HypothesisId.New();
+
+        Decision decision = Consensus.Decide(WithSaturation(saturation, "redis-saturation:reporting-worker"), [], Settings, DecisionId.New(), Now);
+
+        decision.Result.ShouldBe(DecisionResult.Abstained);
+    }
+
     private static readonly HypothesisId Lead = HypothesisId.New();
     private static readonly HypothesisId Other = HypothesisId.New();
+
+    /// <summary>The leak with its change and a saturation hypothesis that shares only the connection-surge evidence.</summary>
+    private static Incident WithSaturation(HypothesisId saturation, string key)
+    {
+        (Incident incident, InvestigationId investigation) = Detected(60, Deployment("checkout-service", "v2.4.1", "v2.4.0", 0, 20, "d1"));
+        Evidence[] evidence =
+        [
+            .. Corroborated(),
+            Supporting(saturation, 0.85, 20, 50, "surge-1", "surge-2") with { IndependenceGroup = "redis-connections:checkout-service" }
+        ];
+        incident.RecordInvestigation(Report(investigation, evidence,
+            Hypothesis(Lead, "The v2.4.1 deployment leaks connections.", Checkout, ObservationId.From("deploy-controller:deployment:d1:started")) with { Key = "change:deploy-controller:deployment:d1:started" },
+            Hypothesis(saturation, "Redis ran out of client connections.") with { Key = key }), Start.AddSeconds(200)).IsSuccess.ShouldBeTrue();
+        return incident;
+    }
 
     private static Evidence[] Corroborated() =>
     [

@@ -13,17 +13,28 @@ namespace Sentinel.Runtime.Domain.Incidents;
 /// </summary>
 public static class Consensus
 {
-    public static Decision Decide(Incident incident, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now)
+    private const string ChangeKey = "change:";
+    private const string RedisSaturationKey = "redis-saturation";
+
+    public static Decision Decide(Incident incident, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now) =>
+        Decide(incident, challenges, settings, decisionId, now, ConsensusSettings.AlgorithmVersion);
+
+    /// <summary>Decides by <paramref name="algorithm"/>, so a replay applies the rules the recorded decision was made by.</summary>
+    public static Decision Decide(Incident incident, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, DecisionId decisionId, DateTimeOffset now, string algorithm)
     {
         ArgumentNullException.ThrowIfNull(incident);
         ArgumentNullException.ThrowIfNull(challenges);
         ArgumentNullException.ThrowIfNull(settings);
+        if (algorithm is not (ConsensusSettings.AlgorithmV1 or ConsensusSettings.AlgorithmVersion))
+        {
+            throw new ArgumentException($"Unknown consensus algorithm '{algorithm}'.", nameof(algorithm));
+        }
 
         IReadOnlyList<Evidence> evidence = incident.AcceptedEvidence();
         IReadOnlyList<Hypothesis> hypotheses = incident.AllHypotheses();
         int totalEvidence = incident.Reports.Sum(report => report.Report.Evidence.Count);
         double completeness = Completeness(evidence, totalEvidence, settings);
-        string inputsHash = InputsHash(hypotheses, evidence, challenges, settings);
+        string inputsHash = InputsHash(hypotheses, evidence, challenges, settings, algorithm);
 
         HypothesisAssessment[] assessments = [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings))];
         HypothesisAssessment[] standing = [.. assessments.Where(assessment => !assessment.Falsified).OrderByDescending(assessment => assessment.Score).ThenBy(assessment => assessment.HypothesisId.ToString(), StringComparer.Ordinal)];
@@ -33,12 +44,18 @@ public static class Consensus
         if (standing.Length == 0)
         {
             checks.Add(new CheckResult("hypothesis-survives-challenge", false, "Every hypothesis was falsified or none was proposed."));
-            return Abstain(decisionId, falsified, completeness, "No explanation survived challenge.", checks, inputsHash, now) with { Assessments = assessments };
+            return Abstain(decisionId, falsified, completeness, "No explanation survived challenge.", checks, inputsHash, now, algorithm) with { Assessments = assessments };
         }
 
         HypothesisAssessment leader = standing[0];
-        HypothesisAssessment? runnerUp = standing.Length > 1 ? standing[1] : null;
         Hypothesis leading = hypotheses.First(hypothesis => hypothesis.HypothesisId == leader.HypothesisId);
+
+        // v2: an explanation of how the leading change caused the symptoms agrees with it, so it is neither the runner-up nor dissent.
+        HypothesisId[] mechanisms = algorithm == ConsensusSettings.AlgorithmV1
+            ? []
+            : [.. standing.Skip(1).Where(other => IsMechanismOf(hypotheses.First(hypothesis => hypothesis.HypothesisId == other.HypothesisId), leading)).Select(other => other.HypothesisId)];
+        HypothesisAssessment[] competitors = [.. standing.Skip(1).Where(other => !mechanisms.Contains(other.HypothesisId))];
+        HypothesisAssessment? runnerUp = competitors.FirstOrDefault();
 
         CheckResult precedence = Precedence(incident, leading, evidence);
         checks.Add(precedence);
@@ -49,7 +66,7 @@ public static class Consensus
 
         double margin = runnerUp is null ? leader.Score : leader.Score - runnerUp.Score;
         double confidence = Math.Clamp(leader.Score / (leader.Score + Math.Max(runnerUp?.Score ?? 0, 0) + ConsensusSettings.Smoothing), 0, 0.95) * completeness;
-        HypothesisId[] dissent = [.. standing.Skip(1).Where(other => leader.Score - other.Score < settings.DissentMargin).Select(other => other.HypothesisId)];
+        HypothesisId[] dissent = [.. competitors.Where(other => leader.Score - other.Score < settings.DissentMargin).Select(other => other.HypothesisId)];
         checks.Add(new CheckResult(
             "confidence-above-threshold",
             confidence >= settings.AbstainBelowConfidence,
@@ -58,7 +75,7 @@ public static class Consensus
         if (!checks.TrueForAll(check => check.Passed) || leader.Score <= 0)
         {
             string failed = string.Join("; ", checks.Where(check => !check.Passed).Select(check => check.Detail));
-            return Abstain(decisionId, falsified, completeness, $"The leading explanation is not established: {failed}", checks, inputsHash, now) with { DissentingHypothesisIds = dissent, Assessments = assessments, Confidence = Math.Round(confidence, 4) };
+            return Abstain(decisionId, falsified, completeness, $"The leading explanation is not established: {failed}", checks, inputsHash, now, algorithm) with { DissentingHypothesisIds = dissent, Assessments = assessments, Confidence = Math.Round(confidence, 4) };
         }
 
         return new Decision
@@ -66,18 +83,28 @@ public static class Consensus
             DecisionId = decisionId,
             Result = DecisionResult.Diagnosed,
             LeadingHypothesisId = leader.HypothesisId,
-            RejectedHypothesisIds = [.. assessments.Where(assessment => assessment.HypothesisId != leader.HypothesisId && !dissent.Contains(assessment.HypothesisId)).Select(assessment => assessment.HypothesisId)],
+            RejectedHypothesisIds = [.. assessments.Where(assessment => assessment.HypothesisId != leader.HypothesisId && !dissent.Contains(assessment.HypothesisId) && !mechanisms.Contains(assessment.HypothesisId)).Select(assessment => assessment.HypothesisId)],
             DissentingHypothesisIds = dissent,
             Confidence = confidence,
             EvidenceCompleteness = completeness,
             Rationale = $"{leading.Statement} It scores {leader.Score:F2} from {leader.IndependentSupport} independent evidence families against {runnerUp?.Score ?? 0:F2} for the next explanation, and it survived {challenges.Count(challenge => challenge.HypothesisId == leader.HypothesisId && challenge.Verdict == ChallengeVerdict.Survived)} challenge(s).",
             Checks = checks,
             Assessments = assessments,
-            AlgorithmVersion = ConsensusSettings.AlgorithmVersion,
+            AlgorithmVersion = algorithm,
             InputsHash = inputsHash,
             DecidedAt = now
         };
     }
+
+    /// <summary>
+    /// Redis saturation with no culprit, or caused by the leading change's own service, is how that change produced the
+    /// symptoms (the key vocabulary's <c>redis-saturation[:culprit]</c>), not another cause.
+    /// </summary>
+    private static bool IsMechanismOf(Hypothesis candidate, Hypothesis leading) =>
+        leading.Key is { } cause && cause.StartsWith(ChangeKey, StringComparison.Ordinal)
+        && candidate.Key is { } mechanism
+        && (mechanism == RedisSaturationKey
+            || leading.SuspectedServiceId is { } service && mechanism == $"{RedisSaturationKey}:{service}");
 
     private static HypothesisAssessment Assess(Incident incident, Hypothesis hypothesis, IReadOnlyList<Evidence> evidence, IReadOnlyList<Challenge> challenges, ConsensusSettings settings)
     {
@@ -200,7 +227,7 @@ public static class Consensus
             : new CheckResult(FalsificationCheck.Precedence, false, $"The earliest supporting signal began at {earliest:O}, not before symptom onset at {onset:O}.");
     }
 
-    private static Decision Abstain(DecisionId decisionId, IReadOnlyList<HypothesisId> rejected, double completeness, string rationale, IReadOnlyList<CheckResult> checks, string inputsHash, DateTimeOffset now) => new()
+    private static Decision Abstain(DecisionId decisionId, IReadOnlyList<HypothesisId> rejected, double completeness, string rationale, IReadOnlyList<CheckResult> checks, string inputsHash, DateTimeOffset now, string algorithm) => new()
     {
         DecisionId = decisionId,
         Result = DecisionResult.Abstained,
@@ -209,15 +236,15 @@ public static class Consensus
         EvidenceCompleteness = completeness,
         Rationale = rationale,
         Checks = checks,
-        AlgorithmVersion = ConsensusSettings.AlgorithmVersion,
+        AlgorithmVersion = algorithm,
         InputsHash = inputsHash,
         DecidedAt = now
     };
 
     /// <summary>Identifies the decision's inputs, so a replay can show it saw exactly the same evidence.</summary>
-    private static string InputsHash(IReadOnlyList<Hypothesis> hypotheses, IReadOnlyList<Evidence> evidence, IReadOnlyList<Challenge> challenges, ConsensusSettings settings)
+    private static string InputsHash(IReadOnlyList<Hypothesis> hypotheses, IReadOnlyList<Evidence> evidence, IReadOnlyList<Challenge> challenges, ConsensusSettings settings, string algorithm)
     {
-        var text = new StringBuilder(ConsensusSettings.AlgorithmVersion);
+        var text = new StringBuilder(algorithm);
         foreach (Hypothesis hypothesis in hypotheses.OrderBy(item => item.HypothesisId.ToString(), StringComparer.Ordinal))
         {
             text.Append('|').Append(hypothesis.HypothesisId).Append(':').Append(hypothesis.SuspectedChangeObservationId);
