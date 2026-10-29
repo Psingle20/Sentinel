@@ -15,6 +15,13 @@ using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using ContractDirection = Sentinel.Contracts.Investigations.EvidenceDirection;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Detection;
+using Sentinel.Runtime.Application.Incidents.Commands;
+using Sentinel.Runtime.Application.Projections;
+using Sentinel.Runtime.Domain.Incidents.Events;
+using Sentinel.Runtime.Application.BusinessProcesses.Incidents;
+using Sentinel.Runtime.Application.BusinessProcesses.Projections;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -105,8 +112,8 @@ public sealed class RuntimeFlowTests : IDisposable
         await _runtime.Owner.SendAsync(incidentId, new UpdateChangesCommand([Change()], LinkNew: true), CancellationToken.None);
 
         InvestigationId investigation = (await StepsAsync(steps => steps.RequestInvestigationsAsync(incidentId, CancellationToken.None))).ShouldHaveSingleItem();
-        await ControlAsync(control => control.HandleInvestigationAsync(Report(incidentId, investigation), CancellationToken.None));
-        await ControlAsync(control => control.HandleInvestigationAsync(Report(incidentId, investigation), CancellationToken.None));
+        await RequestAsync(new RecordInvestigationReportRequest(incidentId, Report(incidentId, investigation).ToReport()));
+        await RequestAsync(new RecordInvestigationReportRequest(incidentId, Report(incidentId, investigation).ToReport()));
         _runtime.Workflows.Signals.Count(signal => signal.Kind == IncidentSignalKind.InvestigationReported).ShouldBe(2);
 
         IncidentSnapshot decided = await StepsAsync(steps => steps.DecideAsync(incidentId, CancellationToken.None));
@@ -125,8 +132,8 @@ public sealed class RuntimeFlowTests : IDisposable
         ExecuteRemediation execute = _runtime.Outbox.Of<ExecuteRemediation>().ShouldHaveSingleItem();
         execute.FencingToken.ShouldBe(executing.FencingToken!.Value);
 
-        await ControlAsync(control => control.ConfirmStartAsync(new RemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, plan.PlanId, plan.PlanVersion, execute.FencingToken), CancellationToken.None));
-        await ControlAsync(control => control.HandleExecutedAsync(Executed(incidentId, plan), CancellationToken.None));
+        await RequestAsync(new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, plan.PlanId, plan.PlanVersion, execute.FencingToken));
+        await RequestAsync(Executed(incidentId, plan));
         IncidentSnapshot scheduled = await StepsAsync(steps => steps.ScheduleRecoveryAsync(incidentId, CancellationToken.None));
         scheduled.State.ShouldBe(IncidentState.Verifying);
 
@@ -140,8 +147,7 @@ public sealed class RuntimeFlowTests : IDisposable
     {
         IncidentId incidentId = await OpenAsync();
 
-        RemediationStartResponse response = await ControlAsync(control => control.ConfirmStartAsync(
-            new RemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, PlanId.New(), 1, 99), CancellationToken.None));
+        RemediationStartResponse response = (await RequestAsync(new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, PlanId.New(), 1, 99))).Value;
 
         response.Confirmed.ShouldBeFalse();
     }
@@ -154,7 +160,7 @@ public sealed class RuntimeFlowTests : IDisposable
         string before = JsonSerializer.Serialize(await _runtime.Store.GetDetailAsync(incidentId, CancellationToken.None), SentinelJson.Options);
 
         _runtime.Store.DeleteProjections();
-        int rebuilt = await _runtime.InScopeAsync(provider => provider.GetRequiredService<ProjectionRebuilder>().RebuildAsync(CancellationToken.None));
+        int rebuilt = (await RequestAsync(new RebuildProjectionsRequest())).Value;
 
         rebuilt.ShouldBe(1);
         JsonSerializer.Serialize(await _runtime.Store.GetDetailAsync(incidentId, CancellationToken.None), SentinelJson.Options).ShouldBe(before);
@@ -165,7 +171,7 @@ public sealed class RuntimeFlowTests : IDisposable
     {
         IncidentId incidentId = await OpenAsync();
 
-        Result<IncidentStateView> state = await _runtime.InScopeAsync(provider => provider.GetRequiredService<IncidentQueryService>().StateAsync(incidentId, CancellationToken.None));
+        Result<IncidentStateView> state = await RequestAsync(new GetIncidentStateRequest(incidentId));
 
         state.Value.ProjectionLag.ShouldBe(0);
         state.Value.StreamVersion.ShouldBe(state.Value.ProjectionVersion!.Value);
@@ -188,8 +194,8 @@ public sealed class RuntimeFlowTests : IDisposable
     private Task<Result> RequestAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest request) =>
         _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
 
-    private Task<T> ControlAsync<T>(Func<RemediationControlService, Task<T>> step) =>
-        _runtime.InScopeAsync(provider => step(provider.GetRequiredService<RemediationControlService>()));
+    private Task<Result<TResult>> RequestAsync<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult> request) =>
+        _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
 
     private static LinkedChange Change() => IncidentScenario.Deployment("checkout-service", "v2.4.1", "v2.4.0", -60, -40, "d1");
 
@@ -251,15 +257,6 @@ public sealed class RuntimeFlowTests : IDisposable
     private static RecordApprovalRequest Approval(IncidentId incidentId, RemediationPlan plan) =>
         new(incidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test", "header.claims.signature");
 
-    private static RemediationExecuted Executed(IncidentId incidentId, RemediationPlan plan) => new()
-    {
-        TenantId = InMemoryRuntime.Tenant,
-        EnvironmentId = InMemoryRuntime.Environment,
-        IncidentId = incidentId,
-        PlanId = plan.PlanId,
-        PlanVersion = plan.PlanVersion,
-        Outcome = ExecutionOutcome.ActionVerified,
-        Detail = "Rolled back.",
-        CompletedAt = IncidentScenario.Start.AddMinutes(4)
-    };
+    private static RecordExecutionResultRequest Executed(IncidentId incidentId, RemediationPlan plan) =>
+        new(incidentId, plan.PlanId, plan.PlanVersion, ExecutionOutcome.ActionVerified.ToDomain(), "Rolled back.");
 }

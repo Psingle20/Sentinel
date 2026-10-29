@@ -9,9 +9,18 @@ using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Application.Memory;
 using Sentinel.Runtime.Domain.Incidents;
-using Sentinel.Runtime.Infrastructure.Storage;
+using Sentinel.Runtime.Infrastructure.Persistence;
 using Shouldly;
 using static Sentinel.Runtime.Tests.IncidentScenario;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Incidents.Commands;
+using Sentinel.Runtime.Application.Options;
+using Sentinel.Runtime.Domain.Incidents.Events;
+using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Messaging;
+using Sentinel.Runtime.Application.BusinessProcesses.Incidents;
+using Sentinel.Runtime.Application.BusinessProcesses.Memory;
+using Sentinel.Runtime.Application.BusinessTasks.Queries.Incidents;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -72,18 +81,18 @@ public sealed class MemoryReplayTests : IDisposable
     {
         IncidentId held = await ResolveAsync(InMemoryRuntime.Tenant, "held");
         IncidentId expiring = await ResolveAsync(InMemoryRuntime.Tenant, "expiring");
-        await InMemory(memory => memory.SetLegalHoldAsync(held, true, "operator@example.test", CancellationToken.None));
+        await RequestAsync(new SetLegalHoldRequest(held, true, "operator@example.test"));
         _runtime.Time.Advance(TimeSpan.FromDays(401));
 
         IncidentId current = await OpenAsync(InMemoryRuntime.Tenant, "now");
-        IReadOnlyList<SimilarIncident> similar = (await InMemory(memory => memory.SimilarToAsync(current, CancellationToken.None)))!;
+        IReadOnlyList<SimilarIncident> similar = (await RequestAsync(new GetSimilarIncidentsRequest(current))).Value!;
         similar.Select(match => match.IncidentId).ShouldBe([held]);
 
-        PurgeReport dryRun = await InMemory(memory => memory.PurgeAsync(dryRun: true, "operator@example.test", 100, CancellationToken.None));
+        PurgeReport dryRun = (await RequestAsync(new PurgeIncidentMemoryRequest(true, "operator@example.test", 100))).Value;
         dryRun.IncidentIds.ShouldBe([expiring]);
         _runtime.Memory.Records.Single(record => record.IncidentId == expiring).Retention.DeletedAt.ShouldBeNull();
 
-        PurgeReport purged = await InMemory(memory => memory.PurgeAsync(dryRun: false, "operator@example.test", 100, CancellationToken.None));
+        PurgeReport purged = (await RequestAsync(new PurgeIncidentMemoryRequest(false, "operator@example.test", 100))).Value;
         purged.IncidentIds.ShouldBe([expiring]);
         IncidentMemoryView tombstone = _runtime.Memory.Records.Single(record => record.IncidentId == expiring);
         tombstone.Retention.DeletedAt.ShouldNotBeNull();
@@ -99,23 +108,23 @@ public sealed class MemoryReplayTests : IDisposable
         await _runtime.Owner.SendAsync(deleted, new EscalateCommand("Responders take it from here."), CancellationToken.None);
         _runtime.Memory.Records.ShouldContain(record => record.IncidentId == deleted);
 
-        (await InMemory(memory => memory.DeleteAsync(deleted, "privacy@example.test", "Erasure request.", CancellationToken.None))).IsSuccess.ShouldBeTrue();
+        (await RequestAsync(new DeleteIncidentMemoryRequest(deleted, "privacy@example.test", "Erasure request."))).IsSuccess.ShouldBeTrue();
         (await _runtime.Owner.SendAsync(deleted, new ResolveClearedCommand("The symptom cleared."), CancellationToken.None)).Value.Snapshot.State.ShouldBe(IncidentState.Resolved);
 
         IncidentMemoryView tombstone = _runtime.Memory.Records.Single(record => record.IncidentId == deleted);
         tombstone.Title.ShouldBe("[deleted]");
         tombstone.Retention.DeletedBy.ShouldBe("privacy@example.test");
         IncidentId current = await OpenAsync(InMemoryRuntime.Tenant, "b");
-        (await InMemory(memory => memory.SimilarToAsync(current, CancellationToken.None)))!.ShouldBeEmpty();
+        (await RequestAsync(new GetSimilarIncidentsRequest(current))).Value!.ShouldBeEmpty();
     }
 
     [Fact]
     public async Task Memory_on_legal_hold_cannot_be_deleted()
     {
         IncidentId held = await ResolveAsync(InMemoryRuntime.Tenant, "a");
-        await InMemory(memory => memory.SetLegalHoldAsync(held, true, "operator@example.test", CancellationToken.None));
+        await RequestAsync(new SetLegalHoldRequest(held, true, "operator@example.test"));
 
-        (await InMemory(memory => memory.DeleteAsync(held, "privacy@example.test", "Erasure request.", CancellationToken.None))).Error.ShouldBe(MemoryErrors.LegalHold);
+        (await RequestAsync(new DeleteIncidentMemoryRequest(held, "privacy@example.test", "Erasure request."))).Error.ShouldBe(MemoryErrors.LegalHold);
     }
 
     [Fact]
@@ -128,7 +137,7 @@ public sealed class MemoryReplayTests : IDisposable
         int evaluations = _runtime.Policy.Calls;
         int memory = _runtime.Memory.Records.Count;
 
-        DomainReplayResult replay = (await InScope<DomainReplayService, DomainReplayResult?>(service => service.ReplayAsync(incidentId, CancellationToken.None)))!;
+        DomainReplayResult replay = (await RequestAsync(new ReplayDomainRequest(incidentId))).Value!;
 
         replay.Level.ShouldBe(ReplayLevel.Domain);
         replay.Deterministic.ShouldBeTrue();
@@ -149,7 +158,7 @@ public sealed class MemoryReplayTests : IDisposable
         IncidentDetail stored = (await _runtime.Store.GetDetailAsync(incidentId, CancellationToken.None))!;
         await _runtime.Store.SaveProjectionAsync(stored with { Summary = stored.Summary with { Title = "edited by hand" } }, isOpen: false, CancellationToken.None);
 
-        DomainReplayResult replay = (await InScope<DomainReplayService, DomainReplayResult?>(service => service.ReplayAsync(incidentId, CancellationToken.None)))!;
+        DomainReplayResult replay = (await RequestAsync(new ReplayDomainRequest(incidentId))).Value!;
 
         replay.ProjectionMatches.ShouldBeFalse();
         replay.ProjectionDifferences.ShouldContain(difference => difference.StartsWith("$.summary.title", StringComparison.Ordinal));
@@ -167,8 +176,8 @@ public sealed class MemoryReplayTests : IDisposable
         var changed = new RuntimeOptions();
         InMemoryRuntime.Configure(changed);
         changed.Consensus.DefaultReliability = 0.1;
-        var replay = new DomainReplayService(_runtime.Store, _runtime.Time, Options.Create(changed));
-        DomainReplayResult result = (await replay.ReplayAsync(incidentId, CancellationToken.None))!;
+        var replay = new ReplayDomainQueryHandler(_runtime.Store, _runtime.Time, Options.Create(changed));
+        DomainReplayResult result = (await replay.Handle(new ReplayDomainQuery(incidentId), CancellationToken.None)).Value!;
 
         DecisionReplay decision = result.Decisions.ShouldHaveSingleItem();
         decision.SettingsRecorded.ShouldBeTrue();
@@ -182,7 +191,7 @@ public sealed class MemoryReplayTests : IDisposable
     {
         IncidentId incidentId = await ResolveAsync(InMemoryRuntime.Tenant, "a");
 
-        Postmortem postmortem = (await InScope<PostmortemService, Postmortem?>(service => service.BuildAsync(incidentId, CancellationToken.None)))!;
+        Postmortem postmortem = (await RequestAsync(new GetPostmortemRequest(incidentId))).Value!;
 
         IReadOnlyList<StoredEvent> history = await _runtime.Store.ReadStreamAsync(incidentId, CancellationToken.None);
         HashSet<string> versions = [.. history.Select(stored => stored.Version.ToString(CultureInfo.InvariantCulture))];
@@ -220,7 +229,7 @@ public sealed class MemoryReplayTests : IDisposable
     {
         IncidentId incidentId = await ResolveAsync(InMemoryRuntime.Tenant, "a");
 
-        IncidentRunRecord record = (await InScope<PostmortemService, IncidentRunRecord?>(service => service.RunRecordAsync(incidentId, "scenarios-v1", CancellationToken.None)))!;
+        IncidentRunRecord record = (await RequestAsync(new GetRunRecordRequest(incidentId, "scenarios-v1"))).Value!;
 
         record.SchemaVersion.ShouldBe(2);
         record.Versions.ShouldNotBeNull().Dataset.ShouldBe("scenarios-v1");
@@ -288,7 +297,12 @@ public sealed class MemoryReplayTests : IDisposable
 
     private Task<T> InScope<T>(Func<IncidentSteps, Task<T>> action) => InScope<IncidentSteps, T>(action);
 
-    private Task<T> InMemory<T>(Func<IncidentMemoryService, Task<T>> action) => InScope<IncidentMemoryService, T>(action);
+    // Orleans also names a type IRequest.
+    private Task<Result> RequestAsync(CleanArchitecture.BuildingBlocks.Messaging.IRequest request) =>
+        _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
+
+    private Task<Result<TResult>> RequestAsync<TResult>(CleanArchitecture.BuildingBlocks.Messaging.IRequest<TResult> request) =>
+        _runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(request, CancellationToken.None));
 
     private Task<T> InScope<TService, T>(Func<TService, Task<T>> action)
         where TService : notnull =>

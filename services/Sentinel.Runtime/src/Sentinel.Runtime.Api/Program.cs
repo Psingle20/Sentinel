@@ -1,5 +1,5 @@
 using Sentinel.Runtime.Api;
-using Sentinel.Runtime.Infrastructure;
+using Sentinel.Runtime.Infrastructure.DependencyInjection;
 using Sentinel.Runtime.Infrastructure.Messaging;
 using Sentinel.ServiceDefaults;
 

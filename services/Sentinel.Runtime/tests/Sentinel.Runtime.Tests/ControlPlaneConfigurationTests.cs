@@ -5,6 +5,10 @@ using Sentinel.Contracts.Messaging;
 using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Application.ControlPlane;
 using Shouldly;
+using Sentinel.Runtime.Application.Options;
+using Sentinel.Runtime.Application.Abstractions.Configuration;
+using Sentinel.Runtime.Application.BusinessTasks.Commands.Configuration;
+using Sentinel.Runtime.Application.BusinessTasks.Queries.Configuration;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -36,8 +40,21 @@ public sealed class ControlPlaneConfigurationTests
 
     private static string Json(RuntimeConfigurationDocument document) => JsonSerializer.Serialize(document with { Version = "x" }, SentinelJson.Options);
 
-    private static RuntimeConfigurationService Service(InMemoryStore store) =>
-        new(new VersionedDocumentPublisher<RuntimeConfigurationDocument>(store, TimeProvider.System), new RuntimeDeploymentOptions(Deployed));
+    private sealed class RecordingActivator : IRuntimeConfigurationActivator
+    {
+        public List<PublishedDocument<RuntimeConfigurationDocument>> Activated { get; } = [];
+
+        public void Activate(PublishedDocument<RuntimeConfigurationDocument> published) => Activated.Add(published);
+    }
+
+    private static readonly RuntimeDeploymentOptions Deployment = new(Deployed);
+
+    private static async Task<DocumentState<RuntimeConfigurationDocument>> CurrentDocumentAsync(VersionedDocumentPublisher<RuntimeConfigurationDocument> publisher) =>
+        (await new GetRuntimeConfigurationQueryHandler(publisher, Deployment).Handle(new GetRuntimeConfigurationQuery(), CancellationToken.None)).Value;
+
+    private static Task<Result<DocumentVersion>> PublishAsync(VersionedDocumentPublisher<RuntimeConfigurationDocument> publisher, RecordingActivator activator, RuntimeConfigurationDocument document) =>
+        new PublishRuntimeConfigurationCommandHandler(publisher, Deployment, activator).Handle(
+            new PublishRuntimeConfigurationCommand(document, RuntimeConfigurationMapping.DeploymentVersion, "operator@example.test"), CancellationToken.None);
 
     [Fact]
     public void The_document_round_trips_the_deployed_options()
@@ -113,40 +130,39 @@ public sealed class ControlPlaneConfigurationTests
     [Fact]
     public async Task The_deployment_configuration_is_current_until_an_operator_publishes()
     {
-        var store = new InMemoryStore();
-        RuntimeConfigurationService service = Service(store);
+        var publisher = new VersionedDocumentPublisher<RuntimeConfigurationDocument>(new InMemoryStore(), TimeProvider.System);
+        var activator = new RecordingActivator();
 
-        DocumentState<RuntimeConfigurationDocument> before = await service.CurrentAsync(CancellationToken.None);
-        Result<PublishedDocument<RuntimeConfigurationDocument>> published = await service.PublishAsync(
-            before.Document with { Version = "runtime-2026.10.29.1", Workflow = before.Document.Workflow with { ApprovalTimeout = TimeSpan.FromMinutes(15) } },
-            RuntimeConfigurationMapping.DeploymentVersion,
-            "operator@example.test",
-            CancellationToken.None);
+        DocumentState<RuntimeConfigurationDocument> before = await CurrentDocumentAsync(publisher);
+        Result<DocumentVersion> published = await PublishAsync(
+            publisher,
+            activator,
+            before.Document with { Version = "runtime-2026.10.29.1", Workflow = before.Document.Workflow with { ApprovalTimeout = TimeSpan.FromMinutes(15) } });
 
         before.Published.ShouldBeFalse();
         published.IsSuccess.ShouldBeTrue();
-        published.Value.Version.BasedOn.ShouldBe(RuntimeConfigurationMapping.DeploymentVersion);
-        DocumentState<RuntimeConfigurationDocument> after = await service.CurrentAsync(CancellationToken.None);
+        published.Value.BasedOn.ShouldBe(RuntimeConfigurationMapping.DeploymentVersion);
+        activator.Activated.ShouldHaveSingleItem().Version.ShouldBe(published.Value);
+        DocumentState<RuntimeConfigurationDocument> after = await CurrentDocumentAsync(publisher);
         after.Published.ShouldBeTrue();
         after.Document.Workflow.ApprovalTimeout.ShouldBe(TimeSpan.FromMinutes(15));
-        (await service.HistoryAsync(CancellationToken.None)).Select(version => version.Version).ShouldBe(["runtime-2026.10.29.1", RuntimeConfigurationMapping.DeploymentVersion]);
+        IReadOnlyList<DocumentVersion> history = (await new GetRuntimeConfigurationHistoryQueryHandler(publisher, Deployment).Handle(new GetRuntimeConfigurationHistoryQuery(), CancellationToken.None)).Value;
+        history.Select(version => version.Version).ShouldBe(["runtime-2026.10.29.1", RuntimeConfigurationMapping.DeploymentVersion]);
     }
 
     [Fact]
     public async Task An_invalid_document_is_never_published()
     {
         var store = new InMemoryStore();
-        RuntimeConfigurationService service = Service(store);
-        RuntimeConfigurationDocument seed = (await service.CurrentAsync(CancellationToken.None)).Document;
+        var publisher = new VersionedDocumentPublisher<RuntimeConfigurationDocument>(store, TimeProvider.System);
+        var activator = new RecordingActivator();
+        RuntimeConfigurationDocument seed = (await CurrentDocumentAsync(publisher)).Document;
 
-        Result<PublishedDocument<RuntimeConfigurationDocument>> refused = await service.PublishAsync(
-            seed with { Version = "runtime-bad", Workflow = seed.Workflow with { ApprovalTimeout = TimeSpan.Zero } },
-            RuntimeConfigurationMapping.DeploymentVersion,
-            "operator@example.test",
-            CancellationToken.None);
+        Result<DocumentVersion> refused = await PublishAsync(publisher, activator, seed with { Version = "runtime-bad", Workflow = seed.Workflow with { ApprovalTimeout = TimeSpan.Zero } });
 
         refused.IsFailure.ShouldBeTrue();
         refused.Error.Code.ShouldBe("Configuration.Invalid");
         store.Versions.ShouldBeEmpty();
+        activator.Activated.ShouldBeEmpty();
     }
 }

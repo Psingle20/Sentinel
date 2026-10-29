@@ -45,23 +45,6 @@ public sealed class LayerDependencyTests
         "Sentinel.Executor"
     ];
 
-    // Rules 8 and 9 (ADR-020): consumers and controllers Runtime's own refactoring step migrates.
-    private static readonly string[] PendingConsumers =
-    [
-        "Sentinel.Runtime.Infrastructure.ObservationRecordedHandler",
-        "Sentinel.Runtime.Infrastructure.InvestigationCompletedHandler",
-        "Sentinel.Runtime.Infrastructure.RemediationExecutedHandler"
-    ];
-
-    private static readonly string[] PendingControllers =
-    [
-        "Sentinel.Runtime.Api.Controllers.IncidentsController",
-        "Sentinel.Runtime.Api.Controllers.MemoryController",
-        "Sentinel.Runtime.Api.Controllers.RemediationController",
-        "Sentinel.Runtime.Api.Controllers.ConfigurationController",
-        "Sentinel.Runtime.Api.Controllers.AdminController"
-    ];
-
     [Fact]
     public void Domain_references_only_core_building_blocks_and_contract_primitives()
     {
@@ -185,11 +168,11 @@ public sealed class LayerDependencyTests
 
     [Fact]
     public void Consumers_live_in_messaging_consumers_and_send_requests() =>
-        ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", PendingConsumers).ShouldBeEmpty();
+        ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", []).ShouldBeEmpty();
 
     [Fact]
     public void Controllers_derive_from_the_api_controller_and_send_requests() =>
-        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Runtime.Domain"], PendingControllers).ShouldBeEmpty();
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Runtime.Domain"], []).ShouldBeEmpty();
 
     [Fact]
     public void Program_maps_no_endpoint_itself() =>

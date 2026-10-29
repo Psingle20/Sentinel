@@ -7,8 +7,9 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
 
-namespace Sentinel.Runtime.Infrastructure.Storage;
+namespace Sentinel.Runtime.Infrastructure.Persistence;
 
 internal sealed class PostgresCorrelationStore(IPostgresTransaction transaction, NpgsqlDataSource dataSource) : ICorrelationStore
 {

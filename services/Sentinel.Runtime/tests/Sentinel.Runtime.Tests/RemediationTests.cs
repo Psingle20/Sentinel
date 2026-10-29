@@ -5,6 +5,11 @@ using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using static Sentinel.Runtime.Tests.IncidentScenario;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Incidents.Commands;
+using Sentinel.Runtime.Domain.Incidents.Events;
+using Sentinel.Runtime.Application.BusinessProcesses.Incidents;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -132,7 +137,7 @@ public sealed class RemediationPlanningTests : IDisposable
 
         IncidentSnapshot planned = await _runtime.InScopeAsync(provider => Steps(provider).PlanAsync(incidentId, CancellationToken.None));
         Sentinel.Contracts.Incidents.IncidentDetail detail = (await _runtime.InScopeAsync(provider =>
-            ((IncidentQueryService)provider.GetService(typeof(IncidentQueryService))!).GetAsync(incidentId, CancellationToken.None))).Value;
+            provider.GetRequiredService<CleanArchitecture.BuildingBlocks.Messaging.IRequestDispatcher>().HandleRequestAsync(new GetIncidentRequest(incidentId), CancellationToken.None))).Value;
 
         planned.State.ShouldBe(IncidentState.AwaitingApproval);
         detail.Plan.ShouldNotBeNull().ApprovalDeadline.ShouldNotBeNull().ShouldBeGreaterThan(DateTimeOffset.UnixEpoch);

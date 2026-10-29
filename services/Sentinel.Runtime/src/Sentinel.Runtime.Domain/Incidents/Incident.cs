@@ -1,21 +1,24 @@
 using CleanArchitecture.BuildingBlocks;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Runtime.Domain.Incidents.Events;
 
 namespace Sentinel.Runtime.Domain.Incidents;
 
 /// <summary>
 /// The incident aggregate. Every change is an event appended to the incident's stream; state is
-/// only ever derived by applying events, so replaying the stream rebuilds it exactly (ADR-004).
+/// only ever derived by applying events, so replaying the stream rebuilds it exactly (ADR-004). It
+/// stays one root with one stream; its lifecycles are child entities, <see cref="Investigation"/>,
+/// <see cref="Remediation"/> and <see cref="RecoveryVerification"/>, each with its own transition
+/// table, and its own states follow <see cref="IncidentStateMachine"/>.
 /// </summary>
 public sealed class Incident : Entity
 {
     private readonly List<LinkedChange> _changes = [];
-    private readonly Dictionary<InvestigationId, InvestigationRequested> _investigations = [];
-    private readonly List<InvestigationReported> _reports = [];
-    private readonly HashSet<InvestigationId> _timedOut = [];
     private readonly List<Decision> _decisions = [];
     private readonly List<SignalLinked> _signals = [];
-    private HypothesisBlackboard? _blackboard;
+    private readonly Investigation _investigation = new();
+    private readonly Remediation _remediation = new();
+    private readonly RecoveryVerification _recovery = new();
 
     private Incident()
     {
@@ -49,20 +52,19 @@ public sealed class Incident : Entity
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public bool IsOpen => State != IncidentState.Resolved;
+    public bool IsOpen => IncidentStateMachine.IsOpen(State);
 
     public IReadOnlyList<LinkedChange> Changes => _changes;
 
-    public IReadOnlyCollection<InvestigationRequested> Investigations => _investigations.Values;
+    public IReadOnlyCollection<InvestigationRequested> Investigations => _investigation.Requested;
 
     /// <summary>Reports of the current cycle; earlier cycles of a reopened incident stay in the stream.</summary>
-    public IReadOnlyList<InvestigationReported> Reports => _reports;
+    public IReadOnlyList<InvestigationReported> Reports => _investigation.Reports;
 
     /// <summary>Requested investigations that have neither reported nor timed out.</summary>
-    public IReadOnlyList<InvestigationRequested> PendingInvestigations =>
-        [.. _investigations.Values.Where(requested => !_timedOut.Contains(requested.InvestigationId) && !_reports.Exists(report => report.Report.InvestigationId == requested.InvestigationId))];
+    public IReadOnlyList<InvestigationRequested> PendingInvestigations => _investigation.Pending;
 
-    public IReadOnlyCollection<InvestigationId> TimedOutInvestigationIds => _timedOut;
+    public IReadOnlyCollection<InvestigationId> TimedOutInvestigationIds => _investigation.TimedOut;
 
     /// <summary>Every decision made, oldest first, superseded ones included (Phase 05).</summary>
     public IReadOnlyList<Decision> Decisions => _decisions;
@@ -80,23 +82,26 @@ public sealed class Incident : Entity
 
     public Decision? Decision { get; private set; }
 
-    public ProposedPlan? Plan { get; private set; }
+    public ProposedPlan? Plan => _remediation.Plan;
 
-    public PlanApproved? Approval { get; private set; }
+    public PlanApproved? Approval => _remediation.Approval;
 
-    public PlanRejected? Rejection { get; private set; }
+    public PlanRejected? Rejection => _remediation.Rejection;
 
-    public ExecutionRequested? Execution { get; private set; }
+    public ExecutionRequested? Execution => _remediation.Execution;
 
-    public ExecutionStarted? ExecutionStart { get; private set; }
+    public ExecutionStarted? ExecutionStart => _remediation.ExecutionStart;
 
-    public ExecutionReported? ExecutionOutcome { get; private set; }
+    public ExecutionReported? ExecutionOutcome => _remediation.ExecutionOutcome;
 
-    public RecoveryScheduled? RecoveryWindow { get; private set; }
+    public RecoveryScheduled? RecoveryWindow => _recovery.Window;
 
-    public RecoveryEvaluated? Recovery { get; private set; }
+    public RecoveryEvaluated? Recovery => _recovery.Evaluation;
 
     public string? ClosingReason { get; private set; }
+
+    /// <summary>The current cycle's evidence blackboard: merged hypotheses with their lineage (Phase 04).</summary>
+    public HypothesisBlackboard Blackboard => _investigation.Blackboard;
 
     public static Incident Detect(
         IncidentId incidentId,
@@ -146,92 +151,65 @@ public sealed class Incident : Entity
         IReadOnlyList<HypothesisId>? challengedHypothesisIds = null,
         IReadOnlyList<PriorIncident>? similarIncidents = null)
     {
-        if (_investigations.ContainsKey(investigationId))
+        if (_investigation.Has(investigationId))
         {
             return Result.Success();
         }
 
-        if (State is not (IncidentState.Detected or IncidentState.Investigating) || Decision is not null)
+        if (!IncidentStateMachine.Allows(State, IncidentOperation.RequestInvestigation) || Decision is not null)
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "request an investigation"));
         }
 
-        if (challengedHypothesisIds is { Count: > 0 } challenged && challenged.Any(id => !AllHypotheses().Any(hypothesis => hypothesis.HypothesisId == id)))
+        Result<InvestigationRequested> requested = _investigation.Request(investigationId, objective, windowFrom, windowTo, now, role, challengedHypothesisIds, similarIncidents);
+        if (requested.IsFailure)
         {
-            return Result.Failure(IncidentErrors.UnknownHypothesis);
+            return Result.Failure(requested.Error);
         }
 
-        Append(new InvestigationRequested(investigationId, objective, windowFrom, windowTo, now, role, challengedHypothesisIds, similarIncidents is { Count: > 0 } ? similarIncidents : null));
+        Append(requested.Value);
         return Result.Success();
     }
 
     /// <summary>Gives up waiting for an investigation; a report that still arrives later is recorded as history.</summary>
     public Result TimeOutInvestigation(InvestigationId investigationId, DateTimeOffset now)
     {
-        if (!PendingInvestigations.Any(pending => pending.InvestigationId == investigationId))
+        if (_investigation.IsPending(investigationId))
         {
-            return Result.Success();
+            Append(new InvestigationTimedOut(investigationId, now));
         }
 
-        Append(new InvestigationTimedOut(investigationId, now));
         return Result.Success();
     }
 
     /// <summary>
-    /// Records findings. Runtime, not the agent, decides what becomes evidence: findings that cite
-    /// no observation, have an inverted time range or point at unknown hypotheses are rejected.
-    /// A repeated report for the same investigation is ignored.
+    /// Records findings. Runtime, not the agent, decides what becomes evidence (see
+    /// <see cref="Investigation"/>). A repeated report for the same investigation is ignored.
     /// </summary>
     public Result<bool> RecordInvestigation(InvestigationReport report, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(report);
 
-        if (!_investigations.ContainsKey(report.InvestigationId))
+        Result<InvestigationReported?> reported = _investigation.Record(report, now);
+        if (reported.IsFailure)
         {
-            return Result.Failure<bool>(IncidentErrors.UnknownInvestigation(report.InvestigationId));
+            return Result.Failure<bool>(reported.Error);
         }
 
-        if (_reports.Exists(existing => existing.Report.InvestigationId == report.InvestigationId))
+        if (reported.Value is not { } recorded)
         {
             return Result.Success(false);
         }
 
-        // Evidence may link to the report's own hypotheses or to any already on the blackboard,
-        // which is how the verifier's findings attach to the hypotheses it challenges.
-        HashSet<HypothesisId> hypotheses = [.. report.Hypotheses.Select(hypothesis => hypothesis.HypothesisId), .. Blackboard.All.SelectMany(entry => entry.Lineage.Append(entry.Hypothesis.HypothesisId))];
-        var rejected = new List<RejectedEvidence>();
-        foreach (Evidence evidence in report.Evidence)
-        {
-            string? reason = evidence switch
-            {
-                { SourceObservationIds.Count: 0 } => "cites no observation",
-                _ when evidence.To < evidence.From => "has an inverted time range",
-                _ when evidence.Strength is < 0 or > 1 => "has a strength outside 0 to 1",
-                _ when evidence.HypothesisIds.Any(id => !hypotheses.Contains(id)) => "refers to an unknown hypothesis",
-                _ => null
-            };
-
-            if (reason is not null)
-            {
-                rejected.Add(new RejectedEvidence(evidence.EvidenceId, reason));
-            }
-        }
-
-        Append(new InvestigationReported(report, rejected, now));
+        Append(recorded);
         return Result.Success(true);
     }
 
-    /// <summary>The current cycle's evidence blackboard: merged hypotheses with their lineage (Phase 04).</summary>
-    public HypothesisBlackboard Blackboard => _blackboard ??= HypothesisBlackboard.Build(_reports);
-
     /// <summary>Accepted evidence from every report, in report order, linked to the blackboard's hypotheses.</summary>
-    public IReadOnlyList<Evidence> AcceptedEvidence() =>
-        [.. _reports.SelectMany(report => report.Report.Evidence
-            .Where(evidence => !report.RejectedEvidence.Any(rejected => rejected.EvidenceId == evidence.EvidenceId)))
-            .Select(Blackboard.Remap)];
+    public IReadOnlyList<Evidence> AcceptedEvidence() => _investigation.AcceptedEvidence();
 
     /// <summary>The competing explanations: proposals merged by key, broader ones replaced by their refinements.</summary>
-    public IReadOnlyList<Hypothesis> AllHypotheses() => Blackboard.Competing;
+    public IReadOnlyList<Hypothesis> AllHypotheses() => _investigation.AllHypotheses();
 
     /// <summary>Applies what is now known about a correlated change, for example its completion time.</summary>
     public Result UpdateChange(LinkedChange change, DateTimeOffset now)
@@ -257,7 +235,7 @@ public sealed class Incident : Entity
             return Decision.DecisionId == decision.DecisionId ? Result.Success() : Result.Failure(IncidentErrors.AlreadyDecided);
         }
 
-        if (State != IncidentState.Investigating)
+        if (!IncidentStateMachine.Allows(State, IncidentOperation.RecordDecision))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "decide"));
         }
@@ -284,7 +262,7 @@ public sealed class Incident : Entity
             return Decision is null ? RecordDecision(next) : Result.Success();
         }
 
-        if (Execution is not null || State is not (IncidentState.Investigating or IncidentState.AwaitingApproval or IncidentState.Escalated))
+        if (Execution is not null || !IncidentStateMachine.Allows(State, IncidentOperation.SupersedeDecision))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "supersede the decision"));
         }
@@ -297,43 +275,19 @@ public sealed class Incident : Entity
     {
         ArgumentNullException.ThrowIfNull(plan);
 
-        if (Plan is { } current && current.PlanId == plan.PlanId && current.Version == plan.Version)
-        {
-            return current.Hash == plan.Hash ? Result.Success() : Result.Failure(IncidentErrors.StalePlanVersion);
-        }
-
-        if (Decision is not { Result: DecisionResult.Diagnosed } decision || decision.LeadingHypothesisId != plan.HypothesisId)
-        {
-            return Result.Failure(IncidentErrors.PlanWithoutDiagnosis);
-        }
-
-        if (Plan is not null && plan.Version <= Plan.Version)
-        {
-            return Result.Failure(IncidentErrors.StalePlanVersion);
-        }
-
-        Append(new PlanProposed(plan, plan.ProposedAt));
-        if (plan.Policy == PolicyVerdict.Deny)
-        {
-            Append(new IncidentEscalated($"Policy {plan.PolicyVersion} denies the plan; human remediation is required.", plan.ProposedAt));
-        }
-        else if (plan.Policy == PolicyVerdict.SuggestionOnly)
-        {
-            Append(new IncidentEscalated($"Suggested remediation, which policy {plan.PolicyVersion} leaves to responders: {plan.Summary ?? "see the plan"}.", plan.ProposedAt));
-        }
-
-        return Result.Success();
+        return AppendAll(_remediation.Propose(plan, Decision, State));
     }
 
     /// <summary>Diagnosed, but there is no automated remediation for the leading cause.</summary>
     public Result EscalateWithoutPlan(string reason, DateTimeOffset now)
     {
-        if (State == IncidentState.Escalated && Plan is null)
+        // Already escalated without a plan: nothing to do.
+        if (Plan is null && State == IncidentState.Escalated)
         {
             return Result.Success();
         }
 
-        if (Decision is not { Result: DecisionResult.Diagnosed } || Plan is not null || State != IncidentState.Investigating)
+        if (Decision is not { Result: DecisionResult.Diagnosed } || Plan is not null || !IncidentStateMachine.Allows(State, IncidentOperation.EscalateWithoutPlan))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "escalate without a plan"));
         }
@@ -348,19 +302,18 @@ public sealed class Incident : Entity
     /// </summary>
     public Result Escalate(string reason, DateTimeOffset now)
     {
-        if (State is IncidentState.Resolved or IncidentState.Escalated)
+        if (IncidentStateMachine.Allows(State, IncidentOperation.Escalate))
         {
-            return Result.Success();
+            Append(new IncidentEscalated(reason, now));
         }
 
-        Append(new IncidentEscalated(reason, now));
         return Result.Success();
     }
 
     /// <summary>Merges a related service's symptom into this incident (correlation, Phase 03).</summary>
     public Result LinkSignal(ServiceId serviceId, string metricName, double value, IReadOnlyList<ObservationId> observationIds, double score, IReadOnlyList<string> reasons, DateTimeOffset now)
     {
-        if (!IsOpen)
+        if (!IncidentStateMachine.Allows(State, IncidentOperation.LinkSignal))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "link a signal"));
         }
@@ -376,19 +329,18 @@ public sealed class Incident : Entity
 
     public Result ChangeSeverity(IncidentSeverity severity, string reason, DateTimeOffset now)
     {
-        if (severity == Severity || !IsOpen)
+        if (severity != Severity && IncidentStateMachine.Allows(State, IncidentOperation.ChangeSeverity))
         {
-            return Result.Success();
+            Append(new SeverityChanged(severity, reason, now));
         }
 
-        Append(new SeverityChanged(severity, reason, now));
         return Result.Success();
     }
 
     /// <summary>The symptom returned soon after resolution with no new change to explain it: start a new cycle.</summary>
     public Result Reopen(string reason, IReadOnlyList<ObservationId> triggers, DateTimeOffset symptomOnset, DateTimeOffset now)
     {
-        if (State != IncidentState.Resolved)
+        if (!IncidentStateMachine.Allows(State, IncidentOperation.Reopen))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "reopen"));
         }
@@ -397,93 +349,31 @@ public sealed class Incident : Entity
         return Result.Success();
     }
 
-    /// <summary>Relays Api's signed approval. Only the current plan version, with its exact hash, can be approved.</summary>
-    public Result Approve(PlanId planId, int planVersion, string planHash, string approverId, string attestation, DateTimeOffset now)
-    {
-        Result current = RequireCurrentPlan(planId, planVersion, planHash);
-        if (current.IsFailure)
-        {
-            return current;
-        }
+    /// <summary>Relays the Gateway's signed approval. Only the current plan version, with its exact hash, can be approved.</summary>
+    public Result Approve(PlanId planId, int planVersion, string planHash, string approverId, string attestation, DateTimeOffset now) =>
+        AppendAll(_remediation.Approve(planId, planVersion, planHash, approverId, attestation, now, State));
 
-        if (Approval is not null)
-        {
-            return Approval.PlanVersion == planVersion ? Result.Success() : Result.Failure(IncidentErrors.AlreadyApproved);
-        }
-
-        if (State != IncidentState.AwaitingApproval)
-        {
-            return Result.Failure(IncidentErrors.InvalidState(State, "approve"));
-        }
-
-        Append(new PlanApproved(planId, planVersion, planHash, approverId, attestation, now));
-        return Result.Success();
-    }
-
-    public Result Reject(PlanId planId, int planVersion, string rejectedBy, string reason, DateTimeOffset now)
-    {
-        if (Plan is null || Plan.PlanId != planId || Plan.Version != planVersion)
-        {
-            return Result.Failure(IncidentErrors.NotCurrentPlan);
-        }
-
-        if (Rejection is { } existing && existing.PlanId == planId && existing.PlanVersion == planVersion)
-        {
-            return Result.Success();
-        }
-
-        if (State != IncidentState.AwaitingApproval)
-        {
-            return Result.Failure(IncidentErrors.InvalidState(State, "reject"));
-        }
-
-        Append(new PlanRejected(planId, planVersion, rejectedBy, reason, now));
-        Append(new IncidentEscalated($"{rejectedBy} rejected the plan: {reason}", now));
-        return Result.Success();
-    }
+    public Result Reject(PlanId planId, int planVersion, string rejectedBy, string reason, DateTimeOffset now) =>
+        AppendAll(_remediation.Reject(planId, planVersion, rejectedBy, reason, now, State));
 
     /// <summary>
     /// Withdraws an approval before execution starts (Phase 06). The incident is handed to responders
     /// and Runtime refuses any start confirmation, so a requested execution can never begin.
     /// </summary>
-    public Result RevokeApproval(PlanId planId, int planVersion, string revokedBy, string reason, DateTimeOffset now)
-    {
-        if (Plan is null || Plan.PlanId != planId || Plan.Version != planVersion)
-        {
-            return Result.Failure(IncidentErrors.NotCurrentPlan);
-        }
-
-        if (Approval is null)
-        {
-            return Result.Success();
-        }
-
-        if (ExecutionStart is not null)
-        {
-            return Result.Failure(IncidentErrors.InvalidState(State, "revoke an approval after execution started"));
-        }
-
-        Append(new ApprovalRevoked(planId, planVersion, revokedBy, reason, now));
-        Append(new IncidentEscalated($"{revokedBy} revoked the approval of plan v{planVersion}: {reason}", now));
-        return Result.Success();
-    }
+    public Result RevokeApproval(PlanId planId, int planVersion, string revokedBy, string reason, DateTimeOffset now) =>
+        AppendAll(_remediation.Revoke(planId, planVersion, revokedBy, reason, now, State));
 
     /// <summary>Requests execution of the approved plan. The new event's stream version is the fencing token.</summary>
     public Result<ExecutionRequested> RequestExecution(string idempotencyKey, DateTimeOffset now)
     {
-        if (Execution is not null)
+        ExecutionRequested? existing = Execution;
+        Result<ExecutionRequested> requested = _remediation.RequestExecution(idempotencyKey, Version + 1, now, State);
+        if (requested.IsSuccess && !ReferenceEquals(requested.Value, existing))
         {
-            return Result.Success(Execution);
+            Append(requested.Value);
         }
 
-        if (Approval is null || Plan is null || State != IncidentState.AwaitingApproval)
-        {
-            return Result.Failure<ExecutionRequested>(IncidentErrors.InvalidState(State, "request execution"));
-        }
-
-        var requested = new ExecutionRequested(Plan.PlanId, Plan.Version, Version + 1, idempotencyKey, now);
-        Append(requested);
-        return Result.Success(requested);
+        return requested;
     }
 
     /// <summary>
@@ -491,96 +381,28 @@ public sealed class Incident : Entity
     /// fencing token it was issued with, while the incident is still remediating. A repeated
     /// confirmation for the same token is confirmed again without a new event.
     /// </summary>
-    public Result ConfirmStart(PlanId planId, int planVersion, long fencingToken, DateTimeOffset now)
-    {
-        if (Execution is null || Execution.PlanId != planId || Execution.PlanVersion != planVersion)
-        {
-            return Result.Failure(IncidentErrors.NotCurrentPlan);
-        }
-
-        if (Execution.FencingToken != fencingToken)
-        {
-            return Result.Failure(IncidentErrors.StaleFencingToken(fencingToken, Execution.FencingToken));
-        }
-
-        if (ExecutionStart is not null)
-        {
-            return Result.Success();
-        }
-
-        if (State != IncidentState.Remediating || ExecutionOutcome is not null)
-        {
-            return Result.Failure(IncidentErrors.InvalidState(State, "start remediation"));
-        }
-
-        Append(new ExecutionStarted(planId, planVersion, fencingToken, now));
-        return Result.Success();
-    }
+    public Result ConfirmStart(PlanId planId, int planVersion, long fencingToken, DateTimeOffset now) =>
+        AppendAll(_remediation.ConfirmStart(planId, planVersion, fencingToken, now, State));
 
     /// <summary>Records Executor's result. <see cref="ExecutionResult.OutcomeUnknown"/> keeps the incident remediating until reconciled.</summary>
-    public Result RecordExecution(PlanId planId, int planVersion, ExecutionResult result, string? detail, DateTimeOffset now)
-    {
-        if (Execution is null || Execution.PlanId != planId || Execution.PlanVersion != planVersion)
-        {
-            return Result.Failure(IncidentErrors.NotCurrentPlan);
-        }
-
-        if (ExecutionOutcome is { Result: not ExecutionResult.OutcomeUnknown })
-        {
-            return Result.Success();
-        }
-
-        Append(new ExecutionReported(planId, planVersion, result, detail, now));
-        if (result is ExecutionResult.Rejected or ExecutionResult.Aborted or ExecutionResult.Failed or ExecutionResult.Compensated or ExecutionResult.CompensationFailed)
-        {
-            Append(new IncidentEscalated($"Remediation ended {result}: {detail}", now));
-        }
-
-        return Result.Success();
-    }
+    public Result RecordExecution(PlanId planId, int planVersion, ExecutionResult result, string? detail, DateTimeOffset now) =>
+        AppendAll(_remediation.RecordExecution(planId, planVersion, result, detail, now));
 
     /// <summary>After the action is verified, recovery is judged over the plan's observation window starting now.</summary>
     public Result<RecoveryScheduled> ScheduleRecovery(DateTimeOffset now)
     {
-        if (RecoveryWindow is not null)
+        RecoveryScheduled? existing = RecoveryWindow;
+        Result<RecoveryScheduled> scheduled = _recovery.Schedule(_remediation, now, State);
+        if (scheduled.IsSuccess && !ReferenceEquals(scheduled.Value, existing))
         {
-            return Result.Success(RecoveryWindow);
+            Append(scheduled.Value);
         }
 
-        if (ExecutionOutcome is not { Result: ExecutionResult.ActionVerified } || Plan is null)
-        {
-            return Result.Failure<RecoveryScheduled>(IncidentErrors.InvalidState(State, "schedule recovery verification"));
-        }
-
-        var scheduled = new RecoveryScheduled(Plan.PlanId, now, now + Plan.ObservationWindow, now);
-        Append(scheduled);
-        return Result.Success(scheduled);
+        return scheduled;
     }
 
-    public Result RecordRecovery(RecoveryResult result, IReadOnlyList<Measurement> measurements, DateTimeOffset observedThrough, string? reason, DateTimeOffset now)
-    {
-        if (Recovery is not null && RecoveryWindow is not null && Recovery.PlanId == RecoveryWindow.PlanId)
-        {
-            return Result.Success();
-        }
-
-        if (RecoveryWindow is null || State != IncidentState.Verifying)
-        {
-            return Result.Failure(IncidentErrors.InvalidState(State, "record recovery"));
-        }
-
-        Append(new RecoveryEvaluated(RecoveryWindow.PlanId, result, measurements, observedThrough, reason, now));
-        if (result == RecoveryResult.Recovered)
-        {
-            Append(new IncidentResolved("Recovery verified from telemetry.", now));
-        }
-        else
-        {
-            Append(new IncidentEscalated($"Recovery {result}: {reason}", now));
-        }
-
-        return Result.Success();
-    }
+    public Result RecordRecovery(RecoveryResult result, IReadOnlyList<Measurement> measurements, DateTimeOffset observedThrough, string? reason, DateTimeOffset now) =>
+        AppendAll(_recovery.Record(result, measurements, observedThrough, reason, now, State));
 
     /// <summary>
     /// Symptoms cleared without Sentinel's action, for example after a human stopped a batch. A
@@ -588,12 +410,13 @@ public sealed class Incident : Entity
     /// </summary>
     public Result ResolveCleared(string reason, DateTimeOffset now)
     {
+        // Already resolved: nothing to do.
         if (State == IncidentState.Resolved)
         {
             return Result.Success();
         }
 
-        if (State is not (IncidentState.AwaitingApproval or IncidentState.Escalated))
+        if (!IncidentStateMachine.Allows(State, IncidentOperation.ResolveCleared))
         {
             return Result.Failure(IncidentErrors.InvalidState(State, "resolve as cleared"));
         }
@@ -602,14 +425,19 @@ public sealed class Incident : Entity
         return Result.Success();
     }
 
-    private Result RequireCurrentPlan(PlanId planId, int planVersion, string planHash)
+    private Result AppendAll(Result<IReadOnlyList<IIncidentEvent>> decided)
     {
-        if (Plan is null || Plan.PlanId != planId || Plan.Version != planVersion)
+        if (decided.IsFailure)
         {
-            return Result.Failure(IncidentErrors.NotCurrentPlan);
+            return Result.Failure(decided.Error);
         }
 
-        return Plan.Hash == planHash ? Result.Success() : Result.Failure(IncidentErrors.PlanHashMismatch);
+        foreach (IIncidentEvent @event in decided.Value)
+        {
+            Append(@event);
+        }
+
+        return Result.Success();
     }
 
     private void Append(IIncidentEvent @event)
@@ -636,16 +464,8 @@ public sealed class Incident : Entity
                 _changes.AddRange(detected.LinkedChanges);
                 State = IncidentState.Detected;
                 break;
-            case InvestigationRequested requested:
-                _investigations[requested.InvestigationId] = requested;
+            case InvestigationRequested:
                 State = IncidentState.Investigating;
-                break;
-            case InvestigationReported reported:
-                _reports.Add(reported);
-                _blackboard = null;
-                break;
-            case InvestigationTimedOut timedOut:
-                _timedOut.Add(timedOut.InvestigationId);
                 break;
             case ChangeUpdated updated:
                 _changes.RemoveAll(change => change.DeploymentId == updated.Change.DeploymentId);
@@ -663,9 +483,6 @@ public sealed class Incident : Entity
                 }
 
                 Decision = null;
-                Plan = null;
-                Approval = null;
-                Rejection = null;
                 ClosingReason = null;
                 State = IncidentState.Investigating;
                 break;
@@ -679,51 +496,19 @@ public sealed class Incident : Entity
                 Cycle++;
                 SymptomOnset = reopened.SymptomOnset;
                 TriggerObservationIds = reopened.TriggerObservationIds;
-                _reports.Clear();
-                _blackboard = null;
                 Decision = null;
-                Plan = null;
-                Approval = null;
-                Rejection = null;
-                Execution = null;
-                ExecutionStart = null;
-                ExecutionOutcome = null;
-                RecoveryWindow = null;
-                Recovery = null;
                 ClosingReason = null;
                 ResolvedAt = null;
                 State = IncidentState.Detected;
                 break;
             case PlanProposed proposed:
-                Plan = proposed.Plan;
-                Approval = null;
                 State = proposed.Plan.Policy is PolicyVerdict.Deny or PolicyVerdict.SuggestionOnly ? State : IncidentState.AwaitingApproval;
                 break;
-            case PlanApproved approved:
-                Approval = approved;
-                break;
-            case PlanRejected rejected:
-                Rejection = rejected;
-                break;
-            case ApprovalRevoked:
-                Approval = null;
-                break;
-            case ExecutionRequested execution:
-                Execution = execution;
+            case ExecutionRequested:
                 State = IncidentState.Remediating;
                 break;
-            case ExecutionStarted started:
-                ExecutionStart = started;
-                break;
-            case ExecutionReported reported:
-                ExecutionOutcome = reported;
-                break;
-            case RecoveryScheduled scheduled:
-                RecoveryWindow = scheduled;
+            case RecoveryScheduled:
                 State = IncidentState.Verifying;
-                break;
-            case RecoveryEvaluated evaluated:
-                Recovery = evaluated;
                 break;
             case IncidentResolved resolved:
                 State = IncidentState.Resolved;
@@ -734,37 +519,17 @@ public sealed class Incident : Entity
                 State = IncidentState.Escalated;
                 ClosingReason = escalated.Reason;
                 break;
+            case InvestigationReported or InvestigationTimedOut or PlanApproved or PlanRejected or ApprovalRevoked or ExecutionStarted or ExecutionReported or RecoveryEvaluated:
+                // Held by the child entities alone.
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(@event), @event.GetType().Name, "Unknown incident event.");
         }
 
+        _investigation.Apply(@event);
+        _remediation.Apply(@event);
+        _recovery.Apply(@event);
         Version++;
         UpdatedAt = @event.OccurredAt;
     }
-}
-
-public static class IncidentErrors
-{
-    public static readonly Error AlreadyDecided = Error.Conflict("Incident.AlreadyDecided", "The incident already has a decision.");
-
-    public static readonly Error PlanWithoutDiagnosis = Error.Conflict("Incident.PlanWithoutDiagnosis", "A plan must remediate the diagnosed leading hypothesis.");
-
-    public static readonly Error StalePlanVersion = Error.Conflict("Incident.StalePlanVersion", "A new plan must have a higher version than the current one.");
-
-    public static readonly Error NotCurrentPlan = Error.Conflict("Incident.NotCurrentPlan", "The plan is not the incident's current plan.");
-
-    public static readonly Error PlanHashMismatch = Error.Conflict("Incident.PlanHashMismatch", "The approved hash does not match the current plan's content.");
-
-    public static readonly Error AlreadyApproved = Error.Conflict("Incident.AlreadyApproved", "Another plan version is already approved.");
-
-    public static readonly Error UnknownHypothesis = Error.Problem("Incident.UnknownHypothesis", "A challenged hypothesis is not among the incident's hypotheses.");
-
-    public static Error InvalidState(IncidentState state, string action) =>
-        Error.Conflict("Incident.InvalidState", $"Cannot {action} while the incident is {state}.");
-
-    public static Error UnknownInvestigation(InvestigationId investigationId) =>
-        Error.NotFound("Incident.UnknownInvestigation", $"Investigation {investigationId} was not requested for this incident.");
-
-    public static Error StaleFencingToken(long presented, long current) =>
-        Error.Conflict("Incident.StaleFencingToken", $"Fencing token {presented} does not match the current execution's {current}.");
 }

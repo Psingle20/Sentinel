@@ -4,9 +4,11 @@ using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Domain.Incidents;
 using DomainDecision = Sentinel.Runtime.Domain.Incidents.Decision;
-using DomainRecoveryEvaluated = Sentinel.Runtime.Domain.Incidents.RecoveryEvaluated;
+using DomainRecoveryEvaluated = Sentinel.Runtime.Domain.Incidents.Events.RecoveryEvaluated;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Domain.Incidents.Events;
 
-namespace Sentinel.Runtime.Application;
+namespace Sentinel.Runtime.Application.Projections;
 
 /// <summary>
 /// Builds the incident read model from the stream. It is a pure function of the events, so the

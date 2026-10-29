@@ -8,82 +8,10 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
-using RecoveryEvaluated = Sentinel.Runtime.Domain.Incidents.RecoveryEvaluated;
+using RecoveryEvaluated = Sentinel.Runtime.Domain.Incidents.Events.RecoveryEvaluated;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
 
-namespace Sentinel.Runtime.Infrastructure.Storage;
-
-/// <summary>
-/// Persisted event type names. They are part of the stored stream, so a name never changes once
-/// written; a new event shape gets a new name or an upcaster (Phase 07).
-/// </summary>
-internal static class IncidentEventTypes
-{
-    private static readonly Dictionary<string, Type> ByName = new(StringComparer.Ordinal)
-    {
-        ["incident.detected.v1"] = typeof(IncidentDetected),
-        ["investigation.requested.v1"] = typeof(InvestigationRequested),
-        ["investigation.reported.v1"] = typeof(InvestigationReported),
-        ["change.updated.v1"] = typeof(ChangeUpdated),
-        ["decision.made.v1"] = typeof(DecisionMade),
-        ["plan.proposed.v1"] = typeof(PlanProposed),
-        ["plan.approved.v1"] = typeof(PlanApproved),
-        ["plan.rejected.v1"] = typeof(PlanRejected),
-        ["approval.revoked.v1"] = typeof(ApprovalRevoked),
-        ["execution.requested.v1"] = typeof(ExecutionRequested),
-        ["execution.started.v1"] = typeof(ExecutionStarted),
-        ["execution.reported.v1"] = typeof(ExecutionReported),
-        ["recovery.scheduled.v1"] = typeof(RecoveryScheduled),
-        ["recovery.evaluated.v1"] = typeof(RecoveryEvaluated),
-        ["incident.resolved.v1"] = typeof(IncidentResolved),
-        ["incident.escalated.v1"] = typeof(IncidentEscalated),
-        ["investigation.timed-out.v1"] = typeof(InvestigationTimedOut),
-        ["decision.superseded.v1"] = typeof(DecisionSuperseded),
-        ["signal.linked.v1"] = typeof(SignalLinked),
-        ["severity.changed.v1"] = typeof(SeverityChanged),
-        ["incident.reopened.v1"] = typeof(IncidentReopened)
-    };
-
-    private static readonly Dictionary<Type, string> ByType = ByName.ToDictionary(pair => pair.Value, pair => pair.Key);
-
-    public static string NameOf(IIncidentEvent @event) => ByType[@event.GetType()];
-
-    public static IIncidentEvent Deserialize(string name, string payload) =>
-        (IIncidentEvent)JsonSerializer.Deserialize(IncidentEventUpcasters.Upcast(name, payload), ByName[name], SentinelJson.Options)!;
-
-    public static string Serialize(IIncidentEvent @event) => JsonSerializer.Serialize(@event, @event.GetType(), SentinelJson.Options);
-}
-
-/// <summary>
-/// Upcasters for stored event payloads (Phase 07): a payload written by an older shape is completed
-/// before it is deserialized, so the stream never has to be rewritten. Each upcaster is pure and
-/// idempotent, and only fills what the older shape lacked.
-/// </summary>
-internal static class IncidentEventUpcasters
-{
-    public static string Upcast(string name, string payload) => name switch
-    {
-        "incident.detected.v1" => TriggerMetricFromTitle(payload),
-        _ => payload
-    };
-
-    /// <summary>Streams detected before Phase 07 carry the trigger metric only in the title, <c>{service} {metric} at {value}</c>.</summary>
-    private static string TriggerMetricFromTitle(string payload)
-    {
-        if (System.Text.Json.Nodes.JsonNode.Parse(payload) is not System.Text.Json.Nodes.JsonObject detected || detected["triggerMetric"] is not null)
-        {
-            return payload;
-        }
-
-        string[] words = (detected["title"]?.GetValue<string>() ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length < 4 || words[^2] != "at")
-        {
-            return payload;
-        }
-
-        detected["triggerMetric"] = words[1];
-        return detected.ToJsonString();
-    }
-}
+namespace Sentinel.Runtime.Infrastructure.Persistence;
 
 internal sealed class PostgresIncidentStore(IPostgresTransaction transaction, NpgsqlDataSource dataSource) : IIncidentStore
 {

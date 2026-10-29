@@ -17,9 +17,6 @@ public sealed class CompositionTests : IDisposable
     private static readonly Assembly InfrastructureAssembly = Sentinel.Runtime.Infrastructure.AssemblyReference.Assembly;
     private static readonly Assembly HostAssembly = typeof(ApiDependencyModule).Assembly;
 
-    // Built from the deployment's named options, which Infrastructure owns, until Runtime's own step.
-    private static readonly string[] PendingInfrastructureRegistrations = ["Sentinel.Runtime.Application.ControlPlane.RuntimeDeploymentOptions"];
-
     private readonly HostComposition<Program> _host = new(new Dictionary<string, string?>
     {
         ["ConnectionStrings:runtime-db"] = "Host=localhost;Database=runtime",
@@ -31,8 +28,8 @@ public sealed class CompositionTests : IDisposable
     public void Dispose() => _host.Dispose();
 
     [Fact]
-    public void Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
-        CompositionAssertions.HandlerProblems(_host.Services, _host.Provider, ApplicationAssembly).ShouldBeEmpty();
+    public async Task Every_command_query_and_request_has_exactly_one_handler_or_processor_that_resolves() =>
+        (await CompositionAssertions.HandlerProblemsAsync(_host.Services, _host.Provider, ApplicationAssembly)).ShouldBeEmpty();
 
     [Fact]
     public void Every_port_has_exactly_one_implementation() =>
@@ -53,7 +50,7 @@ public sealed class CompositionTests : IDisposable
         IHostEnvironment environment = _host.Provider.GetRequiredService<IHostEnvironment>();
 
         CompositionAssertions.ModuleProblems(new ApplicationDependencyModule(), configuration, [], InfrastructureAssembly, HostAssembly).ShouldBeEmpty();
-        CompositionAssertions.ModuleProblems(new InfrastructureDependencyModule(), configuration, PendingInfrastructureRegistrations, ApplicationAssembly, HostAssembly).ShouldBeEmpty();
+        CompositionAssertions.ModuleProblems(new InfrastructureDependencyModule(), configuration, [], ApplicationAssembly, HostAssembly).ShouldBeEmpty();
         CompositionAssertions.ModuleProblems(new ApiDependencyModule(environment), configuration, [], ApplicationAssembly, InfrastructureAssembly).ShouldBeEmpty();
     }
 }

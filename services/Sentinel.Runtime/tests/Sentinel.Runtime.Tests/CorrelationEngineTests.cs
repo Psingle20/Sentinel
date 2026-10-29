@@ -3,6 +3,7 @@ using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using static Sentinel.Runtime.Tests.IncidentScenario;
+using Sentinel.Runtime.Domain.Correlation.Decisions;
 
 namespace Sentinel.Runtime.Tests;
 

@@ -4,6 +4,9 @@ using Sentinel.Runtime.Application;
 using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using static Sentinel.Runtime.Tests.IncidentScenario;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Projections;
+using Sentinel.Runtime.Domain.Incidents.Events;
 
 namespace Sentinel.Runtime.Tests;
 

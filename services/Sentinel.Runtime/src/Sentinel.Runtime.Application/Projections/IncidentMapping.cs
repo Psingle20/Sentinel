@@ -12,7 +12,7 @@ using ContractVerdict = Sentinel.Contracts.Investigations.ChallengeVerdict;
 using DomainDirection = Sentinel.Runtime.Domain.Incidents.EvidenceDirection;
 using DomainVerdict = Sentinel.Runtime.Domain.Incidents.ChallengeVerdict;
 
-namespace Sentinel.Runtime.Application;
+namespace Sentinel.Runtime.Application.Projections;
 
 /// <summary>Translates between Runtime's domain and the shared contracts (ADR-007: the domain never sees contracts).</summary>
 public static class IncidentMapping

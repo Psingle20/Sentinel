@@ -3,7 +3,7 @@ using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Npgsql;
 using Sentinel.Runtime.Application.ControlPlane;
 
-namespace Sentinel.Runtime.Infrastructure.Storage;
+namespace Sentinel.Runtime.Infrastructure.Persistence;
 
 /// <summary>
 /// Runtime's tables in its own database: the incident event stream (authoritative), the

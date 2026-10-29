@@ -11,16 +11,14 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Sentinel.Runtime.Domain.Incidents;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Abstractions.Providers;
+using Sentinel.Runtime.Application.Incidents.Commands;
+using Sentinel.Runtime.Application.Options;
+using Sentinel.Runtime.Application.Recovery;
+using Sentinel.Runtime.Application.Projections;
 
 namespace Sentinel.Runtime.Application.Incidents;
-
-/// <summary>The step a recovery check ended in: judged, or worth asking again because telemetry is not yet complete.</summary>
-public enum RecoveryStepResult
-{
-    Recorded,
-    Retry,
-    NotApplicable
-}
 
 /// <summary>
 /// The incident workflow's steps (ADR-005): each one reads the incident through its writer, does the
@@ -33,7 +31,7 @@ public sealed class IncidentSteps(
     ICorrelationStore correlation,
     IPolicyEvaluator policy,
     RecoveryAssessor recovery,
-    Memory.IncidentMemoryService memory,
+    Memory.IncidentSimilarity similarity,
     TimeProvider time,
     IOptions<RuntimeOptions> options,
     ILogger<IncidentSteps> logger)
@@ -66,7 +64,7 @@ public sealed class IncidentSteps(
 
         RuntimeOptions settings = options.Value;
         DateTimeOffset now = time.GetUtcNow();
-        IReadOnlyList<PriorIncident> similar = await memory.HintsForAsync(incident, cancellationToken);
+        IReadOnlyList<PriorIncident> similar = await similarity.HintsForAsync(incident, cancellationToken);
         InvestigationSpec[] specs = [.. settings.Investigation.EffectiveRoles.Select(role => new InvestigationSpec(
             StepInvestigationId(incidentId, incident.Cycle, $"investigate:{role}"),
             role == InvestigationRoles.Generalist ? null : role,

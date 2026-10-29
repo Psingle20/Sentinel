@@ -3,6 +3,7 @@ using CleanArchitecture.BuildingBlocks.Messaging;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
 using Sentinel.Runtime.Application.Incidents;
 using Sentinel.Runtime.Application.Services;
+using Sentinel.Runtime.Application.Incidents.Commands;
 
 namespace Sentinel.Runtime.Application.BusinessTasks.Commands.Remediation;
 

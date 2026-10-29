@@ -4,7 +4,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
 
-namespace Sentinel.Runtime.Application;
+namespace Sentinel.Runtime.Application.Options;
 
 /// <summary>Configured as <c>Runtime</c>.</summary>
 public sealed class RuntimeOptions
@@ -33,7 +33,7 @@ public sealed class RuntimeOptions
 
     public ConsensusOptions Consensus { get; } = new();
 
-    public Memory.MemoryOptions Memory { get; } = new();
+    public MemoryOptions Memory { get; } = new();
 
     public TimeSpan InvestigationWindow { get; set; } = TimeSpan.FromMinutes(15);
 
@@ -110,112 +110,4 @@ public sealed class RuntimeOptions
         && EvaluationTimeout > EvaluationLag
         && Investigation.Roles.All(InvestigationRoles.IsKnown)
         && Workflow.ApprovalTimeout > TimeSpan.Zero;
-}
-
-/// <summary>Correlation rules (Phase 03), configured as <c>Runtime:Correlation</c>.</summary>
-public sealed class CorrelationOptions
-{
-    public TimeSpan MergeWindow { get; set; } = TimeSpan.FromMinutes(10);
-
-    public TimeSpan ReopenWindow { get; set; } = TimeSpan.FromMinutes(10);
-
-    public int MaxMergeDistance { get; set; } = 1;
-
-    public double MinimumChangeScore { get; set; } = 0.2;
-
-    public TimeSpan ProximityScale { get; set; } = TimeSpan.FromMinutes(5);
-
-    /// <summary>How long an observed dependency edge counts toward topology.</summary>
-    public TimeSpan EdgeRetention { get; set; } = TimeSpan.FromHours(1);
-
-    public IList<SuppressionOptions> Suppressions { get; } = [];
-}
-
-public sealed class SuppressionOptions
-{
-    public string? Service { get; set; }
-
-    public string? Metric { get; set; }
-
-    public DateTimeOffset From { get; set; }
-
-    public DateTimeOffset Until { get; set; }
-
-    public string Reason { get; set; } = "maintenance window";
-}
-
-/// <summary>Which investigators Runtime assigns (Phase 04) and whether hypotheses are challenged (Phase 05).</summary>
-public sealed class InvestigationPlanOptions
-{
-    /// <summary>Roles investigated in parallel for every incident; <c>generalist</c> is the walking skeleton's single investigator.</summary>
-    public IList<string> Roles { get; } = [];
-
-    /// <summary>The configured roles, or the generalist alone when none are configured.</summary>
-    public IReadOnlyList<string> EffectiveRoles => Roles.Count == 0 ? [InvestigationRoles.Generalist] : [.. Roles.Distinct(StringComparer.Ordinal)];
-
-    /// <summary>Runs the adversarial verifier on the hypotheses before deciding.</summary>
-    public bool Challenge { get; set; }
-
-    /// <summary>How long the workflow waits beyond an investigation's own budget before giving up on it.</summary>
-    public TimeSpan ReportGrace { get; set; } = TimeSpan.FromSeconds(30);
-}
-
-/// <summary>Waits and timers of the incident workflow (ADR-005).</summary>
-public sealed class WorkflowOptions
-{
-    /// <summary>After this long without an approval or rejection the plan expires and the incident is escalated.</summary>
-    public TimeSpan ApprovalTimeout { get; set; } = TimeSpan.FromMinutes(30);
-
-    /// <summary>How long to wait for Executor's result before escalating; Executor reconciles unknown outcomes itself.</summary>
-    public TimeSpan ExecutionTimeout { get; set; } = TimeSpan.FromMinutes(10);
-
-    public TimeSpan RecoveryRetryInterval { get; set; } = TimeSpan.FromSeconds(10);
-}
-
-/// <summary>Reliability-weighted consensus (Phase 05); off until the verifier runs, when the walking skeleton's falsification check decides.</summary>
-public sealed class ConsensusOptions
-{
-    public bool Enabled { get; set; }
-
-    public IDictionary<string, double> SourceReliability { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
-
-    public double DefaultReliability { get; set; } = 0.8;
-
-    public double PartialWeight { get; set; } = 0.6;
-
-    public double ContradictionWeight { get; set; } = 1.2;
-
-    public double AbstainBelowConfidence { get; set; } = 0.5;
-
-    public int MinimumIndependentSupport { get; set; } = 2;
-
-    public double DissentMargin { get; set; } = 0.25;
-}
-
-public sealed class DetectionRuleOptions
-{
-    public string Service { get; set; } = string.Empty;
-
-    public string Metric { get; set; } = string.Empty;
-
-    public double DetectionThreshold { get; set; }
-
-    public double OnsetThreshold { get; set; } = 1.0;
-
-    public int RequiredSamples { get; set; } = 2;
-
-    public TimeSpan Lookback { get; set; } = TimeSpan.FromMinutes(10);
-
-    public TimeSpan ClearAfter { get; set; } = TimeSpan.FromMinutes(2);
-}
-
-public sealed class RecoveryCriterionOptions
-{
-    public string? Service { get; set; }
-
-    public string Metric { get; set; } = string.Empty;
-
-    public ThresholdComparison Comparison { get; set; } = ThresholdComparison.LessThan;
-
-    public double Threshold { get; set; }
 }

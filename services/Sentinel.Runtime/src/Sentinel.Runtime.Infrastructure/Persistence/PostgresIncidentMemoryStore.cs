@@ -6,8 +6,9 @@ using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Application;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
 
-namespace Sentinel.Runtime.Infrastructure.Storage;
+namespace Sentinel.Runtime.Infrastructure.Persistence;
 
 /// <summary>
 /// Incident memory in Runtime's database (Phase 07): one record per incident, and the feature

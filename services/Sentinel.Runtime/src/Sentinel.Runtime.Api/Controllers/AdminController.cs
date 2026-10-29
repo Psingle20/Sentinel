@@ -1,14 +1,10 @@
-using CleanArchitecture.BuildingBlocks;
-using CleanArchitecture.BuildingBlocks.Configuration;
-using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
-using CleanArchitecture.BuildingBlocks.Integration;
+using CleanArchitecture.BuildingBlocks.Messaging;
 using Microsoft.AspNetCore.Mvc;
-using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Api.Contracts;
-using Sentinel.Runtime.Application;
-using Sentinel.Runtime.Application.ControlPlane;
-using Sentinel.Runtime.Application.Memory;
+using Sentinel.Runtime.Application.BusinessProcesses.Configuration;
+using Sentinel.Runtime.Application.BusinessProcesses.Memory;
+using Sentinel.Runtime.Application.BusinessProcesses.Projections;
 using Sentinel.ServiceDefaults;
 
 namespace Sentinel.Runtime.Api.Controllers;
@@ -19,17 +15,12 @@ namespace Sentinel.Runtime.Api.Controllers;
 /// </summary>
 [Route(Routes.Admin)]
 [OperatorEndpoint]
-public sealed class AdminController(
-    ProjectionRebuilder rebuilder,
-    RuntimeConfigurationService configuration,
-    ManagedDocument<RuntimeConfigurationDocument> current,
-    IncidentMemoryService memory,
-    IUnitOfWork unitOfWork) : ApiController
+public sealed class AdminController(IRequestDispatcher requests) : ApiController
 {
     /// <summary>Rebuilds every projection from its stream. It overwrites in place and deletes nothing.</summary>
     [HttpPost("projections/rebuild")]
     public async Task<IResult> RebuildProjections(CancellationToken cancellationToken) =>
-        Results.Ok(new { rebuilt = await rebuilder.RebuildAsync(cancellationToken) });
+        Match(await requests.HandleRequestAsync(new RebuildProjectionsRequest(), cancellationToken), rebuilt => new { rebuilt });
 
     /// <summary>A published version applies here at once and on other instances at their next refresh; workflows already running keep their timers.</summary>
     [HttpPut("configuration")]
@@ -37,14 +28,7 @@ public sealed class AdminController(
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        Result<PublishedDocument<RuntimeConfigurationDocument>> published = await configuration.PublishAsync(body.Document, body.ExpectedVersion, body.Author, cancellationToken);
-        if (published.IsFailure)
-        {
-            return Problem(published.Error);
-        }
-
-        current.Set(published.Value);
-        return Results.Ok(published.Value.Version);
+        return Match(await requests.HandleRequestAsync(new PublishRuntimeConfigurationRequest(body.Document, body.ExpectedVersion, body.Author), cancellationToken));
     }
 
     [HttpPost("memory/{incidentId:guid}/legal-hold")]
@@ -52,9 +36,7 @@ public sealed class AdminController(
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        IncidentMemoryView? updated = await memory.SetLegalHoldAsync(IncidentId.From(incidentId), body.Hold, body.Actor, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
-        return updated is null ? Results.NotFound() : Results.Ok(updated);
+        return MatchFound(await requests.HandleRequestAsync(new SetLegalHoldRequest(IncidentId.From(incidentId), body.Hold, body.Actor), cancellationToken));
     }
 
     [HttpPost("memory/{incidentId:guid}/delete")]
@@ -62,9 +44,7 @@ public sealed class AdminController(
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        Result deleted = await memory.DeleteAsync(IncidentId.From(incidentId), body.Actor, body.Reason, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
-        return MatchNoContent(deleted);
+        return MatchNoContent(await requests.HandleRequestAsync(new DeleteIncidentMemoryRequest(IncidentId.From(incidentId), body.Actor, body.Reason), cancellationToken));
     }
 
     /// <summary>The retention purge. It is never scheduled and defaults to a dry run.</summary>
@@ -73,8 +53,6 @@ public sealed class AdminController(
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        PurgeReport report = await memory.PurgeAsync(body.DryRun, body.Actor, body.Limit ?? 100, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
-        return Results.Ok(report);
+        return Match(await requests.HandleRequestAsync(new PurgeIncidentMemoryRequest(body.DryRun, body.Actor, body.Limit ?? 100), cancellationToken));
     }
 }

@@ -16,6 +16,10 @@ using ContractDirection = Sentinel.Contracts.Investigations.EvidenceDirection;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
 using CleanArchitecture.BuildingBlocks.Messaging;
 using Sentinel.Runtime.Application.BusinessProcesses.Remediation;
+using Sentinel.Runtime.Application.Detection;
+using Sentinel.Runtime.Application.Options;
+using Sentinel.Runtime.Domain.Incidents.Events;
+using Sentinel.Runtime.Application.Projections;
 
 namespace Sentinel.Runtime.Tests;
 
@@ -292,7 +296,7 @@ internal sealed class WorkflowHarness : IDisposable
         IncidentId incidentId = (await Runtime.Store.ListAsync(10, CancellationToken.None)).Single().IncidentId;
 
         InvestigateIncident request = await Eventually(() => Runtime.Outbox.Of<InvestigateIncident>().FirstOrDefault(), "an investigation is requested");
-        await Runtime.InScopeAsync(provider => provider.GetRequiredService<RemediationControlService>().HandleInvestigationAsync(Report(request), CancellationToken.None));
+        await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(new RecordInvestigationReportRequest(incidentId, Report(request).ToReport()), CancellationToken.None));
         return incidentId;
     }
 
@@ -319,19 +323,10 @@ internal sealed class WorkflowHarness : IDisposable
     public async Task ExecuteAsync(IncidentId incidentId, ExecutionOutcome outcome)
     {
         ExecuteRemediation request = await Eventually(() => Runtime.Outbox.Of<ExecuteRemediation>().FirstOrDefault(execute => execute.IncidentId == incidentId), "execution is requested");
-        await Runtime.InScopeAsync(provider => provider.GetRequiredService<RemediationControlService>().ConfirmStartAsync(
-            new RemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, request.Plan.PlanId, request.Plan.PlanVersion, request.FencingToken), CancellationToken.None));
-        await Runtime.InScopeAsync(provider => provider.GetRequiredService<RemediationControlService>().HandleExecutedAsync(new RemediationExecuted
-        {
-            TenantId = InMemoryRuntime.Tenant,
-            EnvironmentId = InMemoryRuntime.Environment,
-            IncidentId = incidentId,
-            PlanId = request.Plan.PlanId,
-            PlanVersion = request.Plan.PlanVersion,
-            Outcome = outcome,
-            Detail = "Rolled back.",
-            CompletedAt = IncidentScenario.Start
-        }, CancellationToken.None));
+        await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
+            new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, request.Plan.PlanId, request.Plan.PlanVersion, request.FencingToken), CancellationToken.None));
+        await Runtime.InScopeAsync(provider => provider.GetRequiredService<IRequestDispatcher>().HandleRequestAsync(
+            new RecordExecutionResultRequest(incidentId, request.Plan.PlanId, request.Plan.PlanVersion, outcome.ToDomain(), "Rolled back."), CancellationToken.None));
     }
 
     public async Task<string> ResultAsync(IncidentId incidentId)

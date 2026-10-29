@@ -4,35 +4,6 @@ using Temporalio.Workflows;
 
 namespace Sentinel.Runtime.Infrastructure.Workflows;
 
-/// <summary>The workflow's view of an incident: identifiers and states only (ADR-005 payload rule).</summary>
-public sealed record StepSummary(
-    string State,
-    string? Decision,
-    bool Approved,
-    bool Rejected,
-    string? Execution,
-    DateTime? RecoveryWindowTo,
-    IReadOnlyList<Guid> PendingInvestigationIds,
-    IReadOnlyList<Guid> ReportedInvestigationIds)
-{
-    public bool IsOpen => State != "Resolved";
-}
-
-/// <summary>Timings fixed when a run starts, so a replay of the run sees the same values.</summary>
-public sealed record WorkflowTimings(
-    TimeSpan InvestigationTimeout,
-    bool Challenge,
-    TimeSpan ApprovalTimeout,
-    TimeSpan ExecutionTimeout,
-    TimeSpan RecoveryLag,
-    TimeSpan RecoveryDeadline,
-    TimeSpan RecoveryRetry);
-
-public sealed record IncidentWorkflowInput(Guid IncidentId, int Cycle, WorkflowTimings Timings);
-
-/// <summary>A hint that the incident's stream changed; the workflow re-reads the incident before acting on it.</summary>
-public sealed record IncidentWorkflowSignal(string Kind, string? Reference);
-
 /// <summary>
 /// The incident's durable workflow (ADR-005), one run per incident cycle: investigate, challenge,
 /// decide, plan, wait for approval, execute and verify recovery. It holds step progress only. It

@@ -2,6 +2,7 @@ using System.Globalization;
 using CleanArchitecture.BuildingBlocks;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Domain.Incidents;
+using Sentinel.Runtime.Application.Incidents.Commands;
 
 namespace Sentinel.Runtime.Application.Incidents;
 

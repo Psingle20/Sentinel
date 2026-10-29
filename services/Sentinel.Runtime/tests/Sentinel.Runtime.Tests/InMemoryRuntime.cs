@@ -17,6 +17,10 @@ using Sentinel.Runtime.Application.Memory;
 using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
+using Sentinel.Runtime.Application.Abstractions.Persistence;
+using Sentinel.Runtime.Application.Abstractions.Providers;
+using Sentinel.Runtime.Application.Incidents.InProcess;
+using Sentinel.Runtime.Application.Options;
 
 namespace Sentinel.Runtime.Tests;
 

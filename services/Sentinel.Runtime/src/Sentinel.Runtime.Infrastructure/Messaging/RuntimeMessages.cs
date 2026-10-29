@@ -24,10 +24,10 @@ public static class RuntimeMessages
             .Produces<RecoveryEvaluated>()
             .Produces<InvestigateIncident>()
             .Produces<ExecuteRemediation>()
-            .Consumes<ObservationRecorded, ObservationRecordedHandler>()
-            .Consumes<InvestigationCompleted, InvestigationCompletedHandler>()
+            .Consumes<ObservationRecorded, ObservationRecordedConsumer>()
+            .Consumes<InvestigationCompleted, InvestigationCompletedConsumer>()
             .Consumes<RecordApproval, RecordApprovalConsumer>()
             .Consumes<RecordRejection, RecordRejectionConsumer>()
             .Consumes<RecordRevocation, RecordRevocationConsumer>()
-            .Consumes<RemediationExecuted, RemediationExecutedHandler>();
+            .Consumes<RemediationExecuted, RemediationExecutedConsumer>();
 }

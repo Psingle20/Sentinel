@@ -2,6 +2,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Domain.Incidents;
 using Shouldly;
 using static Sentinel.Runtime.Tests.IncidentScenario;
+using Sentinel.Runtime.Domain.Incidents.Events;
 
 namespace Sentinel.Runtime.Tests;
 

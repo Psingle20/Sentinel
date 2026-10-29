@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
 using Sentinel.Runtime.Application.Incidents;
+using Sentinel.Runtime.Application.Incidents.Commands;
 
 namespace Sentinel.Runtime.Application.Services;
 
