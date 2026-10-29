@@ -24,6 +24,7 @@
 
     <!-- Service hosts -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
 
     <!-- Runtime: virtual actors (ADR-004) and durable workflows (ADR-005) -->
     <PackageVersion Include="Microsoft.Orleans.Server" Version="10.4.0" />

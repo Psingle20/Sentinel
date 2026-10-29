@@ -5,16 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Sentinel.Api.Host;
 
-/// <summary>The plan version and content hash the approver reviewed.</summary>
-public sealed record ApprovePlanRequest(int PlanVersion, string PlanHash);
 
-public sealed record RejectPlanRequest(int PlanVersion, string Reason);
-
-public static class Roles
-{
-    public const string Responder = "responder";
-    public const string Approver = "approver";
-}
 
 /// <summary>Configured as <c>Api:DevIdentity</c>. Users are synthetic addresses on the reserved <c>example.test</c> domain.</summary>
 public sealed class DevelopmentIdentityOptions
@@ -26,13 +17,16 @@ public sealed class DevelopmentIdentityOptions
     public string DefaultUser { get; set; } = string.Empty;
 
     public IDictionary<string, string[]> Users { get; } = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The tenants every development identity may see.</summary>
+    public IList<string> Tenants { get; } = [];
 }
 
 /// <summary>
 /// The walking skeleton's local development identities (Phase 01A): the caller names a configured
 /// user in <c>X-Sentinel-User</c>, or gets the default one. It exists only in the Development
-/// environment; anywhere else no scheme is registered and every API call is refused. Phase 08
-/// replaces it with real identity.
+/// environment; anywhere else Api accepts only JWT bearer tokens from the configured authority
+/// (Phase 08, <see cref="IdentityOptions"/>).
 /// </summary>
 public sealed class DevelopmentIdentityHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -55,7 +49,13 @@ public sealed class DevelopmentIdentityHandler(
             return Task.FromResult(AuthenticateResult.Fail($"{user} is not a configured development identity."));
         }
 
-        Claim[] claims = [new(ClaimTypes.NameIdentifier, user), new(ClaimTypes.Name, user), .. roles.Select(role => new Claim(ClaimTypes.Role, role))];
+        Claim[] claims =
+        [
+            new(ClaimTypes.NameIdentifier, user),
+            new(ClaimTypes.Name, user),
+            .. roles.Select(role => new Claim(ClaimTypes.Role, role)),
+            .. settings.Tenants.Select(tenant => new Claim(SentinelClaims.Tenant, tenant))
+        ];
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
     }
