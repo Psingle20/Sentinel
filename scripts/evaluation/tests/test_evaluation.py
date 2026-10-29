@@ -26,7 +26,11 @@ DEPLOY = "deploy-controller:deployment:d1:started"
 
 
 def evidence(evidence_id: str, hypothesis: str, observations: list[str], status: str = "accepted") -> dict:
-    return {"finding": {"evidenceId": evidence_id, "statement": "A signal.", "direction": "supports", "sourceObservationIds": observations, "hypothesisIds": [hypothesis]}, "status": status}
+    return {"finding": {"evidenceId": evidence_id, "statement": "A signal.", "direction": "supports", "sourceObservationIds": observations, "hypothesisIds": [hypothesis]}, "status": status, "investigationId": "inv1"}
+
+
+def model_execution(returned: list[str]) -> dict:
+    return {"investigator": "model", "shadow": False, "investigationId": "inv1", "toolCalls": [{"toolName": "metric_range", "observationIds": returned}]}
 
 
 def incident(*, leader_service: str, key: str, change_observation: str | None = DEPLOY, changed_service: str = "checkout-service", version: str = "v2.4.1",
@@ -159,11 +163,50 @@ class SentinelScoringTests(unittest.TestCase):
         self.assertEqual(score.input_tokens, 1_000_000)
         self.assertEqual(score.cost, 3.0)
 
+    def test_a_recorded_cost_wins_and_an_older_record_is_priced_by_its_model(self):
+        executions = [
+            {"investigator": "model", "shadow": False, "modelProvider": "meta-wonder", "model": "muse-wonder-1.0", "inputTokens": 1_000_000, "outputTokens": 0, "estimatedCost": 0.5},
+            {"investigator": "model", "shadow": False, "modelProvider": "meta", "model": "muse-spark", "inputTokens": 1_000_000, "outputTokens": 0},
+        ]
+        priced = {"models": {"muse-spark": {"inputPerMillion": 2.0, "outputPerMillion": 4.0}}, "default": {"inputPerMillion": 0, "outputPerMillion": 0}}
+        score = score_sentinel(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"), executions), self.packages["S1"], priced)
+        self.assertEqual(score.cost, 2.5)
+
     def test_different_prompt_versions_are_scored_as_separate_groups(self):
         first = run("S1", incident(leader_service="checkout-service", key="x"))
         second = run("S1", incident(leader_service="checkout-service", key="x"))
         second.incident["investigations"][0]["model"]["promptVersion"] = "investigator-v2/metrics"
         self.assertNotEqual(sentinel_label(first), sentinel_label(second))
+
+    def test_evidence_citing_an_observation_its_tools_never_returned_is_hallucinated_and_fails_the_diagnosis(self):
+        metrics = ["prometheus:redis_connections:checkout-service:100", "prometheus:redis_connections:checkout-service:160"]
+        detail = incident(leader_service="checkout-service", key=f"change:{DEPLOY}")
+        score = score_sentinel(run("S1", detail, [model_execution(metrics)]), self.packages["S1"], PRICING)
+        self.assertEqual(score.hallucinated_evidence, 1)
+        self.assertEqual(score.hallucination_rate, 0.5)
+        self.assertTrue(score.fabricated_evidence)
+        self.assertFalse(score.root_cause_correct)
+
+    def test_evidence_whose_tools_returned_every_citation_is_not_hallucinated(self):
+        returned = ["prometheus:redis_connections:checkout-service:100", "prometheus:redis_connections:checkout-service:160", DEPLOY]
+        score = score_sentinel(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"), [model_execution(returned)]), self.packages["S1"], PRICING)
+        self.assertEqual(score.hallucinated_evidence, 0)
+        self.assertEqual(score.hallucination_rate, 0.0)
+        self.assertTrue(score.root_cause_correct)
+
+    def test_evidence_without_a_recorded_execution_is_not_judged_for_hallucination(self):
+        score = score_sentinel(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}")), self.packages["S1"], PRICING)
+        self.assertEqual(score.hallucinated_evidence, 0)
+        self.assertTrue(score.root_cause_correct)
+
+    def test_consensus_accuracy_is_judged_only_when_an_investigator_proposed_the_true_cause(self):
+        chosen = score_sentinel(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}")), self.packages["S1"], PRICING)
+        discarded = score_sentinel(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}", outcome="abstained", plan=None)), self.packages["S1"], PRICING)
+        never_proposed = score_sentinel(run("S1", incident(leader_service="order-service", key="saturation:redis")), self.packages["S1"], PRICING)
+        self.assertEqual((chosen.correct_hypothesis_proposed, chosen.consensus_correct), (True, True))
+        self.assertEqual((discarded.correct_hypothesis_proposed, discarded.consensus_correct), (True, False))
+        self.assertEqual((never_proposed.correct_hypothesis_proposed, never_proposed.consensus_correct), (False, None))
+        self.assertEqual(aggregate("sentinel", [chosen, discarded, never_proposed]).consensus_accuracy, 0.5)
 
 
 class BaselineScoringTests(unittest.TestCase):

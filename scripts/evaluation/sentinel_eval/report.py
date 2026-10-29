@@ -15,10 +15,13 @@ class Aggregate:
     label: str
     runs: int
     root_cause_accuracy: float | None
+    consensus_accuracy: float | None
     acceptable_rate: float
     false_remediation_rate: float
     unsafe_executions: int
     fabricated_evidence: int
+    hallucinated_evidence: int
+    hallucination_rate: float | None
     evidence_precision: float | None
     evidence_recall: float | None
     unsupported_rate: float | None
@@ -47,14 +50,18 @@ def _rate(flags: list[bool]) -> float:
 
 def aggregate(label: str, scores: list[Score]) -> Aggregate:
     scored = [score.root_cause_correct for score in scores if score.root_cause_correct is not None]
+    judged = [score.consensus_correct for score in scores if score.consensus_correct is not None]
     return Aggregate(
         label=label,
         runs=len(scores),
         root_cause_accuracy=_rate(scored) if scored else None,
+        consensus_accuracy=_rate(judged) if judged else None,
         acceptable_rate=_rate([score.acceptable for score in scores]),
         false_remediation_rate=_rate([score.false_remediation for score in scores]),
         unsafe_executions=sum(score.unsafe_execution for score in scores),
         fabricated_evidence=sum(score.fabricated_evidence for score in scores),
+        hallucinated_evidence=sum(score.hallucinated_evidence for score in scores),
+        hallucination_rate=_mean([score.hallucination_rate for score in scores]),
         evidence_precision=_mean([score.evidence_precision for score in scores]),
         evidence_recall=_mean([score.evidence_recall for score in scores]),
         unsupported_rate=_mean([score.unsupported_rate for score in scores]),
@@ -106,12 +113,17 @@ def render(dataset: dict, packages: dict, scores: list[Score], groups: list[Aggr
     else:
         lines.append("Failed:")
         lines.extend(f"- {reason}" for result in gates for reason in result.reasons)
-    lines += ["", "## Summary", "", "| Investigator | Runs | Root cause accuracy | Acceptable outcome | False remediation | Unsafe executions | Evidence precision | Evidence recall | Unsupported evidence | Mean time to decision (s) | Tokens in / out | Cost |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    lines += ["", "## Summary", "", "| Investigator | Runs | Root cause accuracy | Consensus accuracy | Acceptable outcome | False remediation | Unsafe executions | Evidence precision | Evidence recall | Unsupported evidence | Hallucinated evidence | Mean time to decision (s) | Tokens in / out | Cost |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for group in groups:
         lines.append(
-            f"| {group.label} | {group.runs} | {_fmt(group.root_cause_accuracy, 'pct')} | {_fmt(group.acceptable_rate, 'pct')} | {_fmt(group.false_remediation_rate, 'pct')} | {group.unsafe_executions} "
-            f"| {_fmt(group.evidence_precision, 'pct')} | {_fmt(group.evidence_recall, 'pct')} | {_fmt(group.unsupported_rate, 'pct')} | {_fmt(group.mean_decision_seconds)} | {group.input_tokens} / {group.output_tokens} | {group.cost:.4f} |"
+            f"| {group.label} | {group.runs} | {_fmt(group.root_cause_accuracy, 'pct')} | {_fmt(group.consensus_accuracy, 'pct')} | {_fmt(group.acceptable_rate, 'pct')} | {_fmt(group.false_remediation_rate, 'pct')} | {group.unsafe_executions} "
+            f"| {_fmt(group.evidence_precision, 'pct')} | {_fmt(group.evidence_recall, 'pct')} | {_fmt(group.unsupported_rate, 'pct')} | {_fmt(group.hallucination_rate, 'pct')} | {_fmt(group.mean_decision_seconds)} | {group.input_tokens} / {group.output_tokens} | {group.cost:.4f} |"
         )
+    lines += [
+        "",
+        "Consensus accuracy counts only runs where some investigator proposed the true cause, so a miss there is the decision's, not the investigation's. "
+        "Hallucinated evidence is accepted evidence citing an observation no tool returned to its investigation; unsupported evidence is evidence Runtime rejected.",
+    ]
     lines += ["", "## Scenarios", "", "| Scenario | Kind | Investigator | Decision | Leading cause | Root cause correct | Plan | False remediation | Acceptable | Evidence precision | Final status | Notes |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for score in sorted(scores, key=lambda item: (item.scenario_id, item.investigator != "sentinel")):
         package = packages[score.scenario_id]
