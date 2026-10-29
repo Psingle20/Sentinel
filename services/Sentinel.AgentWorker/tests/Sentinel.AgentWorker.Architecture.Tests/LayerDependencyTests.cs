@@ -1,5 +1,6 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using Sentinel.Testing.Architecture;
 using Shouldly;
 
 namespace Sentinel.AgentWorker.Architecture.Tests;
@@ -40,6 +41,11 @@ public sealed class LayerDependencyTests
         "Sentinel.Ingestion",
         "Sentinel.Runtime",
         "Sentinel.Executor"
+    ];
+
+    // Rules 8 to 10 (ADR-020): the consumers, inline endpoints and building-block registration AgentWorker's own step (6) migrates.
+    private static readonly string[] PendingConsumers = [
+        "Sentinel.AgentWorker.Infrastructure.InvestigateIncidentHandler"
     ];
 
     [Fact]
@@ -89,6 +95,26 @@ public sealed class LayerDependencyTests
             assembly.GetReferencedAssemblies().ShouldNotContain(name => (name.Name ?? string.Empty).StartsWith("Reference.", StringComparison.Ordinal));
         }
     }
+
+    [Fact]
+    public void Every_command_query_and_request_has_one_handler_or_processor_in_its_own_namespace() =>
+        ArchitectureRules.HandlerPlacement(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Processors_depend_only_on_a_validator_and_a_dispatcher() =>
+        ArchitectureRules.ProcessorDependencies(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Consumers_live_in_messaging_consumers_and_send_requests() =>
+        ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", PendingConsumers).ShouldBeEmpty();
+
+    [Fact]
+    public void Program_still_maps_its_endpoints_until_they_move_to_controllers() =>
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/Program.cs"), pending: true).ShouldBeEmpty();
+
+    [Fact]
+    public void Only_the_application_module_registers_the_building_blocks() =>
+        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, ["Program"]).ShouldBeEmpty();
 
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
