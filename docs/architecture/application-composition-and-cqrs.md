@@ -13,7 +13,9 @@ The corresponding decision is [ADR-020](../decisions/ADR-020-application-composi
 
 ## Why this refactor is needed
 
-**Current.** Sentinel's service boundaries are right and its building blocks are capable, but inside each service the composition has drifted:
+**Status (2026-10-29).** The refactoring sequence below has been carried out in all five services and in the reference system's deploy controller and scenario runner: every host composes through layer modules and a `DependencyContainer`, every endpoint and consumer sends a request through `IRequestDispatcher`, and the one-type-per-file rules are errors everywhere with no exemptions. Rules 6 to 13 run in every service's architecture tests with no pending entries. Where the code departs from this guide's names: Runtime's recovery child entity is `RecoveryVerification` (`Recovery` collides with an `Incident` member), its in-process owner sits in `Incidents/InProcess/`, AgentWorker's persisted record is `AgentExecutionRecord` beside the `AgentExecution` aggregate, and the reference services have Domain, Application and Api projects only, with their HTTP adapters in the Api project. The **Before the refactoring** notes record what this guide was written against.
+
+**Before the refactoring.** Sentinel's service boundaries are right and its building blocks are capable, but inside each service the composition has drifted:
 
 - Every host calls `AddBuildingBlocks` itself and then registers messaging, so the Application layer does not own its own handlers and validators.
 - Every Infrastructure registration method also registers Application services. Runtime's registers fourteen Application types; Api's registers its three application services beside its HTTP clients.
@@ -186,7 +188,7 @@ Only one service changes its short name. `Sentinel.Api` becomes **`Sentinel.Gate
 
 **What changes and what must not.** The rename touches the Gateway's directory, the `.Host` project names and namespaces, the Gateway project names and namespaces, the solution file, the AppHost resource names, configuration section roots and the `Services:` discovery keys, the architecture tests' service list, the steering file, the README, the production-topology document and ADR-001, ADR-006 and ADR-007, and is done in one commit per service with no behaviour change. It must not change anything that is a contract or a durable identity: message type names such as `runtime.incident.opened` and stream names such as `sentinel.executor.commands` are versioned contracts under ADR-012 and stay as they are; the Orleans `ClusterId` and `ServiceId`, the Temporal namespace, task queue and workflow IDs, database and schema names, and the approval attestation `Issuer` and `Audience` are runtime identities that persist across restarts and stay as they are unless a separate migration is planned and recorded. So is the messaging service name passed to `AddSentinelMessaging` (`sentinel-api`, `sentinel-runtime` and so on): it sets the envelope `Producer` and also names the service's Redis consumer groups and inbox records, so renaming it would start new consumer groups at the beginning of every stream and replay every message. The first slice found this and kept it; separating the producer from the consumer identity is a building-block change for later. The architecture tests that forbid cross-service references are updated to the new namespaces in the same commit, so the boundary is enforced before and after.
 
-**Current.** The first slice renamed Gateway, Runtime and Executor: `services/Sentinel.Gateway/`, `services/Sentinel.Runtime/` and `services/Sentinel.Executor/` hold `.Api` projects, with resources `gateway-service`, `runtime-service` and `executor-service`. Ingestion and AgentWorker keep their `.Host` projects and resource names until their own steps.
+**Current.** All five services are renamed: each `services/Sentinel.<Name>/` holds an `.Api` project, with resources `gateway-service`, `ingestion-service`, `runtime-service`, `agent-worker-service` and `executor-service`. Database names and messaging names are unchanged, so no consumer group restarted and no message was replayed.
 
 ## Target folder structure
 
@@ -289,7 +291,7 @@ Enforce it with analyzers rather than review. Add `StyleCop.Analyzers` to `Direc
 
 The job engine's `Job` is the model to follow: a sealed aggregate with private setters, a factory, behaviour methods that return `Result`, an explicit transition table in `JobStateMachine`, an error catalogue in `JobErrors`, one enum per file and one domain event per file. Its application handlers load the aggregate, call one method, persist and publish; its infrastructure maps the aggregate to tables and knows nothing about the rules. Sentinel already does this well in two places and badly in several others.
 
-**Current.** `Incident` and `ExecutionRequest` are real aggregates: private state, `Result`-returning operations, error catalogues, a transition table in Executor. The problems are around them. Twelve enums are clubbed into files with the records that use them (`IncidentModel.cs` alone has seven enums and eleven records). `Incident` is 770 lines and carries four lifecycles, investigation, decision, remediation and recovery, with no explicit transition table for any of them. Api's domain is one record and one enum, while the approval rules it should own, hash equality, single decision per plan version, expiry, live in `ApprovalService` in Application. `AgentExecution` and `SourceState` are records with no behaviour. Recovery success is decided by comparing measurements to thresholds in `RecoveryVerificationService` in Application, which is a domain rule.
+**Before the refactoring.** `Incident` and `ExecutionRequest` are real aggregates: private state, `Result`-returning operations, error catalogues, a transition table in Executor. The problems are around them. Twelve enums are clubbed into files with the records that use them (`IncidentModel.cs` alone has seven enums and eleven records). `Incident` is 770 lines and carries four lifecycles, investigation, decision, remediation and recovery, with no explicit transition table for any of them. Api's domain is one record and one enum, while the approval rules it should own, hash equality, single decision per plan version, expiry, live in `ApprovalService` in Application. `AgentExecution` and `SourceState` are records with no behaviour. Recovery success is decided by comparing measurements to thresholds in `RecoveryVerificationService` in Application, which is a domain rule.
 
 ### Rules
 
@@ -333,7 +335,7 @@ An interface earns its existence by crossing a layer or by being a substitution 
 
 ## Message consumers
 
-**Current.** Consumers implement `IIntegrationMessageHandler<T>` in Infrastructure files beside HTTP clients and call application services directly.
+**Before the refactoring.** Consumers implement `IIntegrationMessageHandler<T>` in Infrastructure files beside HTTP clients and call application services directly. Every consumer now follows the target below.
 
 Target: one consumer class per contract under `Infrastructure/Messaging/Consumers/`, each a five-line adapter that maps the contract to a `<Operation>Request` and sends it through `IRequestDispatcher`. The same processor and handler then serve HTTP and messages. Consumers stay in Infrastructure because the building-block consumer contract lives there and because the inbox and unit of work are infrastructure concerns.
 
@@ -364,7 +366,7 @@ Protocol, configuration, route-root, service and telemetry identifiers live as c
 
 The first slice, chosen because it crosses the public edge, Runtime's authority and Executor's privileged boundary.
 
-**Current.** `POST /api/v1/incidents/{id}/plans/{planId}/approve` is an inline lambda in Api's `Program.cs` that builds an `ApprovePlan` record and calls `ApprovalService.ApproveAsync`, a 311-line file that also declares the three ports it uses, the options class, the receipt and the error catalogue. The approval reaches Runtime as `RecordApproval`, consumed by `RecordApprovalHandler` in `RuntimeAdapters.cs`, which calls `RemediationControlService`.
+**Before the refactoring.** `POST /api/v1/incidents/{id}/plans/{planId}/approve` was an inline lambda in Api's `Program.cs` that builds an `ApprovePlan` record and calls `ApprovalService.ApproveAsync`, a 311-line file that also declares the three ports it uses, the options class, the receipt and the error catalogue. The approval reaches Runtime as `RecordApproval`, consumed by `RecordApprovalHandler` in `RuntimeAdapters.cs`, which calls `RemediationControlService`.
 
 Target, Api:
 

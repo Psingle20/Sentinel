@@ -311,6 +311,8 @@ Added by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md). Th
 
 Stage E2 precedes the first service slice in the composition guide because the services cannot adopt the processor seam until the package provides it.
 
+**Status (2026-10-29).** Stage E2 is complete in `0.1.0-alpha.6`, which also renamed the inbound call to `IRequestDispatcher.HandleRequestAsync`. All five services and the reference system's deploy controller and scenario runner compose through `IDependencyModule` and `AddModules` and send every request through the processor seam; the deploy controller's `DeploymentLedger` derives from `Entity`. The reference system is therefore the third consumer this plan anticipated, and the first that uses the domain-event support, for logging only.
+
 ### Stage F – Standalone extraction
 
 Extract the library into its own repository when all criteria below are satisfied:
