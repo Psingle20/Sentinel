@@ -2,6 +2,7 @@ using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Contracts.Queries;
 using Sentinel.Contracts.Remediation;
 
 namespace Sentinel.Contracts.Tests;
@@ -250,6 +251,93 @@ internal static class ContractSamples
             ObservedThrough = Opened.AddSeconds(390),
             EvaluatedAt = Opened.AddSeconds(396),
             StreamVersion = 10
-        }
+        },
+
+        // Logs and traces travel only in query answers (ADR-018), so the query contract carries their compatibility snapshot.
+        [QueryAnswer] = new ObservationQueryResult(
+            [
+                new LogObservation
+                {
+                    ObservationId = ObservationId.From("loki:service-warnings:checkout-service:1793093040:9f2c"),
+                    TenantId = Tenant,
+                    EnvironmentId = Environment,
+                    ServiceId = Checkout,
+                    SourceProvider = "loki",
+                    SourceResource = "{service=\"checkout-service\"}",
+                    EventTime = Opened.AddSeconds(-20),
+                    IngestTime = Opened.AddSeconds(-18),
+                    Severity = LogSeverity.Error,
+                    Message = "Checkout cart-17526 failed on Redis: ERR max number of clients reached",
+                    ExceptionType = "Reference.Common.Redis.RedisUnavailableException",
+                    Attributes = new Dictionary<string, string> { ["signature"] = "Checkout cart-<n> failed on Redis: ERR max number of clients reached" }
+                },
+                new TraceObservation
+                {
+                    ObservationId = ObservationId.From("jaeger:4bf92f3577b34da6:00f067aa0ba902b7"),
+                    TenantId = Tenant,
+                    EnvironmentId = Environment,
+                    ServiceId = Checkout,
+                    SourceProvider = "jaeger",
+                    SourceResource = "traces",
+                    EventTime = Opened.AddSeconds(-15),
+                    IngestTime = Opened.AddSeconds(-10),
+                    TraceId = "4bf92f3577b34da6a3ce929d0e0e4736",
+                    SpanId = "00f067aa0ba902b7",
+                    OperationName = "POST /api/orders",
+                    Duration = TimeSpan.FromMilliseconds(842),
+                    Status = SpanStatus.Error,
+                    DependencyServiceId = ServiceId.From("order-service")
+                },
+                new DeploymentObservation
+                {
+                    ObservationId = Deployment,
+                    TenantId = Tenant,
+                    EnvironmentId = Environment,
+                    ServiceId = Checkout,
+                    SourceProvider = "deploy-controller",
+                    SourceResource = "deployments/d1",
+                    EventTime = Opened.AddSeconds(-240),
+                    IngestTime = Opened.AddSeconds(-238),
+                    DeploymentId = "d1",
+                    Version = "v2.4.1",
+                    PreviousVersion = "v2.4.0",
+                    Actor = "release-pipeline",
+                    StartedAt = Opened.AddSeconds(-260),
+                    CompletedAt = Opened.AddSeconds(-240)
+                },
+                new TopologyObservation
+                {
+                    ObservationId = ObservationId.From("jaeger:topology:checkout-service:order-service"),
+                    TenantId = Tenant,
+                    EnvironmentId = Environment,
+                    ServiceId = Checkout,
+                    SourceProvider = "jaeger",
+                    SourceResource = "dependencies",
+                    EventTime = Opened,
+                    IngestTime = Opened.AddSeconds(5),
+                    TargetServiceId = ServiceId.From("order-service"),
+                    DependencyType = "http",
+                    Protocol = "http",
+                    Confidence = 0.95,
+                    FirstSeen = Opened.AddHours(-6),
+                    LastSeen = Opened
+                }
+            ],
+            new QueryMetadata
+            {
+                ObservedThrough = Opened,
+                Freshness = TimeSpan.FromSeconds(12),
+                Completeness = QueryCompleteness.Partial,
+                Truncated = true,
+                ProviderHealth = [new ProviderHealth("loki", ProviderStatus.Healthy), new ProviderHealth("jaeger", ProviderStatus.Degraded)],
+                RedactionPolicyVersion = "redaction-v1",
+                ContinuationToken = "1793093100.prometheus:checkout:slo-burn-rate:1793093100"
+            })
     };
+
+    /// <summary>The snapshot name of Ingestion's observation query answer, which is a contract but not a message.</summary>
+    internal const string QueryAnswer = "ingestion.query.observations.result";
+
+    /// <summary>Samples of contracts that are not messages, which the message rules leave out.</summary>
+    internal static readonly IReadOnlyList<string> NonMessageContracts = [QueryAnswer];
 }

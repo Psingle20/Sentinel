@@ -1,0 +1,96 @@
+{
+  "observations": [
+    {
+      "kind": "log",
+      "severity": "error",
+      "message": "Checkout cart-17526 failed on Redis: ERR max number of clients reached",
+      "structuredFields": {},
+      "exceptionType": "Reference.Common.Redis.RedisUnavailableException",
+      "observationId": "loki:service-warnings:checkout-service:1793093040:9f2c",
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "serviceId": "checkout-service",
+      "sourceProvider": "loki",
+      "sourceResource": "{service=\u0022checkout-service\u0022}",
+      "eventTime": "2026-10-28T09:04:40+00:00",
+      "ingestTime": "2026-10-28T09:04:42+00:00",
+      "attributes": {
+        "signature": "Checkout cart-\u003Cn\u003E failed on Redis: ERR max number of clients reached"
+      }
+    },
+    {
+      "kind": "trace",
+      "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "spanId": "00f067aa0ba902b7",
+      "operationName": "POST /api/orders",
+      "duration": "00:00:00.8420000",
+      "status": "error",
+      "dependencyServiceId": "order-service",
+      "observationId": "jaeger:4bf92f3577b34da6:00f067aa0ba902b7",
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "serviceId": "checkout-service",
+      "sourceProvider": "jaeger",
+      "sourceResource": "traces",
+      "eventTime": "2026-10-28T09:04:45+00:00",
+      "ingestTime": "2026-10-28T09:04:50+00:00",
+      "attributes": {}
+    },
+    {
+      "kind": "deployment",
+      "deploymentId": "d1",
+      "version": "v2.4.1",
+      "previousVersion": "v2.4.0",
+      "actor": "release-pipeline",
+      "startedAt": "2026-10-28T09:00:40+00:00",
+      "completedAt": "2026-10-28T09:01:00+00:00",
+      "changeKind": "deploy",
+      "status": "completed",
+      "observationId": "deploy-controller:checkout-service:v2.4.1",
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "serviceId": "checkout-service",
+      "sourceProvider": "deploy-controller",
+      "sourceResource": "deployments/d1",
+      "eventTime": "2026-10-28T09:01:00+00:00",
+      "ingestTime": "2026-10-28T09:01:02+00:00",
+      "attributes": {}
+    },
+    {
+      "kind": "topology",
+      "targetServiceId": "order-service",
+      "dependencyType": "http",
+      "protocol": "http",
+      "confidence": 0.95,
+      "firstSeen": "2026-10-28T03:05:00+00:00",
+      "lastSeen": "2026-10-28T09:05:00+00:00",
+      "observationId": "jaeger:topology:checkout-service:order-service",
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "serviceId": "checkout-service",
+      "sourceProvider": "jaeger",
+      "sourceResource": "dependencies",
+      "eventTime": "2026-10-28T09:05:00+00:00",
+      "ingestTime": "2026-10-28T09:05:05+00:00",
+      "attributes": {}
+    }
+  ],
+  "metadata": {
+    "observedThrough": "2026-10-28T09:05:00+00:00",
+    "freshness": "00:00:12",
+    "completeness": "partial",
+    "truncated": true,
+    "providerHealth": [
+      {
+        "provider": "loki",
+        "status": "healthy"
+      },
+      {
+        "provider": "jaeger",
+        "status": "degraded"
+      }
+    ],
+    "redactionPolicyVersion": "redaction-v1",
+    "continuationToken": "1793093100.prometheus:checkout:slo-burn-rate:1793093100"
+  }
+}

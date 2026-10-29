@@ -30,7 +30,7 @@ public sealed partial class ContractRulesTests
         string[] names = [.. MessageTypes.Select(type => StaticValue(type, nameof(ISentinelMessage.MessageType)))];
 
         names.ShouldBeUnique();
-        names.Order(StringComparer.Ordinal).ShouldBe(ContractSamples.All.Keys.Order(StringComparer.Ordinal));
+        names.Order(StringComparer.Ordinal).ShouldBe(ContractSamples.All.Keys.Except(ContractSamples.NonMessageContracts).Order(StringComparer.Ordinal));
     }
 
     [Fact]
