@@ -75,7 +75,7 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
         InvestigationRun run = InvestigationRecords.Build(
             command, Name, shadow, Metadata, InvestigationOutcome.Completed, null,
             output.Evidence, output.Alternatives, reads.ToolCalls, 0, 0, 0, 0, started, time.GetUtcNow());
-        return run with { Completed = run.Completed with { Challenges = output.Challenges } };
+        return run.WithCompleted(run.Completed with { Challenges = output.Challenges });
     }
 
     /// <summary>F1 and F2: the change must serve before onset, and its own service must shift after it.</summary>

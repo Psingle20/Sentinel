@@ -15,7 +15,16 @@ using Sentinel.Contracts.Queries;
 namespace Sentinel.AgentWorker.Application.Investigations;
 
 /// <summary>One investigator run: the message for Runtime and the audit record for AgentWorker.</summary>
-public sealed record InvestigationRun(InvestigationCompleted Completed, AgentExecution Execution);
+public sealed record InvestigationRun(InvestigationCompleted Completed, AgentExecution Execution)
+{
+    /// <summary>Replaces the findings and keeps the audit record's copy identical to what is sent (Phase 07 replay compares against it).</summary>
+    public InvestigationRun WithCompleted(InvestigationCompleted completed)
+    {
+        ArgumentNullException.ThrowIfNull(completed);
+
+        return new InvestigationRun(completed, Execution with { Findings = JsonSerializer.Serialize(completed, SentinelJson.Options) });
+    }
+}
 
 /// <summary>
 /// The investigator contract (Phase 01A): every investigator, model-driven or not, answers the same
@@ -203,7 +212,7 @@ public sealed class ModelInvestigator(
     {
         var metadata = new ModelMetadata(state.Model.Provider, state.Model.Model, state.Model.ModelVersion, InvestigatorPrompt.VersionFor(state.Profile, state.PromptVersion));
         InvestigationRun run = InvestigationRecords.Build(command, Name, shadow, metadata, outcome, reason, state.Evidence, state.Hypotheses, state.ToolCalls, state.ModelCalls, state.InputTokens, state.OutputTokens, state.SchemaFailures, state.StartedAt, time.GetUtcNow());
-        return run with { Completed = run.Completed with { Unknowns = state.Unknowns.Count > 0 ? state.Unknowns : null } };
+        return run.WithCompleted(run.Completed with { Unknowns = state.Unknowns.Count > 0 ? state.Unknowns : null });
     }
 
     private sealed class RunState(DateTimeOffset startedAt, SpecialistProfile profile, IModelProvider model, string promptVersion)

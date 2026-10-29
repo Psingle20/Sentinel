@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+    <PropertyGroup>
+        <UserSecretsId>sentinel-agentworker-6e25c6a7-8687-4b63-85e2-ec5a9fd4cdd7</UserSecretsId>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Sentinel.AgentWorker.Infrastructure\Sentinel.AgentWorker.Infrastructure.csproj" />
         <ProjectReference Include="..\..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />

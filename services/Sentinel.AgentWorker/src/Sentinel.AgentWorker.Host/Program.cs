@@ -1,5 +1,9 @@
 using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using Sentinel.AgentWorker.Application.Investigations;
+using Sentinel.AgentWorker.Application.Models;
+using Sentinel.AgentWorker.Host;
 using Sentinel.AgentWorker.Infrastructure;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
@@ -40,6 +44,29 @@ app.MapPost("/v1/executions/{executionId:guid}/replays", async (Guid executionId
         return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
     }
 });
+
+// Phase 08 model selection: the control-plane document and every published version. Api authorizes and audits changes.
+app.MapGet("/v1/configuration", async (ModelConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.CurrentAsync(cancellationToken));
+app.MapGet("/v1/configuration/history", async (ModelConfigurationService configuration, CancellationToken cancellationToken) =>
+    await configuration.HistoryAsync(cancellationToken));
+
+// Until service-to-service authentication (Phase 09), publishing exists only where operator endpoints are enabled.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Sentinel:OperatorEndpoints:Enabled"))
+{
+    app.MapPut("/admin/configuration", async (PublishModelConfigurationRequest request, ModelConfigurationService configuration, ManagedDocument<ModelConfigurationDocument> current, CancellationToken cancellationToken) =>
+    {
+        Result<PublishedDocument<ModelConfigurationDocument>> published = await configuration.PublishAsync(request.Document, request.ExpectedVersion, request.Author, cancellationToken);
+        if (published.IsFailure)
+        {
+            return Results.Problem(published.Error.Description, title: published.Error.Code, statusCode: published.Error.Type == ErrorType.Conflict ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest);
+        }
+
+        // Investigations already running keep the settings they started with.
+        current.Set(published.Value);
+        return Results.Ok(published.Value.Version);
+    });
+}
 
 await app.RunAsync();
 

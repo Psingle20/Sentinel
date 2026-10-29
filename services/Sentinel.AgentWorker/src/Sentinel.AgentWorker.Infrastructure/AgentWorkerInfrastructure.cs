@@ -1,11 +1,14 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
+using CleanArchitecture.BuildingBlocks.Configuration;
+using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
 using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
 using Sentinel.AgentWorker.Application.Investigations;
@@ -22,6 +25,9 @@ namespace Sentinel.AgentWorker.Infrastructure;
 
 public static class AgentWorkerInfrastructure
 {
+    /// <summary>The options name for the deployment configuration without the control-plane document.</summary>
+    public const string DeploymentOptions = "deployment";
+
     /// <summary>
     /// Tools, investigators, the model provider selected by <c>Model:Provider</c> (<c>test-double</c>
     /// by default, or <c>meta</c>) and the execution store. AgentWorker holds no provider
@@ -31,7 +37,11 @@ public static class AgentWorkerInfrastructure
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
+        // Each managed options type is also bound as "deployment": the control-plane document's seed, unchanged by it.
         services.AddOptions<InvestigationOptions>().Bind(configuration.GetSection(InvestigationOptions.Section));
+        services.AddOptions<InvestigationOptions>(DeploymentOptions).Bind(configuration.GetSection(InvestigationOptions.Section));
+        services.AddOptions<ModelRoutingOptions>().Bind(configuration.GetSection(ModelRoutingOptions.Section));
+        services.AddOptions<ModelRoutingOptions>(DeploymentOptions).Bind(configuration.GetSection(ModelRoutingOptions.Section));
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IMessagingStoreInitializer, AgentWorkerSchema>();
         services.AddScoped<IExecutionStore, PostgresExecutionStore>();
@@ -64,17 +74,22 @@ public static class AgentWorkerInfrastructure
         services.AddScoped<InvestigationReplayService>();
 
         services.AddOptions<ModelPricingOptions>().Bind(configuration.GetSection(ModelPricingOptions.Section));
+        services.AddOptions<ModelPricingOptions>(DeploymentOptions).Bind(configuration.GetSection(ModelPricingOptions.Section));
         services.AddSingleton<AgentWorkerTelemetry>();
 
         // The test double is always available; the Meta provider only when configured (ADR-015).
-        // Model:Provider picks the default, Model:Routing:<role> overrides it per role (Phase 04).
+        // Model:Provider picks the default, Model:Routing:<role> overrides it per role (Phase 04), and
+        // the control plane can move roles between the providers registered here (Phase 08).
         services.AddOptions<TestDoubleOptions>().Bind(configuration.GetSection("Model:TestDouble"));
         services.AddSingleton<IModelProvider, DeterministicModelProvider>();
         string provider = configuration["Model:Provider"] ?? ModelRouter.TestDouble;
         bool metaRouted = provider == MetaModelProvider.ProviderName
             || configuration.GetSection("Model:Routing").GetChildren().Any(route => route.Value == MetaModelProvider.ProviderName);
-        if (metaRouted)
+        bool metaConfigured = configuration.GetSection("Model:Meta").Get<MetaModelOptions>()?.IsValid() == true;
+        List<string> available = [ModelRouter.TestDouble];
+        if (metaRouted || metaConfigured)
         {
+            available.Add(MetaModelProvider.ProviderName);
             services.AddOptions<MetaModelOptions>()
                 .Bind(configuration.GetSection("Model:Meta"))
                 .Validate(options => options.IsValid(), "Model:Meta needs ChatCompletionsUri, Model and ApiKey (from secret configuration).")
@@ -93,7 +108,22 @@ public static class AgentWorkerInfrastructure
             throw new InvalidOperationException($"Model:Provider '{provider}' is not supported; use {ModelRouter.TestDouble} or {MetaModelProvider.ProviderName}.");
         }
 
-        services.AddScoped<IModelRouter>(services => new ModelRouter(services.GetServices<IModelProvider>(), configuration, services.GetRequiredService<InvestigationCapture>()));
+        services.AddScoped<IModelRouter>(services => new ModelRouter(services.GetServices<IModelProvider>(), services.GetRequiredService<IOptions<ModelRoutingOptions>>(), services.GetRequiredService<InvestigationCapture>()));
+
+        // Phase 08: model selection through the control plane, applied over the deployment configuration.
+        services.AddSingleton<IVersionedDocumentStore<ModelConfigurationDocument>>(provider =>
+            new PostgresVersionedDocumentStore<ModelConfigurationDocument>(provider.GetRequiredService<NpgsqlDataSource>(), AgentWorkerSchema.ConfigurationTable, SentinelJson.Options));
+        services.AddSingleton<VersionedDocumentPublisher<ModelConfigurationDocument>>();
+        services.AddSingleton(provider => new ModelConfigurationService(
+            provider.GetRequiredService<VersionedDocumentPublisher<ModelConfigurationDocument>>(),
+            () => ModelConfigurationMapping.From(
+                provider.GetRequiredService<IOptionsFactory<ModelRoutingOptions>>().Create(DeploymentOptions),
+                provider.GetRequiredService<IOptionsFactory<InvestigationOptions>>().Create(DeploymentOptions),
+                provider.GetRequiredService<IOptionsFactory<ModelPricingOptions>>().Create(DeploymentOptions)),
+            available));
+        services.AddManagedDocument<ModelRoutingOptions, ModelConfigurationDocument>(ModelConfigurationMapping.Apply);
+        services.AddManagedDocument<InvestigationOptions, ModelConfigurationDocument>(ModelConfigurationMapping.Apply);
+        services.AddManagedDocument<ModelPricingOptions, ModelConfigurationDocument>(ModelConfigurationMapping.Apply);
         return services;
     }
 }
@@ -103,15 +133,15 @@ public static class AgentWorkerInfrastructure
 /// Configuration values are <c>test-double</c> or <c>meta</c>. A level-3 replay's model profile
 /// overrides both for its own scope only.
 /// </summary>
-internal sealed class ModelRouter(IEnumerable<IModelProvider> providers, IConfiguration configuration, InvestigationCapture capture) : IModelRouter
+internal sealed class ModelRouter(IEnumerable<IModelProvider> providers, IOptions<ModelRoutingOptions> routing, InvestigationCapture capture) : IModelRouter
 {
-    public const string TestDouble = "test-double";
+    public const string TestDouble = ModelRoutingOptions.TestDouble;
 
     private readonly IReadOnlyList<IModelProvider> _providers = [.. providers];
 
     public IModelProvider For(string role)
     {
-        string name = capture.ModelProfile ?? configuration[$"Model:Routing:{role}"] ?? configuration["Model:Provider"] ?? TestDouble;
+        string name = capture.ModelProfile ?? routing.Value.ProviderFor(role);
         string provider = name == TestDouble ? DeterministicModelProvider.ProviderName : name;
         return _providers.FirstOrDefault(candidate => candidate.Provider == provider)
             ?? throw new InvalidOperationException($"No model provider '{name}' is configured for the {role} role.");
@@ -149,6 +179,9 @@ public sealed class InvestigateIncidentHandler(InvestigationService investigatio
 
 internal sealed class AgentWorkerSchema(NpgsqlDataSource dataSource) : IMessagingStoreInitializer
 {
+    /// <summary>Published versions of AgentWorker's control-plane document (Phase 08).</summary>
+    public const string ConfigurationTable = "agentworker.configuration_versions";
+
     private const string Sql = """
         select pg_advisory_xact_lock(hashtext('sentinel.agentworker.schema'));
 
@@ -193,7 +226,7 @@ internal sealed class AgentWorkerSchema(NpgsqlDataSource dataSource) : IMessagin
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(Sql, connection, transaction);
+        await using var command = new NpgsqlCommand(Sql + PostgresVersionedDocumentStore<ModelConfigurationDocument>.CreateTableSql(ConfigurationTable), connection, transaction);
         await command.ExecuteNonQueryAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
