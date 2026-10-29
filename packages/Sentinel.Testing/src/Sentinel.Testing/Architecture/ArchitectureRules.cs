@@ -45,6 +45,9 @@ public static partial class ArchitectureRules
 
     private static readonly Type[] AllowedDomainAttributes = [typeof(JsonDerivedTypeAttribute), typeof(JsonPolymorphicAttribute)];
 
+    // The Sentinel packages a service may reference (ADR-007); everything else named Sentinel.* belongs to a service.
+    private static readonly string[] SharedPackages = ["Sentinel.Contracts", "Sentinel.Contracts.Primitives", "Sentinel.ServiceDefaults"];
+
     /// <summary>Rule 6: every command, query and request has exactly one handler or processor, in its own namespace.</summary>
     public static IReadOnlyList<string> HandlerPlacement(Assembly application)
     {
@@ -250,6 +253,45 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>The source file of a project, found by walking up from the test's output directory.</summary>
+    /// <summary>
+    /// Project references, which the type rules above cannot see until a type uses them (review finding F-016): inside a
+    /// service they point inward, Api to Infrastructure to Application to Domain, and no project references another
+    /// service or the reference system. Shared packages are allowed here; the assembly rules govern which.
+    /// </summary>
+    public static IReadOnlyList<string> ProjectReferences(string service) =>
+        ProjectReferences(service, Path.GetDirectoryName(Path.GetDirectoryName(SourceFile($"services/{service}/src/{service}.Domain/{service}.Domain.csproj")))!);
+
+    /// <summary><see cref="ProjectReferences(string)"/> over the service's projects under <paramref name="source"/>.</summary>
+    public static IReadOnlyList<string> ProjectReferences(string service, string source)
+    {
+        string[] layers = ["Domain", "Application", "Infrastructure", "Api"];
+        var violations = new List<string>();
+        for (int layer = 0; layer < layers.Length; layer++)
+        {
+            string project = $"{service}.{layers[layer]}";
+            string file = Path.Combine(source, project, $"{project}.csproj");
+            foreach (string referenced in System.Xml.Linq.XDocument.Load(file).Descendants("ProjectReference")
+                .Select(reference => Path.GetFileNameWithoutExtension((string?)reference.Attribute("Include") ?? string.Empty)))
+            {
+                if (referenced.StartsWith($"{service}.", StringComparison.Ordinal))
+                {
+                    int target = Array.IndexOf(layers, referenced[(service.Length + 1)..]);
+                    if (target < 0 || target >= layer)
+                    {
+                        violations.Add($"{project} references {referenced}; references point inward only.");
+                    }
+                }
+                else if (referenced.StartsWith("Reference.", StringComparison.Ordinal)
+                    || referenced.StartsWith("Sentinel.", StringComparison.Ordinal) && !SharedPackages.Contains(referenced))
+                {
+                    violations.Add($"{project} references {referenced}, which belongs to another service or the reference system.");
+                }
+            }
+        }
+
+        return violations;
+    }
+
     public static string SourceFile(string relativePath)
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

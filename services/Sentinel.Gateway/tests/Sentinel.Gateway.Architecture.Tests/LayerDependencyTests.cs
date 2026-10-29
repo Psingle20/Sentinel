@@ -132,6 +132,10 @@ public sealed class LayerDependencyTests
     public void Domain_types_carry_no_persistence_serialization_or_framework_attributes() =>
         ArchitectureRules.DomainAttributes(DomainAssembly).ShouldBeEmpty();
 
+    [Fact]
+    public void Project_references_point_inward_and_never_to_another_service() =>
+        ArchitectureRules.ProjectReferences("Sentinel.Gateway").ShouldBeEmpty();
+
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
         TestResult result = Types.InAssembly(assembly)
