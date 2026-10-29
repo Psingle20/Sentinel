@@ -26,7 +26,7 @@
         <ProjectReference Include="..\..\services\Reference.ReportingWorker\Reference.ReportingWorker.csproj" />
         <ProjectReference Include="..\..\deploy\redis-exporter\Reference.RedisExporter\Reference.RedisExporter.csproj" />
         <ProjectReference Include="..\..\deploy-controller\Reference.DeployController.Api\Reference.DeployController.Api.csproj" />
-        <ProjectReference Include="..\..\scenarios\Reference.Scenarios\Reference.Scenarios.csproj" />
+        <ProjectReference Include="..\..\scenarios\Reference.Scenarios.Api\Reference.Scenarios.Api.csproj" />
     </ItemGroup>
 
     <ItemGroup>

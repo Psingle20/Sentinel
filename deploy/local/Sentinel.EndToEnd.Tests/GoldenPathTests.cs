@@ -1,7 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Playwright;
-using Reference.Scenarios;
+using Reference.Scenarios.Api.Contracts;
+using Reference.Scenarios.Api.Manifests;
+using Reference.Scenarios.Application.Runs;
+using Reference.Scenarios.Domain.Scenarios;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Messaging;

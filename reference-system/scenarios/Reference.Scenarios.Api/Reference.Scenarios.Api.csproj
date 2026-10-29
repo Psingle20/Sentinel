@@ -5,7 +5,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Reference.Scenarios.Application\Reference.Scenarios.Application.csproj" />
         <ProjectReference Include="..\..\services\Reference.Common\Reference.Common.csproj" />
+        <ProjectReference Include="..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />
     </ItemGroup>
 
     <ItemGroup>

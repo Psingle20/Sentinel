@@ -341,18 +341,6 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[reference-system/scenarios/Reference.Scenarios/ScenarioManifest.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[reference-system/scenarios/Reference.Scenarios/ScenarioRunner.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
-[reference-system/scenarios/Reference.Scenarios/TrafficGenerator.cs]
-dotnet_diagnostic.SA1402.severity = none
-dotnet_diagnostic.SA1649.severity = none
-
 [reference-system/services/Reference.Checkout/Checkout.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none

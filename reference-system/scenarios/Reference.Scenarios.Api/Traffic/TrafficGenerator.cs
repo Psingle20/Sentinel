@@ -1,16 +1,16 @@
 using System.Diagnostics.Metrics;
 using Reference.Common;
+using Reference.Scenarios.Application.Abstractions;
+using Reference.Scenarios.Application.Traffic;
 
-namespace Reference.Scenarios;
-
-public sealed record TrafficSettings(double RequestsPerSecond, bool Paused);
+namespace Reference.Scenarios.Api.Traffic;
 
 /// <summary>
 /// Continuous, seeded checkout traffic. Inter-request gaps vary by up to 10 percent from a fixed
 /// seed, and in-flight requests are capped, so a stalled checkout cannot exhaust the machine.
 /// </summary>
 public sealed class TrafficGenerator(IHttpClientFactory clients, IConfiguration configuration, TimeProvider time, ILogger<TrafficGenerator> logger)
-    : BackgroundService
+    : BackgroundService, ITraffic
 {
     public const string SourceName = "Reference.Scenarios";
     public const int MaxInFlight = 50;

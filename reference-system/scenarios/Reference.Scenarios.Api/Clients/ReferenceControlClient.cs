@@ -1,13 +1,15 @@
 using System.Net.Http.Headers;
 using Reference.Common.Control;
+using Reference.Scenarios.Application.Abstractions;
+using Reference.Scenarios.Domain.Scenarios;
 
-namespace Reference.Scenarios;
+namespace Reference.Scenarios.Api.Clients;
 
 /// <summary>
 /// The runner's view of the reference system: the deploy controller, as a CI pipeline would use
 /// it, and the reporting-worker's batch control. Tokens come from configuration, never source.
 /// </summary>
-public sealed class ReferenceControlClient(HttpClient http, IConfiguration configuration)
+public sealed class ReferenceControlClient(HttpClient http, IConfiguration configuration) : IReferenceControl
 {
     public const string Actor = "reference-pipeline";
 

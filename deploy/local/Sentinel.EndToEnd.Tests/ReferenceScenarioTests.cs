@@ -1,5 +1,8 @@
 using System.Net.Http.Json;
-using Reference.Scenarios;
+using Reference.Scenarios.Api.Contracts;
+using Reference.Scenarios.Api.Manifests;
+using Reference.Scenarios.Application.Runs;
+using Reference.Scenarios.Domain.Scenarios;
 using Shouldly;
 using Xunit.Abstractions;
 

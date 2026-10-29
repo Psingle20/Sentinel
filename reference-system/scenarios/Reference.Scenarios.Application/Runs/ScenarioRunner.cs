@@ -1,31 +1,11 @@
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Reference.Scenarios.Application.Abstractions;
+using Reference.Scenarios.Domain.Scenarios;
 
-namespace Reference.Scenarios;
-
-public sealed record StepExecution(int AtSeconds, string Action, string Service, string? Version, string Role, DateTimeOffset? ExecutedAt, string? Error);
-
-/// <summary>
-/// A run's progress. <see cref="ActivatedAt"/> is the time of the first step: every offset in the
-/// manifest is relative to it.
-/// </summary>
-public sealed record ScenarioRunView(
-    string RunId,
-    string ScenarioId,
-    string Phase,
-    DateTimeOffset RequestedAt,
-    DateTimeOffset? ActivatedAt,
-    DateTimeOffset? CompletedAt,
-    IReadOnlyList<StepExecution> Steps,
-    string? Error);
-
-public sealed record StartRunRequest(string ScenarioId);
-
-public enum StartRunOutcome
-{
-    Started,
-    UnknownScenario,
-    RunActive
-}
+namespace Reference.Scenarios.Application.Runs;
 
 /// <summary>
 /// Runs one scenario at a time: reset to baseline, warm up with healthy traffic, then execute
@@ -123,7 +103,7 @@ public sealed class ScenarioRunner(
         try
         {
             await using AsyncServiceScope scope = scopes.CreateAsyncScope();
-            ReferenceControlClient control = scope.ServiceProvider.GetRequiredService<ReferenceControlClient>();
+            IReferenceControl control = scope.ServiceProvider.GetRequiredService<IReferenceControl>();
 
             await control.ResetAsync(stopping);
             Update(runId, run => run with { Phase = "warmup" });
@@ -183,7 +163,7 @@ public sealed class ScenarioRunner(
         }
     }
 
-    private async Task<string?> ExecuteStepAsync(ReferenceControlClient control, ScenarioStep step, string runId, CancellationToken cancellationToken)
+    private async Task<string?> ExecuteStepAsync(IReferenceControl control, ScenarioStep step, string runId, CancellationToken cancellationToken)
     {
         logger.LogInformation("Run {RunId}: {Action} {Service} {Version} at +{At}s", runId, step.Action, step.Service, step.Version, step.AtSeconds);
         try

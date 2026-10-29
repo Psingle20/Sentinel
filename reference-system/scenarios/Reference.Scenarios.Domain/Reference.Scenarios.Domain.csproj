@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Reference scenario runner domain: the scenario manifests and the rules every manifest must satisfy.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Core\CleanArchitecture.BuildingBlocks.Core.csproj" />
+    </ItemGroup>
+
+</Project>

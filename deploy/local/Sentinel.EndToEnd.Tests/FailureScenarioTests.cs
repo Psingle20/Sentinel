@@ -1,7 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
-using Reference.Scenarios;
+using Reference.Scenarios.Api.Contracts;
+using Reference.Scenarios.Api.Manifests;
+using Reference.Scenarios.Application.Runs;
+using Reference.Scenarios.Domain.Scenarios;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Remediation;

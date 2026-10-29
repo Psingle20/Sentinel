@@ -1,13 +1,16 @@
 using Reference.Checkout;
 using Reference.Orders;
-using Reference.Scenarios;
+using Reference.Scenarios.Api.Contracts;
+using Reference.Scenarios.Api.Manifests;
+using Reference.Scenarios.Application.Runs;
+using Reference.Scenarios.Domain.Scenarios;
 using Shouldly;
 
 namespace Reference.Tests;
 
 public sealed class ScenarioManifestTests
 {
-    private static readonly ScenarioCatalog Catalog = ScenarioCatalog.Load(Path.Combine(AppContext.BaseDirectory, "manifests"));
+    private static readonly ScenarioCatalog Catalog = ScenarioCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "manifests"));
 
     private static readonly Dictionary<string, string> Baselines = new(StringComparer.Ordinal)
     {

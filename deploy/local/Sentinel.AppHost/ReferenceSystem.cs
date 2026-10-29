@@ -75,7 +75,7 @@ internal static class ReferenceSystemExtensions
             .WithReference(orders)
             .WithReference(reporting);
 
-        IResourceBuilder<ProjectResource> scenarioRunner = AddReferenceService<Projects.Reference_Scenarios>("scenario-runner")
+        IResourceBuilder<ProjectResource> scenarioRunner = AddReferenceService<Projects.Reference_Scenarios_Api>("scenario-runner")
             .WithEnvironment("DeployController__DeployToken", deployToken)
             .WithReference(checkout)
             .WithReference(reporting)

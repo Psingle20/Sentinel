@@ -53,7 +53,9 @@
     <Project Path="reference-system/deploy/redis-exporter/Reference.RedisExporter/Reference.RedisExporter.csproj" />
   </Folder>
   <Folder Name="/reference-system/scenarios/">
-    <Project Path="reference-system/scenarios/Reference.Scenarios/Reference.Scenarios.csproj" />
+    <Project Path="reference-system/scenarios/Reference.Scenarios.Api/Reference.Scenarios.Api.csproj" />
+    <Project Path="reference-system/scenarios/Reference.Scenarios.Application/Reference.Scenarios.Application.csproj" />
+    <Project Path="reference-system/scenarios/Reference.Scenarios.Domain/Reference.Scenarios.Domain.csproj" />
   </Folder>
   <Folder Name="/reference-system/services/">
     <Project Path="reference-system/services/Reference.Checkout/Reference.Checkout.csproj" />

@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Reference.Common.Control;
 using Shouldly;
-using ScenarioRunnerEntryPoint = Reference.Scenarios.ScenarioRunner;
+using Reference.Scenarios.Api.Clients;
+using Reference.Scenarios.Application.Abstractions;
+using ScenarioRunnerEntryPoint = Reference.Scenarios.Api.ApiDependencyModule;
 
 namespace Reference.Tests;
 
@@ -170,7 +172,7 @@ public sealed class ScenarioRunnerEndpointTests
                     services.Remove(hosted);
                 }
 
-                services.AddHttpClient<Reference.Scenarios.ReferenceControlClient>().ConfigurePrimaryHttpMessageHandler(() => Reference);
+                services.AddHttpClient<IReferenceControl, ReferenceControlClient>().ConfigurePrimaryHttpMessageHandler(() => Reference);
             });
         }
     }

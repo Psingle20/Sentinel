@@ -5,7 +5,10 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Reference.Scenarios;
+using Reference.Scenarios.Api.Contracts;
+using Reference.Scenarios.Api.Manifests;
+using Reference.Scenarios.Application.Runs;
+using Reference.Scenarios.Domain.Scenarios;
 
 namespace Sentinel.EndToEnd.Tests;
 
@@ -39,7 +42,7 @@ public class SentinelSystem : IAsyncLifetime
 
     public IReadOnlyList<string> ResourceNames => _referenceOnly ? ReferenceResources : [.. ReferenceResources, .. SentinelResources];
 
-    public ScenarioCatalog Scenarios { get; } = ScenarioCatalog.Load(Path.Combine(AppContext.BaseDirectory, "manifests"));
+    public ScenarioCatalog Scenarios { get; } = ScenarioCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "manifests"));
 
     public PrometheusClient Prometheus { get; private set; } = null!;
 
@@ -228,7 +231,7 @@ public class SentinelSystem : IAsyncLifetime
     /// <summary>Starts a scenario run and waits until its first step executes.</summary>
     public async Task<ScenarioRunView> StartScenarioAsync(string scenarioId)
     {
-        using HttpResponseMessage response = await ScenarioRunner.PostAsJsonAsync("/api/runs", new StartRunRequest(scenarioId));
+        using HttpResponseMessage response = await ScenarioRunner.PostAsJsonAsync("/api/runs", new StartRunBody(scenarioId));
         response.EnsureSuccessStatusCode();
         ScenarioRunView run = (await response.Content.ReadFromJsonAsync<ScenarioRunView>())!;
 

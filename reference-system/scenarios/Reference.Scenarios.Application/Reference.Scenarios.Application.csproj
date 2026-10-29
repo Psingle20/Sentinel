@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Reference scenario runner application: starting, stopping and resetting scenario runs, and the traffic they run under.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Reference.Scenarios.Domain\Reference.Scenarios.Domain.csproj" />
+        <ProjectReference Include="..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Application\CleanArchitecture.BuildingBlocks.Application.csproj" />
+        <ProjectReference Include="..\..\..\packages\CleanArchitecture.BuildingBlocks\src\CleanArchitecture.BuildingBlocks.Hosting\CleanArchitecture.BuildingBlocks.Hosting.csproj" />
+    </ItemGroup>
+
+</Project>
