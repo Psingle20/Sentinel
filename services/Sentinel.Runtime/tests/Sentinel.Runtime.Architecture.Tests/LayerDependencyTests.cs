@@ -1,5 +1,7 @@
 using System.Reflection;
 using NetArchTest.Rules;
+using Sentinel.Runtime.Api.Controllers;
+using Sentinel.Testing.Architecture;
 using Shouldly;
 
 namespace Sentinel.Runtime.Architecture.Tests;
@@ -41,6 +43,23 @@ public sealed class LayerDependencyTests
         "Sentinel.Ingestion",
         "Sentinel.AgentWorker",
         "Sentinel.Executor"
+    ];
+
+    // Rules 8 and 9 (ADR-020): consumers and controllers Runtime's own refactoring step migrates.
+    private static readonly string[] PendingConsumers =
+    [
+        "Sentinel.Runtime.Infrastructure.ObservationRecordedHandler",
+        "Sentinel.Runtime.Infrastructure.InvestigationCompletedHandler",
+        "Sentinel.Runtime.Infrastructure.RemediationExecutedHandler"
+    ];
+
+    private static readonly string[] PendingControllers =
+    [
+        "Sentinel.Runtime.Api.Controllers.IncidentsController",
+        "Sentinel.Runtime.Api.Controllers.MemoryController",
+        "Sentinel.Runtime.Api.Controllers.RemediationController",
+        "Sentinel.Runtime.Api.Controllers.ConfigurationController",
+        "Sentinel.Runtime.Api.Controllers.AdminController"
     ];
 
     [Fact]
@@ -155,6 +174,30 @@ public sealed class LayerDependencyTests
 
     private static IEnumerable<Mono.Cecil.TypeDefinition> AllNestedTypes(Mono.Cecil.TypeDefinition type) =>
         [type, .. type.NestedTypes.SelectMany(AllNestedTypes)];
+
+    [Fact]
+    public void Every_command_query_and_request_has_one_handler_or_processor_in_its_own_namespace() =>
+        ArchitectureRules.HandlerPlacement(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Processors_depend_only_on_a_validator_and_a_dispatcher() =>
+        ArchitectureRules.ProcessorDependencies(ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Consumers_live_in_messaging_consumers_and_send_requests() =>
+        ArchitectureRules.Consumers(InfrastructureAssembly, InfrastructureNamespace + ".Messaging.Consumers", PendingConsumers).ShouldBeEmpty();
+
+    [Fact]
+    public void Controllers_derive_from_the_api_controller_and_send_requests() =>
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Runtime.Domain"], PendingControllers).ShouldBeEmpty();
+
+    [Fact]
+    public void Program_maps_no_endpoint_itself() =>
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Runtime/src/Sentinel.Runtime.Api/Program.cs")).ShouldBeEmpty();
+
+    [Fact]
+    public void Only_the_application_module_registers_the_building_blocks() =>
+        ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, []).ShouldBeEmpty();
 
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
