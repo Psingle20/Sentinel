@@ -212,6 +212,37 @@ public sealed class ExecutionTests : IDisposable
         _target.Executions.ShouldBe(0);
     }
     [Fact]
+    public async Task A_request_interrupted_before_it_was_reserved_is_rejected_with_no_side_effect()
+    {
+        RemediationPlan plan = Commands.Plan();
+        var request = ExecutionRequest.Receive("received", Commands.Tenant, Commands.Environment, IncidentId.New(), plan.PlanId, 1, plan.PlanHash, 7,
+            System.Text.Json.JsonSerializer.Serialize(plan, Sentinel.Contracts.Messaging.SentinelJson.Options), Commands.Now);
+        await _store.SaveAsync(request, CancellationToken.None);
+
+        await Service().ReconcileAsync(request, CancellationToken.None);
+
+        LastOutcome().ShouldBe(ExecutionOutcome.Rejected);
+        _target.Executions.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_crash_after_start_confirmation_executes_the_action_exactly_once_on_reconciliation()
+    {
+        RemediationPlan plan = Commands.Plan();
+        var request = ExecutionRequest.Receive("confirmed", Commands.Tenant, Commands.Environment, IncidentId.New(), plan.PlanId, 1, plan.PlanHash, 7,
+            System.Text.Json.JsonSerializer.Serialize(plan, Sentinel.Contracts.Messaging.SentinelJson.Options), Commands.Now);
+        request.Reserve(AttestationId.New(), "responder@example.test", "static-2026.10.1", Commands.Now);
+        request.ConfirmStart(Commands.Now);
+        await _store.SaveAsync(request, CancellationToken.None);
+
+        await Service().ReconcileAsync((await _store.UnfinishedAsync(Commands.Now, CancellationToken.None)).Single(), CancellationToken.None);
+        (await _store.UnfinishedAsync(Commands.Now, CancellationToken.None)).ShouldBeEmpty("the reconciled request is finished");
+
+        LastOutcome().ShouldBe(ExecutionOutcome.ActionVerified);
+        _target.Executions.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task Every_action_runs_under_its_own_single_use_capability()
     {
         await ExecuteAsync(Commands.Execute(_signer));

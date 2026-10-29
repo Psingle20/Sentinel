@@ -30,6 +30,20 @@ public sealed class RemediationLifecycleTests
     }
 
     [Fact]
+    public void A_plan_superseded_after_approval_can_be_neither_executed_nor_started_on_the_old_approval()
+    {
+        (Incident incident, ProposedPlan plan) = Approved();
+        ProposedPlan revised = plan with { Version = plan.Version + 1, Hash = "sha256:revised" };
+
+        incident.ProposePlan(revised).IsSuccess.ShouldBeTrue();
+
+        incident.Approval.ShouldBeNull("the approval was for the version that was superseded");
+        incident.RequestExecution("key", Start.AddSeconds(230)).IsFailure.ShouldBeTrue();
+        incident.ConfirmStart(plan.PlanId, plan.Version, 1, Start.AddSeconds(231)).IsFailure.ShouldBeTrue();
+        incident.Approve(plan.PlanId, plan.Version, plan.Hash, "responder@example.test", "jws", Start.AddSeconds(232)).IsFailure.ShouldBeTrue("an approval of the old version is refused");
+    }
+
+    [Fact]
     public void An_approval_cannot_be_revoked_after_execution_started()
     {
         (Incident incident, ProposedPlan plan) = Approved();
