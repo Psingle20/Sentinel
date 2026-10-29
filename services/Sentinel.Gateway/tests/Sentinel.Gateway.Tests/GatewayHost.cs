@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
-using Sentinel.Gateway.Application.Approvals;
+using Sentinel.Gateway.Application.Abstractions.Providers;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;

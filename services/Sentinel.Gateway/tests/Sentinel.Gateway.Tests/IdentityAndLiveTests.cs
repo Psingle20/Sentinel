@@ -5,18 +5,24 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using CleanArchitecture.BuildingBlocks.Integration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using Sentinel.Gateway.Application.Approvals;
+using Sentinel.Gateway.Application.Abstractions.Providers;
 using Sentinel.Gateway.Application.ControlPlane;
 using Sentinel.Gateway.Application.Live;
 using Sentinel.Gateway.Api;
+using Sentinel.Gateway.Api.Filters;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
@@ -39,7 +45,7 @@ public sealed class IdentityTests : IAsyncLifetime
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Production" });
         builder.WebHost.UseTestServer();
         builder.Configuration["Gateway:Identity:Audience"] = Audience;
-        builder.AddSentinelIdentity();
+        builder.Services.AddSentinelIdentity(builder.Configuration, builder.Environment);
         builder.Services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
         {
             // The test plays the authority: tokens are signed with a key generated for this run.
@@ -52,9 +58,9 @@ public sealed class IdentityTests : IAsyncLifetime
         _app = builder.Build();
         _app.UseAuthentication();
         _app.UseAuthorization();
-        _app.MapGet("/whoami", (ClaimsPrincipal user) => new { id = user.FindFirstValue(ClaimTypes.NameIdentifier), tenants = user.Tenants().Select(tenant => tenant.Value) }).RequireAuthorization(Roles.Responder);
-        _app.MapGet("/approve", () => "ok").RequireAuthorization(Roles.Approver);
-        _app.MapGet("/admin", () => "ok").RequireAuthorization(Roles.Operator);
+        _app.MapGet("/whoami", (ClaimsPrincipal user) => new { id = user.FindFirstValue(ClaimTypes.NameIdentifier), tenants = user.Tenants().Select(tenant => tenant.Value) }).RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Responder });
+        _app.MapGet("/approve", () => "ok").RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Approver });
+        _app.MapGet("/admin", () => "ok").RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Operator });
         await _app.StartAsync();
         _client = _app.GetTestClient();
     }
@@ -78,7 +84,7 @@ public sealed class IdentityTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Each_policy_requires_its_role()
+    public async Task Each_role_is_required_where_it_is_named()
     {
         string responder = Token("viewer@example.test", ["responder"], ["acme"]);
 
@@ -133,19 +139,24 @@ public sealed class TenantScopeTests
     {
         var filter = new IncidentTenantFilter(new OneIncident(Acme, TenantId.From("acme")));
 
-        (await InvokeAsync(filter, Acme, ["acme"])).ShouldBe("reached");
-        (await InvokeAsync(filter, Acme, ["globex"])).ShouldBeAssignableTo<IResult>().ShouldNotBeNull();
-        (await InvokeAsync(filter, IncidentId.New(), ["acme"])).ShouldBeAssignableTo<IResult>().ShouldNotBeNull();
+        (await InvokeAsync(filter, Acme, ["acme"])).ShouldBeNull();
+        (await InvokeAsync(filter, Acme, ["globex"])).ShouldBeOfType<NotFoundResult>();
+        (await InvokeAsync(filter, IncidentId.New(), ["acme"])).ShouldBeOfType<NotFoundResult>();
     }
 
-    private static async Task<object?> InvokeAsync(IncidentTenantFilter filter, IncidentId incidentId, string[] tenants)
+    // The action's result: null when the filter let the action run, otherwise what the filter answered instead.
+    private static async Task<IActionResult?> InvokeAsync(IncidentTenantFilter filter, IncidentId incidentId, string[] tenants)
     {
         var http = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity([.. tenants.Select(tenant => new Claim(SentinelClaims.Tenant, tenant))], "test"))
         };
-        http.Request.RouteValues["incidentId"] = incidentId.Value.ToString();
-        return await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(http), _ => ValueTask.FromResult<object?>("reached"));
+        var route = new RouteData();
+        route.Values["incidentId"] = incidentId.Value.ToString();
+        var action = new ActionContext(http, route, new ActionDescriptor());
+        var context = new ActionExecutingContext(action, [], new Dictionary<string, object?>(), controller: new object());
+        await filter.OnActionExecutionAsync(context, () => Task.FromResult(new ActionExecutedContext(action, [], new object())));
+        return context.Result;
     }
 
     private sealed class OneIncident(IncidentId known, TenantId tenantId) : IRuntimeIncidents

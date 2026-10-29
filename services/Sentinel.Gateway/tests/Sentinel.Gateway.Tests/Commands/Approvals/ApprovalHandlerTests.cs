@@ -1,7 +1,13 @@
+using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Integration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using Sentinel.Gateway.Application.Approvals;
+using Sentinel.Gateway.Application.Abstractions.Persistence;
+using Sentinel.Gateway.Application.Abstractions.Providers;
+using Sentinel.Gateway.Application.Abstractions.Security;
+using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
+using Sentinel.Gateway.Application.Commands.Approvals;
+using Sentinel.Gateway.Application.Options;
 using Sentinel.Gateway.Domain.Approvals;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
@@ -9,9 +15,10 @@ using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Shouldly;
 
-namespace Sentinel.Gateway.Tests;
+namespace Sentinel.Gateway.Tests.Commands.Approvals;
 
-public sealed class ApprovalServiceTests
+/// <summary>The approval handlers: what they sign, keep and relay to Runtime once the approval rules allow a decision.</summary>
+public sealed class ApprovalHandlerTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 28, 9, 8, 0, TimeSpan.Zero);
 
@@ -20,7 +27,7 @@ public sealed class ApprovalServiceTests
     private readonly InMemoryApprovals _approvals = new();
     private readonly RecordingOutbox _outbox = new();
 
-    private ApprovalService Service() => new(
+    private Task<Result<ApprovalReceipt>> ApproveAsync(ApprovePlanCommand command) => new ApprovePlanCommandHandler(
         _incidents,
         _signer,
         _approvals,
@@ -28,15 +35,17 @@ public sealed class ApprovalServiceTests
         new NoUnitOfWork(),
         new FakeTimeProvider(Now),
         Microsoft.Extensions.Options.Options.Create(new ApprovalOptions { AttestationLifetime = TimeSpan.FromMinutes(15) }),
-        NullLogger<ApprovalService>.Instance);
+        NullLogger<ApprovePlanCommandHandler>.Instance).Handle(command, CancellationToken.None);
+
+    private Task<Result<ApprovalReceipt>> RejectAsync(RejectPlanCommand command) =>
+        new RejectPlanCommandHandler(_incidents, _approvals, _outbox, new NoUnitOfWork(), new FakeTimeProvider(Now)).Handle(command, CancellationToken.None);
 
     [Fact]
     public async Task Approving_the_current_plan_signs_a_short_lived_attestation_bound_to_it_and_relays_it_to_Runtime()
     {
         RemediationPlan plan = _incidents.Plan;
 
-        CleanArchitecture.BuildingBlocks.Result<ApprovalReceipt> result = await Service().ApproveAsync(
-            new ApprovePlan(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test"), CancellationToken.None);
+        Result<ApprovalReceipt> result = await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test"));
 
         result.IsSuccess.ShouldBeTrue();
         ApprovalAttestationClaims claims = _signer.Signed.ShouldHaveSingleItem();
@@ -55,10 +64,10 @@ public sealed class ApprovalServiceTests
     public async Task Approving_again_returns_the_same_receipt_without_a_second_attestation()
     {
         RemediationPlan plan = _incidents.Plan;
-        var command = new ApprovePlan(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test");
+        var command = new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "responder@example.test");
 
-        ApprovalReceipt first = (await Service().ApproveAsync(command, CancellationToken.None)).Value;
-        ApprovalReceipt second = (await Service().ApproveAsync(command, CancellationToken.None)).Value;
+        ApprovalReceipt first = (await ApproveAsync(command)).Value;
+        ApprovalReceipt second = (await ApproveAsync(command)).Value;
 
         second.ShouldBe(first);
         _signer.Signed.Count.ShouldBe(1);
@@ -70,13 +79,13 @@ public sealed class ApprovalServiceTests
     {
         RemediationPlan plan = _incidents.Plan;
 
-        (await Service().ApproveAsync(new ApprovePlan(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, "sha256:stale", "r@example.test"), CancellationToken.None))
+        (await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, "sha256:stale", "r@example.test")))
             .Error.ShouldBe(ApprovalErrors.HashMismatch);
-        (await Service().ApproveAsync(new ApprovePlan(_incidents.IncidentId, plan.PlanId, plan.PlanVersion + 1, plan.PlanHash, "r@example.test"), CancellationToken.None))
+        (await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion + 1, plan.PlanHash, "r@example.test")))
             .Error.ShouldBe(ApprovalErrors.NotCurrentPlan);
 
         _incidents.Status = PlanStatus.Executing;
-        (await Service().ApproveAsync(new ApprovePlan(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "r@example.test"), CancellationToken.None))
+        (await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "r@example.test")))
             .Error.Code.ShouldBe("Approval.NotAwaitingApproval");
         _signer.Signed.ShouldBeEmpty();
     }
@@ -86,9 +95,9 @@ public sealed class ApprovalServiceTests
     {
         RemediationPlan plan = _incidents.Plan;
 
-        (await Service().RejectAsync(new RejectPlan(_incidents.IncidentId, plan.PlanId, 1, "  ", "r@example.test"), CancellationToken.None))
+        (await RejectAsync(new RejectPlanCommand(_incidents.IncidentId, plan.PlanId, 1, "  ", "r@example.test")))
             .Error.ShouldBe(ApprovalErrors.ReasonRequired);
-        (await Service().RejectAsync(new RejectPlan(_incidents.IncidentId, plan.PlanId, 1, "Migration window.", "r@example.test"), CancellationToken.None))
+        (await RejectAsync(new RejectPlanCommand(_incidents.IncidentId, plan.PlanId, 1, "Migration window.", "r@example.test")))
             .Value.Decision.ShouldBe(ApprovalDecision.Rejected);
 
         _outbox.Messages.OfType<RecordRejection>().ShouldHaveSingleItem().Reason.ShouldBe("Migration window.");
@@ -164,14 +173,15 @@ public sealed class ApprovalServiceTests
 
     private sealed class InMemoryApprovals : IApprovalStore
     {
-        private readonly List<ApprovalRecord> _records = [];
+        private readonly List<ApprovalSnapshot> _records = [];
 
-        public Task<ApprovalRecord?> FindAsync(IncidentId incidentId, PlanId planId, int planVersion, CancellationToken cancellationToken) =>
-            Task.FromResult(_records.Find(record => record.IncidentId == incidentId && record.PlanId == planId && record.PlanVersion == planVersion));
+        // Stored as snapshots, as the PostgreSQL store does, so each find rebuilds the approval.
+        public Task<Approval?> FindAsync(IncidentId incidentId, PlanId planId, int planVersion, CancellationToken cancellationToken) =>
+            Task.FromResult(_records.FindLast(record => record.IncidentId == incidentId && record.PlanId == planId && record.PlanVersion == planVersion) is { } found ? Approval.Rehydrate(found) : null);
 
-        public Task SaveAsync(ApprovalRecord record, CancellationToken cancellationToken)
+        public Task SaveAsync(Approval approval, CancellationToken cancellationToken)
         {
-            _records.Add(record);
+            _records.Add(approval.Snapshot());
             return Task.CompletedTask;
         }
     }
