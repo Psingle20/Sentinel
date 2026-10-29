@@ -475,7 +475,7 @@ Keep this table synchronized with `PROJECT.json` and the scripts.
 - [Phase-wise implementation plan](docs/implementation/README.md) and the [phase status ledger](docs/implementation/phase-status.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [Business and API contracts](docs/business-contracts/README.md)
-- Operational procedures belong in `docs/runbooks/` and arrive with Phase 09.
+- [Runbooks](docs/runbooks/README.md): emergency stop, models and spend, dead letters and projection rebuild; more arrive with the Phase 09 deployment definition.
 - Generated diagrams and reports live under `artifacts/` with their sources and provenance, for example the [walking-skeleton comparison report](artifacts/reports/walking-skeleton/comparison.md).
 
 ## Verification
