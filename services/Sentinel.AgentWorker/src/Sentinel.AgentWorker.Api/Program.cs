@@ -3,7 +3,7 @@ using CleanArchitecture.BuildingBlocks.Configuration;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Configuration;
 using Sentinel.AgentWorker.Application.Investigations;
 using Sentinel.AgentWorker.Application.Models;
-using Sentinel.AgentWorker.Host;
+using Sentinel.AgentWorker.Api;
 using Sentinel.AgentWorker.Infrastructure;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;

@@ -673,7 +673,7 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/ConfigurationRequests.cs]
+[services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 

@@ -19,7 +19,7 @@
         <ProjectReference Include="..\..\src\Sentinel.AgentWorker.Domain\Sentinel.AgentWorker.Domain.csproj" />
         <ProjectReference Include="..\..\src\Sentinel.AgentWorker.Application\Sentinel.AgentWorker.Application.csproj" />
         <ProjectReference Include="..\..\src\Sentinel.AgentWorker.Infrastructure\Sentinel.AgentWorker.Infrastructure.csproj" />
-        <ProjectReference Include="..\..\src\Sentinel.AgentWorker.Host\Sentinel.AgentWorker.Host.csproj" />
+        <ProjectReference Include="..\..\src\Sentinel.AgentWorker.Api\Sentinel.AgentWorker.Api.csproj" />
         <ProjectReference Include="..\..\..\..\packages\Sentinel.Testing\src\Sentinel.Testing\Sentinel.Testing.csproj" />
     </ItemGroup>
 

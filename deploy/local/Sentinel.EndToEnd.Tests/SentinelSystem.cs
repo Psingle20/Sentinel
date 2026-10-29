@@ -22,7 +22,7 @@ public class SentinelSystem : IAsyncLifetime
         "checkout-service", "order-service", "reporting-worker", "redis-exporter", "deploy-controller", "scenario-runner", "prometheus"
     ];
 
-    private static readonly string[] SentinelResources = ["ingestion-service", "runtime-service", "agentworker", "executor-service", "gateway-service", "web"];
+    private static readonly string[] SentinelResources = ["ingestion-service", "runtime-service", "agent-worker-service", "executor-service", "gateway-service", "web"];
 
     private readonly bool _referenceOnly;
 
@@ -96,7 +96,7 @@ public class SentinelSystem : IAsyncLifetime
         if (!_referenceOnly)
         {
             Api = App.CreateHttpClient("gateway-service");
-            AgentWorker = App.CreateHttpClient("agentworker");
+            AgentWorker = App.CreateHttpClient("agent-worker-service");
             Ingestion = App.CreateHttpClient("ingestion-service");
             Runtime = App.CreateHttpClient("runtime-service");
             DeployControllerControl = App.CreateHttpClient("deploy-controller");

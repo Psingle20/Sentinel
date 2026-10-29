@@ -68,7 +68,7 @@ void AddSentinel()
         .WithReference(ingestion)
         .WithReference(executor)
         .WaitFor(temporal);
-    IResourceBuilder<ProjectResource> agentworker = AddService<Projects.Sentinel_AgentWorker_Host>("agentworker")
+    IResourceBuilder<ProjectResource> agentworker = AddService<Projects.Sentinel_AgentWorker_Api>("agent-worker-service", database: "agentworker")
         .WithReference(ingestion);
 
     // The gateway reads incidents from Runtime and agent executions and replays from AgentWorker (Phase 07), and is the

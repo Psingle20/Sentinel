@@ -67,7 +67,7 @@
   <Folder Name="/services/Sentinel.AgentWorker/src/">
     <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Sentinel.AgentWorker.Application.csproj" />
     <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Domain/Sentinel.AgentWorker.Domain.csproj" />
-    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Host/Sentinel.AgentWorker.Host.csproj" />
+    <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Api/Sentinel.AgentWorker.Api.csproj" />
     <Project Path="services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Infrastructure/Sentinel.AgentWorker.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/services/Sentinel.AgentWorker/tests/">
