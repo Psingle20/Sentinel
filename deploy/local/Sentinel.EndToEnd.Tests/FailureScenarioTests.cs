@@ -69,12 +69,15 @@ public sealed class FailureScenarioTests(SentinelSystem system, ITestOutputHelpe
     public async Task S5_a_failed_rollback_is_reported_and_never_claimed_as_recovery()
     {
         await system.WaitUntilQuietAsync(output);
-        (await system.DeployControllerControl.PostAsJsonAsync("/_reference/faults", new { failRollbacks = true })).EnsureSuccessStatusCode();
         ScenarioRunView run = await system.StartScenarioAsync("S1");
         try
         {
             IncidentDetail incident = await system.WaitForIncidentAsync(detail => detail.Summary.Status == IncidentStatus.AwaitingApproval, DecisionTimeout, "S5 awaits approval");
             RemediationPlan plan = incident.Plan!.Plan;
+
+            // Armed only now: every scenario run begins by resetting the reference system, and the reset clears faults,
+            // so a fault set before the run started would be gone before the rollback is attempted.
+            (await system.DeployControllerControl.PostAsJsonAsync("/_reference/faults", new { failRollbacks = true })).EnsureSuccessStatusCode();
             using var approve = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/incidents/{incident.Summary.IncidentId}/plans/{plan.PlanId}/approve")
             {
                 Content = JsonContent.Create(new { planVersion = plan.PlanVersion, planHash = plan.PlanHash }, options: SentinelJson.Options)
