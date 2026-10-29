@@ -15,4 +15,7 @@ public interface IControlStore
     Task SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken);
 
     Task SetActionDisabledAsync(string actionKind, bool disabled, string actor, CancellationToken cancellationToken);
+
+    /// <summary>Every recorded change to the controls, newest first: the authoritative audit of who changed them.</summary>
+    Task<IReadOnlyList<ControlChange>> HistoryAsync(int limit, CancellationToken cancellationToken);
 }

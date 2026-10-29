@@ -44,4 +44,6 @@ internal sealed class FakeControlStore : IControlStore
         Controls = Controls with { DisabledActions = set };
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<ControlChange>> HistoryAsync(int limit, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<ControlChange>>([]);
 }

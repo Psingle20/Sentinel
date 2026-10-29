@@ -77,6 +77,14 @@ internal sealed class ExecutorSchema(NpgsqlDataSource dataSource) : IMessagingSt
             changed_by text not null,
             changed_at timestamptz not null default now()
         );
+
+        create table if not exists executor.control_changes (
+            change_id bigserial primary key,
+            control text not null,
+            value jsonb not null,
+            changed_by text not null,
+            changed_at timestamptz not null
+        );
         """;
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
