@@ -64,17 +64,28 @@ public sealed class GatewayPeers : IRuntimeHistory, IAgentExecutions, IExecutorC
 
     public Task<ControlPlaneResponse> PolicyHistoryAsync(CancellationToken cancellationToken) => Task.FromResult(Policy);
 
-    public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, CancellationToken cancellationToken)
+    public ConcurrentQueue<string> OperatorAttestations { get; } = new();
+
+    public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, string attestation, CancellationToken cancellationToken)
     {
         Published.Enqueue($"policy:{expectedVersion}:{author}");
+        OperatorAttestations.Enqueue(attestation);
         return Task.FromResult(PolicyPublication);
     }
 
     Task<ControlPlaneResponse> IExecutorControlPlane.ControlsAsync(CancellationToken cancellationToken) => Task.FromResult(Controls);
 
-    public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken) => Task.FromResult(ControlChange);
+    public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, string attestation, CancellationToken cancellationToken)
+    {
+        OperatorAttestations.Enqueue(attestation);
+        return Task.FromResult(ControlChange);
+    }
 
-    public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, CancellationToken cancellationToken) => Task.FromResult(ControlChange);
+    public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, string attestation, CancellationToken cancellationToken)
+    {
+        OperatorAttestations.Enqueue(attestation);
+        return Task.FromResult(ControlChange);
+    }
 
     public Task<ControlPlaneResponse> CurrentAsync(string area, CancellationToken cancellationToken) => Task.FromResult(Configuration);
 

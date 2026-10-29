@@ -17,7 +17,7 @@ using Shouldly;
 
 namespace Sentinel.Gateway.Tests.BusinessTasks.Commands.Approvals;
 
-/// <summary>The approval handlers: what they sign, keep and relay to Runtime once the approval rules allow a decision.</summary>
+/// <summary>The approval handlers: what they sign, keep, relay to Runtime and ask Runtime once the approval rules allow a decision.</summary>
 public sealed class ApprovalHandlerTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 28, 9, 8, 0, TimeSpan.Zero);
@@ -26,6 +26,10 @@ public sealed class ApprovalHandlerTests
     private readonly CapturingSigner _signer = new();
     private readonly InMemoryApprovals _approvals = new();
     private readonly RecordingOutbox _outbox = new();
+    private readonly FakeRemediation _runtime = new();
+
+    private DecisionAttestations Attestations() =>
+        new(_signer, Microsoft.Extensions.Options.Options.Create(new ApprovalOptions { AttestationLifetime = TimeSpan.FromMinutes(15) }));
 
     private Task<Result<ApprovalReceipt>> ApproveAsync(ApprovePlanCommand command) => new ApprovePlanCommandHandler(
         _incidents,
@@ -38,7 +42,10 @@ public sealed class ApprovalHandlerTests
         NullLogger<ApprovePlanCommandHandler>.Instance).Handle(command, CancellationToken.None);
 
     private Task<Result<ApprovalReceipt>> RejectAsync(RejectPlanCommand command) =>
-        new RejectPlanCommandHandler(_incidents, _approvals, _outbox, new NoUnitOfWork(), new FakeTimeProvider(Now)).Handle(command, CancellationToken.None);
+        new RejectPlanCommandHandler(_incidents, _approvals, Attestations(), _outbox, new NoUnitOfWork(), new FakeTimeProvider(Now)).Handle(command, CancellationToken.None);
+
+    private Task<Result<ApprovalReceipt>> RevokeAsync(RevokeApprovalCommand command) =>
+        new RevokeApprovalCommandHandler(_incidents, _runtime, _approvals, Attestations(), new NoUnitOfWork(), new FakeTimeProvider(Now), NullLogger<RevokeApprovalCommandHandler>.Instance).Handle(command, CancellationToken.None);
 
     [Fact]
     public async Task Approving_the_current_plan_signs_a_short_lived_attestation_bound_to_it_and_relays_it_to_Runtime()
@@ -91,7 +98,7 @@ public sealed class ApprovalHandlerTests
     }
 
     [Fact]
-    public async Task A_rejection_needs_a_reason_and_is_relayed_to_Runtime()
+    public async Task A_rejection_needs_a_reason_and_is_relayed_to_Runtime_under_a_signed_attestation()
     {
         RemediationPlan plan = _incidents.Plan;
 
@@ -100,7 +107,58 @@ public sealed class ApprovalHandlerTests
         (await RejectAsync(new RejectPlanCommand(_incidents.IncidentId, plan.PlanId, 1, "Migration window.", "r@example.test")))
             .Value.Decision.ShouldBe(ApprovalDecision.Rejected);
 
-        _outbox.Messages.OfType<RecordRejection>().ShouldHaveSingleItem().Reason.ShouldBe("Migration window.");
+        RecordRejection relayed = _outbox.Messages.OfType<RecordRejection>().ShouldHaveSingleItem();
+        relayed.Reason.ShouldBe("Migration window.");
+        relayed.Attestation.ShouldBe("signed-token");
+        ApprovalAttestationClaims claims = _signer.Signed.ShouldHaveSingleItem();
+        claims.ApprovalScope.ShouldBe(ApprovalAttestation.RejectPlanScope);
+        claims.Audience.ShouldBe(ApprovalAttestation.RuntimeAudience);
+        claims.PlanHash.ShouldBe(plan.PlanHash);
+        claims.ApproverId.ShouldBe("r@example.test");
+    }
+
+    [Fact]
+    public async Task A_revocation_is_recorded_only_once_Runtime_accepted_it_and_carries_a_signed_attestation()
+    {
+        // Review F-003: the Gateway's record must never say "revoked" while Runtime, the authority, went ahead.
+        RemediationPlan plan = _incidents.Plan;
+        await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "r@example.test"));
+
+        Result<ApprovalReceipt> revoked = await RevokeAsync(new RevokeApprovalCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, "Wrong target.", "r@example.test"));
+
+        revoked.Value.Decision.ShouldBe(ApprovalDecision.Revoked);
+        RecordRevocation asked = _runtime.Revocations.ShouldHaveSingleItem();
+        asked.Attestation.ShouldBe("signed-token");
+        _signer.Signed[^1].ApprovalScope.ShouldBe(ApprovalAttestation.RevokeApprovalScope);
+        _signer.Signed[^1].Audience.ShouldBe(ApprovalAttestation.RuntimeAudience);
+        _outbox.Messages.OfType<RecordRevocation>().ShouldBeEmpty();
+        (await _approvals.FindAsync(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, CancellationToken.None))!.Decision.ShouldBe(ApprovalDecision.Revoked);
+    }
+
+    [Fact]
+    public async Task A_revocation_Runtime_refuses_leaves_the_approval_standing_and_reports_why()
+    {
+        RemediationPlan plan = _incidents.Plan;
+        await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "r@example.test"));
+        _runtime.Answer = new RevocationResponse(false, "Execution already started.");
+
+        Result<ApprovalReceipt> refused = await RevokeAsync(new RevokeApprovalCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, "Too late.", "r@example.test"));
+
+        refused.Error.ShouldBe(ApprovalErrors.ExecutionStarted);
+        (await _approvals.FindAsync(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, CancellationToken.None))!.Decision.ShouldBe(ApprovalDecision.Approved);
+    }
+
+    [Fact]
+    public async Task A_revocation_when_Runtime_cannot_be_reached_fails_closed_and_changes_nothing()
+    {
+        RemediationPlan plan = _incidents.Plan;
+        await ApproveAsync(new ApprovePlanCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, plan.PlanHash, "r@example.test"));
+        _runtime.Unreachable = true;
+
+        Result<ApprovalReceipt> failed = await RevokeAsync(new RevokeApprovalCommand(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, "Wrong target.", "r@example.test"));
+
+        failed.Error.ShouldBe(ApprovalErrors.RuntimeUnavailable);
+        (await _approvals.FindAsync(_incidents.IncidentId, plan.PlanId, plan.PlanVersion, CancellationToken.None))!.Decision.ShouldBe(ApprovalDecision.Approved);
     }
 
     private sealed class FakeIncidents : IRuntimeIncidents
@@ -158,6 +216,30 @@ public sealed class ApprovalHandlerTests
         public Task<IncidentRunRecord?> RunRecordAsync(IncidentId incidentId, CancellationToken cancellationToken) => Task.FromResult<IncidentRunRecord?>(null);
     }
 
+    private sealed class FakeRemediation : IRuntimeRemediation
+    {
+        public List<RecordRevocation> Revocations { get; } = [];
+
+        public RevocationResponse Answer { get; set; } = new(true, null);
+
+        public bool Unreachable { get; set; }
+
+        public Task<RevocationResponse> RevokeAsync(RecordRevocation revocation, CancellationToken cancellationToken)
+        {
+            if (Unreachable)
+            {
+                throw new HttpRequestException("Runtime is down.");
+            }
+
+            if (Answer.Accepted)
+            {
+                Revocations.Add(revocation);
+            }
+
+            return Task.FromResult(Answer);
+        }
+    }
+
     private sealed class CapturingSigner : IApprovalSigner
     {
         public List<ApprovalAttestationClaims> Signed { get; } = [];
@@ -167,6 +249,9 @@ public sealed class ApprovalHandlerTests
             Signed.Add(claims);
             return Task.FromResult(new SignedAttestation("signed-token", "test-key"));
         }
+
+        public Task<SignedAttestation> SignOperatorAsync(OperatorAttestationClaims claims, CancellationToken cancellationToken) =>
+            Task.FromResult(new SignedAttestation("operator-token", "test-key"));
 
         public Task<ApprovalKeySet> PublishedKeysAsync(CancellationToken cancellationToken) => Task.FromResult(new ApprovalKeySet([]));
     }

@@ -19,6 +19,13 @@ public static class ApprovalErrors
 
     public static readonly Error ExecutionStarted = Error.Conflict("Approval.ExecutionStarted", "Execution already started; the approval can no longer be revoked. Use the emergency stop.");
 
+    /// <summary>Runtime, the authority on the incident, could not be asked; the revocation is not recorded, so the approval stands until it can be.</summary>
+    public static readonly Error RuntimeUnavailable = Error.Failure("Approval.RuntimeUnavailable", "Runtime could not be reached to record the revocation; the approval still stands. Retry, or use the emergency stop.");
+
     public static Error NotAwaitingApproval(string planStatus) =>
         Error.Conflict("Approval.NotAwaitingApproval", $"The plan is {planStatus}, not awaiting approval.");
+
+    /// <summary>Runtime refused the revocation: its reason is final, because Runtime's stream is the truth (ADR-004).</summary>
+    public static Error RevocationRefused(string? reason) =>
+        Error.Conflict("Approval.RevocationRefused", $"Runtime refused the revocation: {reason ?? "no reason given"}. The approval still stands.");
 }

@@ -118,7 +118,10 @@ public sealed class ApprovalEndpointTests(GatewayFixture gateway) : IClassFixtur
         using JsonDocument receipt = await JsonAsync(revoked);
         receipt.RootElement.GetProperty("decision").GetString().ShouldBe("revoked");
         receipt.RootElement.GetProperty("approvalId").GetGuid().ShouldBe(approval.RootElement.GetProperty("approvalId").GetGuid());
-        (await RelayedAsync(RecordRevocation.MessageType, incident)).ShouldHaveSingleItem();
+        RecordRevocation accepted = _host.Runtime.Revocations.ShouldHaveSingleItem();
+        accepted.IncidentId.ShouldBe(incident.Summary.IncidentId);
+        accepted.Attestation.ShouldNotBeNullOrEmpty();
+        (await RelayedAsync(RecordRevocation.MessageType, incident)).ShouldBeEmpty();
 
         using HttpResponseMessage startedApproval = await PostAsync(Path(started, "approve"), new { planVersion = started.Plan!.Plan.PlanVersion, planHash = started.Plan.Plan.PlanHash });
         startedApproval.StatusCode.ShouldBe(HttpStatusCode.Accepted);

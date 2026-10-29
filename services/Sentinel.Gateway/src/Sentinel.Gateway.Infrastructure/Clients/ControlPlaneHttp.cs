@@ -19,17 +19,24 @@ using Sentinel.Gateway.Application.Postmortems;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
+using Sentinel.Contracts.Remediation;
 
 namespace Sentinel.Gateway.Infrastructure.Clients;
 
 internal static class ControlPlaneHttp
 {
-    public static async Task<ControlPlaneResponse> SendAsync(HttpClient http, HttpMethod method, string uri, object? body, CancellationToken cancellationToken)
+    /// <param name="operatorAttestation">The Gateway-signed operator attestation a mutation carries (ADR-006); none for reads.</param>
+    public static async Task<ControlPlaneResponse> SendAsync(HttpClient http, HttpMethod method, string uri, object? body, CancellationToken cancellationToken, string? operatorAttestation = null)
     {
         using var request = new HttpRequestMessage(method, new Uri(uri, UriKind.Relative))
         {
             Content = body is null ? null : JsonContent.Create(body, options: SentinelJson.Options)
         };
+        if (operatorAttestation is not null)
+        {
+            request.Headers.TryAddWithoutValidation(ApprovalAttestation.OperatorHeader, operatorAttestation);
+        }
+
         using HttpResponseMessage response = await http.SendAsync(request, cancellationToken);
         string text = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)

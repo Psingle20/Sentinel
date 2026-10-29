@@ -57,6 +57,8 @@ public sealed class GatewayHost(string connectionString) : WebApplicationFactory
 
             services.RemoveAll<IRuntimeIncidents>();
             services.AddSingleton<IRuntimeIncidents>(Runtime);
+            services.RemoveAll<IRuntimeRemediation>();
+            services.AddSingleton<IRuntimeRemediation>(Runtime);
             services.RemoveAll<IRuntimeHistory>();
             services.AddSingleton<IRuntimeHistory>(Peers);
             services.RemoveAll<IAgentExecutions>();
@@ -72,10 +74,25 @@ public sealed class GatewayHost(string connectionString) : WebApplicationFactory
         });
     }
 
-    /// <summary>Runtime's incident read model: incidents awaiting approval of one plan, in the tenant they are added for.</summary>
-    public sealed class FakeRuntimeIncidents : IRuntimeIncidents
+    /// <summary>Runtime's incident read model: incidents awaiting approval of one plan, in the tenant they are added for; and its answer to revocations (ADR-006).</summary>
+    public sealed class FakeRuntimeIncidents : IRuntimeIncidents, IRuntimeRemediation
     {
         private readonly ConcurrentDictionary<IncidentId, IncidentDetail> _incidents = new();
+
+        /// <summary>The revocations Runtime accepted, with the attestation each carried.</summary>
+        public ConcurrentQueue<RecordRevocation> Revocations { get; } = new();
+
+        /// <summary>Runtime accepts a revocation unless the execution it approved already started.</summary>
+        public Task<RevocationResponse> RevokeAsync(RecordRevocation revocation, CancellationToken cancellationToken)
+        {
+            if (_incidents.TryGetValue(revocation.IncidentId, out IncidentDetail? incident) && incident.Execution?.StartedAt is not null)
+            {
+                return Task.FromResult(new RevocationResponse(false, "Execution already started; the approval can no longer be revoked."));
+            }
+
+            Revocations.Enqueue(revocation);
+            return Task.FromResult(new RevocationResponse(true, null));
+        }
 
         public IncidentDetail Add(string tenant, PlanStatus status = PlanStatus.AwaitingApproval)
         {

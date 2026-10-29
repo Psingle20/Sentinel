@@ -3,6 +3,7 @@ using CleanArchitecture.BuildingBlocks.Integration;
 using CleanArchitecture.BuildingBlocks.Messaging;
 using Sentinel.Gateway.Application.Abstractions.Persistence;
 using Sentinel.Gateway.Application.Abstractions.Providers;
+using Sentinel.Gateway.Application.Abstractions.Security;
 using Sentinel.Gateway.Domain.Approvals;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Remediation;
@@ -10,10 +11,14 @@ using Sentinel.Gateway.Application.BusinessProcesses.Approvals;
 
 namespace Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 
-/// <summary>Records a rejection of the incident's current plan and relays it to Runtime.</summary>
+/// <summary>
+/// Records a rejection of the incident's current plan and relays it to Runtime under a signed
+/// attestation, so Runtime applies only decisions the Gateway's authenticated approvers made (ADR-006).
+/// </summary>
 public sealed class RejectPlanCommandHandler(
     IRuntimeIncidents incidents,
     IApprovalStore approvals,
+    DecisionAttestations attestations,
     IOutbox outbox,
     IUnitOfWork unitOfWork,
     TimeProvider time) : ICommandHandler<RejectPlanCommand, ApprovalReceipt>
@@ -25,7 +30,8 @@ public sealed class RejectPlanCommandHandler(
         IncidentDetail? incident = await incidents.GetAsync(command.IncidentId, cancellationToken);
         IncidentState? state = ApprovalMapping.State(incident);
         Approval? existing = await approvals.FindAsync(command.IncidentId, command.PlanId, command.PlanVersion, cancellationToken);
-        Result<Approval?> allowed = Approval.CheckRejection(existing, state, new PlanReference(command.PlanId, command.PlanVersion), command.Reason);
+        var reference = new PlanReference(command.PlanId, command.PlanVersion);
+        Result<Approval?> allowed = Approval.CheckRejection(existing, state, reference, command.Reason);
         if (allowed.IsFailure)
         {
             return Result.Failure<ApprovalReceipt>(allowed.Error);
@@ -37,6 +43,9 @@ public sealed class RejectPlanCommandHandler(
         }
 
         DateTimeOffset now = time.GetUtcNow();
+        (_, SignedAttestation signed) = await attestations.SignAsync(
+            ApprovalAttestation.RejectPlanScope, state!, reference, incident!.Plan!.Plan.PlanHash, command.ApproverId, incident.Plan.PolicyEvaluation.PolicyVersion, now, cancellationToken);
+
         var rejection = Approval.Reject(state!, command.ApproverId, command.Reason, now);
         await approvals.SaveAsync(rejection, cancellationToken);
         outbox.Enqueue(
@@ -49,9 +58,10 @@ public sealed class RejectPlanCommandHandler(
                 PlanVersion = command.PlanVersion,
                 RejectedBy = command.ApproverId,
                 Reason = command.Reason,
-                RejectedAt = now
+                RejectedAt = now,
+                Attestation = signed.Token
             },
-            ApprovalMapping.Metadata(incident!));
+            ApprovalMapping.Metadata(incident));
         await unitOfWork.CommitAsync(cancellationToken);
         return Result.Success(ApprovalMapping.Receipt(rejection));
     }

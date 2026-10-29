@@ -30,6 +30,8 @@ using Shouldly;
 using Sentinel.Gateway.Api.Identity;
 using Sentinel.Gateway.Application.Abstractions.Persistence;
 using Sentinel.Gateway.Application.Options;
+using Sentinel.Gateway.Application.Abstractions.Security;
+using Sentinel.Contracts.Remediation;
 using Sentinel.Gateway.Application.BusinessTasks.Commands.ControlPlane;
 using Sentinel.Gateway.Application.BusinessTasks.Queries.ControlPlane;
 using Sentinel.Gateway.Application.BusinessTasks.Queries.Live;
@@ -42,12 +44,13 @@ public sealed class ControlPlaneTests
     private sealed class ControlPlane(IExecutorControlPlane executor, IConfigurationOwners owners, IAuditLog audit, IUnitOfWork unitOfWork, TimeProvider time)
     {
         private readonly ControlPlaneAudit _audit = new(audit, unitOfWork, time);
+        private readonly OperatorAttestations _attestations = new(new StubSigner(), Microsoft.Extensions.Options.Options.Create(new ApprovalOptions()), time);
 
         public async Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string actor, CancellationToken cancellationToken) =>
-            (await new PublishPolicyCommandHandler(executor, _audit).Handle(new PublishPolicyCommand(document, expectedVersion, actor), cancellationToken)).Value;
+            (await new PublishPolicyCommandHandler(executor, _attestations, _audit).Handle(new PublishPolicyCommand(document, expectedVersion, actor), cancellationToken)).Value;
 
         public async Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken) =>
-            (await new SetEmergencyStopCommandHandler(executor, _audit).Handle(new SetEmergencyStopCommand(engaged, actor), cancellationToken)).Value;
+            (await new SetEmergencyStopCommandHandler(executor, _attestations, _audit).Handle(new SetEmergencyStopCommand(engaged, actor), cancellationToken)).Value;
 
         public async Task<ControlPlaneResponse> PublishConfigurationAsync(string area, JsonElement document, string expectedVersion, string actor, CancellationToken cancellationToken) =>
             (await new PublishConfigurationCommandHandler(owners, _audit).Handle(new PublishConfigurationCommand(area, document, expectedVersion, actor), cancellationToken)).Value;
@@ -123,13 +126,22 @@ public sealed class ControlPlaneTests
 
         public Task<ControlPlaneResponse> PolicyHistoryAsync(CancellationToken cancellationToken) => Task.FromResult(Done);
 
-        public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, CancellationToken cancellationToken) => Task.FromResult(Refused);
+        public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, string attestation, CancellationToken cancellationToken) => Task.FromResult(Refused);
 
         public Task<ControlPlaneResponse> ControlsAsync(CancellationToken cancellationToken) => Task.FromResult(Done);
 
-        public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken) => Task.FromResult(Done);
+        public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, string attestation, CancellationToken cancellationToken) => Task.FromResult(Done);
 
-        public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, CancellationToken cancellationToken) => Task.FromResult(Done);
+        public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, string attestation, CancellationToken cancellationToken) => Task.FromResult(Done);
+    }
+
+    private sealed class StubSigner : IApprovalSigner
+    {
+        public Task<SignedAttestation> SignAsync(ApprovalAttestationClaims claims, CancellationToken cancellationToken) => Task.FromResult(new SignedAttestation("decision-token", "test-key"));
+
+        public Task<SignedAttestation> SignOperatorAsync(OperatorAttestationClaims claims, CancellationToken cancellationToken) => Task.FromResult(new SignedAttestation($"operator:{claims.ActorId}:{claims.Scope}:{claims.Resource}", "test-key"));
+
+        public Task<ApprovalKeySet> PublishedKeysAsync(CancellationToken cancellationToken) => Task.FromResult(new ApprovalKeySet([]));
     }
 
     private sealed class RecordingAudit : IAuditLog

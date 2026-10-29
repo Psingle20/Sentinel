@@ -28,14 +28,14 @@ internal sealed class ExecutorControlPlaneClient(HttpClient http) : IExecutorCon
 
     public Task<ControlPlaneResponse> PolicyHistoryAsync(CancellationToken cancellationToken) => ControlPlaneHttp.SendAsync(http, HttpMethod.Get, "/v1/policy/history", null, cancellationToken);
 
-    public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, CancellationToken cancellationToken) =>
-        ControlPlaneHttp.SendAsync(http, HttpMethod.Put, "/admin/policy", new { document, expectedVersion, author }, cancellationToken);
+    public Task<ControlPlaneResponse> PublishPolicyAsync(JsonElement document, string expectedVersion, string author, string attestation, CancellationToken cancellationToken) =>
+        ControlPlaneHttp.SendAsync(http, HttpMethod.Put, "/admin/policy", new { document, expectedVersion, author }, cancellationToken, attestation);
 
     public Task<ControlPlaneResponse> ControlsAsync(CancellationToken cancellationToken) => ControlPlaneHttp.SendAsync(http, HttpMethod.Get, "/admin/controls", null, cancellationToken);
 
-    public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, CancellationToken cancellationToken) =>
-        ControlPlaneHttp.SendAsync(http, HttpMethod.Post, "/admin/controls/emergency-stop", new { enabled = engaged, actor }, cancellationToken);
+    public Task<ControlPlaneResponse> SetEmergencyStopAsync(bool engaged, string actor, string attestation, CancellationToken cancellationToken) =>
+        ControlPlaneHttp.SendAsync(http, HttpMethod.Post, "/admin/controls/emergency-stop", new { enabled = engaged, actor }, cancellationToken, attestation);
 
-    public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, CancellationToken cancellationToken) =>
-        ControlPlaneHttp.SendAsync(http, HttpMethod.Post, $"/admin/controls/actions/{Uri.EscapeDataString(actionKind)}", new { enabled = disabled, actor }, cancellationToken);
+    public Task<ControlPlaneResponse> SetActionDisabledAsync(string actionKind, bool disabled, string actor, string attestation, CancellationToken cancellationToken) =>
+        ControlPlaneHttp.SendAsync(http, HttpMethod.Post, $"/admin/controls/actions/{Uri.EscapeDataString(actionKind)}", new { enabled = disabled, actor }, cancellationToken, attestation);
 }

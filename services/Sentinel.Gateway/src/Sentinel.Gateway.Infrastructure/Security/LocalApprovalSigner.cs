@@ -36,10 +36,15 @@ internal sealed class LocalApprovalSigner(
         ArgumentNullException.ThrowIfNull(claims);
 
         (ECDsa key, string keyId) = await CurrentKeyAsync(cancellationToken);
-        string header = Encode(JsonSerializer.SerializeToUtf8Bytes(new ApprovalAttestationHeader(ApprovalAttestation.Algorithm, keyId, ApprovalAttestation.TokenType), SentinelJson.Options));
-        string payload = Encode(JsonSerializer.SerializeToUtf8Bytes(claims, SentinelJson.Options));
-        byte[] signature = key.SignData(Encoding.ASCII.GetBytes($"{header}.{payload}"), HashAlgorithmName.SHA256);
-        return new SignedAttestation($"{header}.{payload}.{Encode(signature)}", keyId);
+        return new SignedAttestation(AttestationToken.Encode(new ApprovalAttestationHeader(ApprovalAttestation.Algorithm, keyId, ApprovalAttestation.TokenType), claims, key), keyId);
+    }
+
+    public async Task<SignedAttestation> SignOperatorAsync(OperatorAttestationClaims claims, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(claims);
+
+        (ECDsa key, string keyId) = await CurrentKeyAsync(cancellationToken);
+        return new SignedAttestation(AttestationToken.Encode(new ApprovalAttestationHeader(ApprovalAttestation.Algorithm, keyId, ApprovalAttestation.OperatorTokenType), claims, key), keyId);
     }
 
     public async Task<ApprovalKeySet> PublishedKeysAsync(CancellationToken cancellationToken)

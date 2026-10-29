@@ -3,6 +3,7 @@ using CleanArchitecture.BuildingBlocks.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Sentinel.Gateway.Application.BusinessTasks.Commands.Approvals;
 using Sentinel.Gateway.Application.ControlPlane;
 using Sentinel.Gateway.Application.Options;
 
@@ -19,6 +20,10 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddBuildingBlocks(AssemblyReference.Assembly);
 
         services.AddScoped<ControlPlaneAudit>();
+
+        // What the Gateway signs (ADR-006): approver decisions for Executor and Runtime, operator actions for the owning services.
+        services.AddScoped<DecisionAttestations>();
+        services.AddScoped<OperatorAttestations>();
 
         // The Gateway's own area (Phase 08): published versions over the deployment configuration alone. A
         // webhook may name only an allowed host, and only a secret this deployment holds.

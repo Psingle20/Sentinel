@@ -21,6 +21,7 @@ internal static class ClientRegistration
         Uri ingestion = Required(configuration, "Gateway:Services:Ingestion");
         services.AddHttpClient<IRuntimeIncidents, RuntimeIncidentsClient>(client => client.BaseAddress = runtime);
         services.AddHttpClient<IRuntimeHistory, RuntimeHistoryClient>(client => client.BaseAddress = runtime);
+        services.AddHttpClient<IRuntimeRemediation, RuntimeRemediationClient>(client => client.BaseAddress = runtime);
         services.AddHttpClient<IAgentExecutions, AgentExecutionsClient>(client => client.BaseAddress = agentWorker);
         services.AddHttpClient<IExecutorControlPlane, ExecutorControlPlaneClient>(client => client.BaseAddress = executor);
         services.AddHttpClient<ISourceHealth, SourceHealthClient>(client => client.BaseAddress = ingestion);
