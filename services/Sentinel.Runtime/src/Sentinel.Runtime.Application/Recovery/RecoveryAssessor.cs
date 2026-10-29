@@ -76,6 +76,15 @@ public sealed class RecoveryAssessor(IObservationQueries observations)
             Filters = new Dictionary<string, string> { ["metricName"] = criterion.MetricName },
             Limit = 1000
         }, cancellationToken);
+
+        // A baseline the telemetry does not cover completely could make recovery look worse than it is and ask for
+        // compensation on a partial picture, so it counts as no baseline and the thresholds alone decide.
+        QueryMetadata coverage = before.Metadata;
+        if (coverage.ObservedThrough < actionAt || coverage.Completeness != QueryCompleteness.Complete || coverage.Truncated)
+        {
+            return null;
+        }
+
         MetricObservation[] samples = [.. before.Observations.OfType<MetricObservation>()];
         return samples.Length == 0 ? null : samples.Average(sample => sample.Value);
     }
