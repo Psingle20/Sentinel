@@ -5,6 +5,7 @@ using Sentinel.Contracts.Primitives.Identifiers;
 
 namespace Sentinel.Contracts.Remediation;
 
+/// <summary>Api relays a rejection of a plan version to Runtime, signed so Runtime can verify who decided (ADR-006).</summary>
 public sealed record RecordRejection : ISentinelMessage
 {
     public static string MessageType => "runtime.record-rejection";
@@ -28,4 +29,7 @@ public sealed record RecordRejection : ISentinelMessage
     public required string Reason { get; init; }
 
     public required DateTimeOffset RejectedAt { get; init; }
+
+    /// <summary>Compact JWS signed by the Gateway with the reject-plan scope. Absent only in messages written before the signing of rejections; Runtime refuses those.</summary>
+    public string? Attestation { get; init; }
 }

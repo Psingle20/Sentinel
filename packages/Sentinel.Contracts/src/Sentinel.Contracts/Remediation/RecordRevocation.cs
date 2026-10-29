@@ -6,8 +6,10 @@ using Sentinel.Contracts.Primitives.Identifiers;
 namespace Sentinel.Contracts.Remediation;
 
 /// <summary>
-/// Api relays an approver's revocation of an approval to Runtime (Phase 06). Runtime refuses the
-/// start of any execution of the revoked plan, so a revoked attestation can never take effect.
+/// The Gateway asks Runtime to withdraw an approval (Phase 06), as a bounded request whose answer is
+/// <see cref="RevocationResponse"/>: Runtime is the authority on whether execution already started, so
+/// the Gateway records a revocation only once Runtime accepted it (ADR-006). Carried over HTTP; the
+/// message form stays registered for the stream name it once used.
 /// </summary>
 public sealed record RecordRevocation : ISentinelMessage
 {
@@ -32,4 +34,7 @@ public sealed record RecordRevocation : ISentinelMessage
     public required string Reason { get; init; }
 
     public required DateTimeOffset RevokedAt { get; init; }
+
+    /// <summary>Compact JWS signed by the Gateway with the revoke-approval scope; Runtime refuses a revocation without one.</summary>
+    public string? Attestation { get; init; }
 }
