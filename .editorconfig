@@ -713,7 +713,7 @@ dotnet_diagnostic.SA1649.severity = none
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/ConfigurationRequests.cs]
+[services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/ConfigurationRequests.cs]
 dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1649.severity = none
 

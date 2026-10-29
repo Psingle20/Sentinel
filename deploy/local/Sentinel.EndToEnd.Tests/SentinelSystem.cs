@@ -22,7 +22,7 @@ public class SentinelSystem : IAsyncLifetime
         "checkout-service", "order-service", "reporting-worker", "redis-exporter", "deploy-controller", "scenario-runner", "prometheus"
     ];
 
-    private static readonly string[] SentinelResources = ["ingestion", "runtime-service", "agentworker", "executor-service", "gateway-service", "web"];
+    private static readonly string[] SentinelResources = ["ingestion-service", "runtime-service", "agentworker", "executor-service", "gateway-service", "web"];
 
     private readonly bool _referenceOnly;
 
@@ -97,7 +97,7 @@ public class SentinelSystem : IAsyncLifetime
         {
             Api = App.CreateHttpClient("gateway-service");
             AgentWorker = App.CreateHttpClient("agentworker");
-            Ingestion = App.CreateHttpClient("ingestion");
+            Ingestion = App.CreateHttpClient("ingestion-service");
             Runtime = App.CreateHttpClient("runtime-service");
             DeployControllerControl = App.CreateHttpClient("deploy-controller");
             DeployControllerControl.DefaultRequestHeaders.Add("X-Reference-Control-Token", await ParameterAsync("reference-control-token"));

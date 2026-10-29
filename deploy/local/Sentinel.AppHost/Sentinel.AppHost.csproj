@@ -13,7 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\services\Sentinel.Gateway\src\Sentinel.Gateway.Api\Sentinel.Gateway.Api.csproj" />
-        <ProjectReference Include="..\..\..\services\Sentinel.Ingestion\src\Sentinel.Ingestion.Host\Sentinel.Ingestion.Host.csproj" />
+        <ProjectReference Include="..\..\..\services\Sentinel.Ingestion\src\Sentinel.Ingestion.Api\Sentinel.Ingestion.Api.csproj" />
         <ProjectReference Include="..\..\..\services\Sentinel.Runtime\src\Sentinel.Runtime.Api\Sentinel.Runtime.Api.csproj" />
         <ProjectReference Include="..\..\..\services\Sentinel.AgentWorker\src\Sentinel.AgentWorker.Host\Sentinel.AgentWorker.Host.csproj" />
         <ProjectReference Include="..\..\..\services\Sentinel.Executor\src\Sentinel.Executor.Api\Sentinel.Executor.Api.csproj" />

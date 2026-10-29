@@ -100,7 +100,7 @@
   <Folder Name="/services/Sentinel.Ingestion/src/">
     <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/Sentinel.Ingestion.Application.csproj" />
     <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Sentinel.Ingestion.Domain.csproj" />
-    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/Sentinel.Ingestion.Host.csproj" />
+    <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/Sentinel.Ingestion.Api.csproj" />
     <Project Path="services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Sentinel.Ingestion.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/services/Sentinel.Ingestion/tests/">

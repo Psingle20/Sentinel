@@ -41,7 +41,7 @@ void AddSentinel()
 
     // Only Ingestion holds provider credentials (ADR-007): the telemetry backends and the deploy
     // controller's read token.
-    IResourceBuilder<ProjectResource> ingestion = AddService<Projects.Sentinel_Ingestion_Host>("ingestion")
+    IResourceBuilder<ProjectResource> ingestion = AddService<Projects.Sentinel_Ingestion_Api>("ingestion-service", database: "ingestion")
         .WithEnvironment("Ingestion__Providers__Prometheus__Endpoint", reference.Prometheus.GetEndpoint("http"))
         .WithEnvironment("Ingestion__Providers__Loki__Endpoint", reference.Loki.GetEndpoint("http"))
         .WithEnvironment("Ingestion__Providers__Jaeger__Endpoint", reference.Jaeger.GetEndpoint("http"))

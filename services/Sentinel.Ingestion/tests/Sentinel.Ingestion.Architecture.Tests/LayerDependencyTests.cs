@@ -9,7 +9,7 @@ public sealed class LayerDependencyTests
 {
     private const string ApplicationNamespace = "Sentinel.Ingestion.Application";
     private const string InfrastructureNamespace = "Sentinel.Ingestion.Infrastructure";
-    private const string HostNamespace = "Sentinel.Ingestion.Host";
+    private const string HostNamespace = "Sentinel.Ingestion.Api";
 
     private static readonly Assembly DomainAssembly = Sentinel.Ingestion.Domain.AssemblyReference.Assembly;
     private static readonly Assembly ApplicationAssembly = Sentinel.Ingestion.Application.AssemblyReference.Assembly;
@@ -108,7 +108,7 @@ public sealed class LayerDependencyTests
 
     [Fact]
     public void Program_still_maps_its_endpoints_until_they_move_to_controllers() =>
-        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Ingestion/src/Sentinel.Ingestion.Host/Program.cs"), pending: true).ShouldBeEmpty();
+        ArchitectureRules.ProgramEndpoints(ArchitectureRules.SourceFile("services/Sentinel.Ingestion/src/Sentinel.Ingestion.Api/Program.cs"), pending: true).ShouldBeEmpty();
 
     [Fact]
     public void Only_the_application_module_registers_the_building_blocks() =>

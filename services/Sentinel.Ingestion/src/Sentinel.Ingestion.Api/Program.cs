@@ -6,7 +6,7 @@ using Sentinel.Contracts.Queries;
 using Sentinel.Ingestion.Application;
 using Sentinel.Ingestion.Application.Knowledge;
 using Sentinel.Ingestion.Domain.Sources;
-using Sentinel.Ingestion.Host;
+using Sentinel.Ingestion.Api;
 using Sentinel.Ingestion.Infrastructure;
 using Sentinel.ServiceDefaults;
 

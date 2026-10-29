@@ -19,7 +19,7 @@
         <ProjectReference Include="..\..\src\Sentinel.Ingestion.Domain\Sentinel.Ingestion.Domain.csproj" />
         <ProjectReference Include="..\..\src\Sentinel.Ingestion.Application\Sentinel.Ingestion.Application.csproj" />
         <ProjectReference Include="..\..\src\Sentinel.Ingestion.Infrastructure\Sentinel.Ingestion.Infrastructure.csproj" />
-        <ProjectReference Include="..\..\src\Sentinel.Ingestion.Host\Sentinel.Ingestion.Host.csproj" />
+        <ProjectReference Include="..\..\src\Sentinel.Ingestion.Api\Sentinel.Ingestion.Api.csproj" />
         <ProjectReference Include="..\..\..\..\packages\Sentinel.Testing\src\Sentinel.Testing\Sentinel.Testing.csproj" />
     </ItemGroup>
 
