@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Sentinel.Gateway.Application.Abstractions.Providers;
+using Sentinel.Gateway.Application.ControlPlane;
+using Sentinel.Gateway.Application.Postmortems;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Primitives.Identifiers;
@@ -25,6 +27,8 @@ public sealed class GatewayHost(string connectionString) : WebApplicationFactory
     public static readonly DateTimeOffset Now = new(2026, 10, 29, 9, 30, 0, TimeSpan.Zero);
 
     public FakeRuntimeIncidents Runtime { get; } = new();
+
+    public GatewayPeers Peers { get; } = new();
 
     public FakeTimeProvider Time { get; } = new(Now);
 
@@ -52,6 +56,16 @@ public sealed class GatewayHost(string connectionString) : WebApplicationFactory
 
             services.RemoveAll<IRuntimeIncidents>();
             services.AddSingleton<IRuntimeIncidents>(Runtime);
+            services.RemoveAll<IRuntimeHistory>();
+            services.AddSingleton<IRuntimeHistory>(Peers);
+            services.RemoveAll<IAgentExecutions>();
+            services.AddSingleton<IAgentExecutions>(Peers);
+            services.RemoveAll<IExecutorControlPlane>();
+            services.AddSingleton<IExecutorControlPlane>(Peers);
+            services.RemoveAll<IConfigurationOwners>();
+            services.AddSingleton<IConfigurationOwners>(Peers);
+            services.RemoveAll<ISourceHealth>();
+            services.AddSingleton<ISourceHealth>(Peers);
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
         });
