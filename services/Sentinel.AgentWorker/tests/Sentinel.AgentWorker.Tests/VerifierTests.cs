@@ -57,6 +57,20 @@ public sealed class VerifierTests
     }
 
     [Fact]
+    public async Task An_earlier_leak_in_the_window_does_not_hide_the_mechanism_of_the_change_that_is_serving()
+    {
+        var telemetry = Telemetry.RepeatedLeak();
+        HypothesisFinding earlier = Change("d8");
+        HypothesisFinding current = Change("d1");
+
+        InvestigationRun run = await Verify(telemetry, 70, earlier, current);
+
+        Verdict(run, earlier, AdversarialVerifier.ChangeStillServing).ShouldBe(ChallengeVerdict.Falsified);
+        Verdict(run, current, AdversarialVerifier.MechanismFollowsChange).ShouldBe(ChallengeVerdict.Survived);
+        run.Completed.Evidence.Where(evidence => evidence.HypothesisIds.Contains(current.HypothesisId)).ShouldAllBe(evidence => evidence.Direction == EvidenceDirection.Supports);
+    }
+
+    [Fact]
     public async Task In_the_dependency_regression_only_the_dependency_change_shows_a_mechanism()
     {
         var telemetry = Telemetry.DependencyRegression();

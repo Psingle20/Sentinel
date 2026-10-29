@@ -44,6 +44,34 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         return telemetry;
     }
 
+    /// <summary>
+    /// S5 after S4: an earlier checkout v2.4.1 leaked from -100 s until a reset released it at -50 s; the incident's own
+    /// v2.4.1 serves from 20 s and leaks again, burning the SLO from 60 s.
+    /// </summary>
+    public static Telemetry RepeatedLeak()
+    {
+        var telemetry = new Telemetry();
+        telemetry.Deployment("checkout-service", "v2.4.1", "v2.4.0", "d8", -110, -100);
+        telemetry.Deployment("checkout-service", "v2.4.0", "v2.4.1", "d9", -55, -50);
+        telemetry.Deployment("checkout-service", "v2.4.1", "v2.4.0", "d1", 0, 20);
+        telemetry.Burn(onset: 60, until: 90);
+        for (int second = -120; second <= 90; second += 5)
+        {
+            double connections = second switch
+            {
+                >= -100 and < -50 => Math.Min(186, 4 + (second + 100) * 5),
+                >= 20 => Math.Min(186, 4 + (second - 20) * 5),
+                _ => 4
+            };
+            telemetry.Metric("redis_connections", "checkout-service", second, connections);
+        }
+
+        telemetry.Connections("reporting-worker", _ => 0);
+        telemetry.Series("request_rate", "checkout-service", _ => 10);
+        telemetry.Series("latency_p95", "order-service", _ => 0.04);
+        return telemetry;
+    }
+
     /// <summary>S3: order-service v1.8.0 serves from 20 s and slows steadily; a benign checkout deployment serves from 140 s; the SLO burns from 160 s.</summary>
     public static Telemetry DependencyRegression()
     {

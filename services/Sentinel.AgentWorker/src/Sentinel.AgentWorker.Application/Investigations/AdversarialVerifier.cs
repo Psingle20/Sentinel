@@ -22,7 +22,10 @@ namespace Sentinel.AgentWorker.Application.Investigations;
 public sealed class AdversarialVerifier(IObservationQueries observations, TimeProvider time) : IInvestigator
 {
     public const string InvestigatorName = "adversarial-verifier";
-    /// <summary>v2 adds <see cref="ChangeStillServing"/>; executions record the version, so v1 runs replay as v1 did.</summary>
+    /// <summary>
+    /// v2 adds <see cref="ChangeStillServing"/> and measures a change's mechanism against how its service stood just before
+    /// it served; executions record the version, so v1 runs replay as v1 did.
+    /// </summary>
     public const string PromptVersion = "falsifiers-v2";
 
     public const string ChangeServing = "change-serving-before-onset";
@@ -136,15 +139,15 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
 
         output.Challenge(hypothesis.HypothesisId, ChangeStillServing, ChallengeVerdict.Survived, $"{reported.ServiceId} {reported.Version} was still serving when symptoms began.");
 
-        // The changed service's own signals must move after the change and before onset.
+        // The changed service's own signals must move after the change and before onset, measured against how they stood
+        // just before it served, so an earlier rise in the window, such as a previous incident's, is not this change's.
         Shift?[] shifts =
         [
-            connections.GetValueOrDefault(reported.ServiceId) is { } own ? Shift.Of(own, onset, 30, 2) : null,
-            latency.GetValueOrDefault(reported.ServiceId) is { } slow ? Shift.Of(slow, onset, 0.2, 3) : null
+            connections.GetValueOrDefault(reported.ServiceId) is { } own ? Shift.Since(own, servedAt, onset, 30, 2) : null,
+            latency.GetValueOrDefault(reported.ServiceId) is { } slow ? Shift.Since(slow, servedAt, onset, 0.2, 3) : null
         ];
         Shift? shift = shifts
             .OfType<Shift>()
-            .Where(candidate => candidate.Start.EventTime >= servedAt - TimeSpan.FromSeconds(10))
             .OrderBy(candidate => candidate.Start.EventTime)
             .FirstOrDefault();
         if (shift is not null)
@@ -284,6 +287,32 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
 
             // A shift that had already subsided by onset cannot explain symptoms at onset.
             MetricObservation atOnset = considered.Where(sample => sample.EventTime <= onset + TimeSpan.FromSeconds(10)).MaxBy(sample => sample.EventTime) ?? peak;
+            return start.EventTime < onset && atOnset.Value >= baseline + rise * 0.5 ? new Shift(baseline, start, peak) : null;
+        }
+
+        /// <summary>
+        /// A material rise that began after <paramref name="servedAt"/> and before onset, against the lowest level in the
+        /// two minutes before it: whether a change moved its own service's signal.
+        /// </summary>
+        public static Shift? Since(MetricObservation[] series, DateTimeOffset servedAt, DateTimeOffset onset, double minimumRise, double minimumRatio)
+        {
+            MetricObservation[] before = [.. series.Where(sample => sample.EventTime >= servedAt - TimeSpan.FromMinutes(2) && sample.EventTime <= servedAt)];
+            MetricObservation[] after = [.. series.Where(sample => sample.EventTime >= servedAt - TimeSpan.FromSeconds(10) && sample.EventTime <= onset + TimeSpan.FromSeconds(30))];
+            if (before.Length == 0 || after.Length < 2)
+            {
+                return null;
+            }
+
+            double baseline = before.Min(sample => sample.Value);
+            MetricObservation peak = after.MaxBy(sample => sample.Value)!;
+            double rise = peak.Value - baseline;
+            if (rise < minimumRise || peak.Value < minimumRatio * Math.Max(baseline, minimumRise / 10))
+            {
+                return null;
+            }
+
+            MetricObservation start = after.First(sample => sample.Value >= baseline + rise * 0.2);
+            MetricObservation atOnset = after.Where(sample => sample.EventTime <= onset + TimeSpan.FromSeconds(10)).MaxBy(sample => sample.EventTime) ?? peak;
             return start.EventTime < onset && atOnset.Value >= baseline + rise * 0.5 ? new Shift(baseline, start, peak) : null;
         }
     }
