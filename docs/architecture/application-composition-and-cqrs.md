@@ -139,7 +139,7 @@ internal sealed class DependencyContainer
 
 Order is Application, then Infrastructure, then Api: inner layers first, so an outer layer's `TryAdd` or decoration sees the inner registrations it refines. The reference template registers Infrastructure first; Sentinel reverses it because its infrastructure decorates and replaces application defaults (test doubles, in-process owners), never the other way round.
 
-Infrastructure modules split into private, capability-named methods (`AddApiPersistence`, `AddServiceClients`) each in its own file under `Infrastructure/DependencyInjection/`. The public module stays a short list of calls.
+Infrastructure modules split into private, capability-named methods (`AddApiPersistence`, `AddServiceClients`) each in its own file under `Infrastructure/DependencyInjection/`. The public module, at the project root, stays a short list of calls.
 
 `Program.cs` becomes a process outline:
 
@@ -235,7 +235,6 @@ services/Sentinel.<Service>/src/
 │
 ├── Sentinel.<Service>.Infrastructure/
 │   ├── DependencyInjection/
-│   │   ├── InfrastructureDependencyModule.cs
 │   │   └── <Capability>Registration.cs          the private Add* methods
 │   ├── Messaging/
 │   │   ├── <Service>Messages.cs                 Produces/Consumes registration
@@ -245,6 +244,7 @@ services/Sentinel.<Service>/src/
 │   │   └── Postgres<Thing>Store.cs              one per port
 │   ├── Clients/          <Peer><Purpose>Client.cs, one per port
 │   ├── Grains/, Workflows/, Providers/, Models/  as the service needs
+│   ├── InfrastructureDependencyModule.cs
 │   └── AssemblyReference.cs
 │
 └── Sentinel.<Service>.Api/
@@ -256,6 +256,7 @@ services/Sentinel.<Service>/src/
     │   ├── <Operation>Body.cs                   transport bodies, one per file
     │   └── ...
     ├── Filters/                                 action filters, when needed
+    ├── <Concern>/                               the rest the host owns, one folder per concern: Identity/, Idempotency/, Live/
     ├── DependencyContainer.cs
     ├── ApiDependencyModule.cs
     └── Program.cs
@@ -266,6 +267,10 @@ services/Sentinel.<Service>/src/
 **Decided by the owner on 2026-10-29.** An Application project separates what a caller asks from the work that carries it out, each split by capability: `BusinessProcesses/<Capability>/` holds the requests, their processors and what they return; `BusinessTasks/Commands/<Capability>/` and `BusinessTasks/Queries/<Capability>/` hold the commands and queries a processor dispatches, with their handlers; `Validators/<Capability>/` holds the request validators. `Abstractions/`, `Options/` and `Services/` stay at the root. A capability is a business area such as `Approvals`, `Remediation` or `Execution`, the same name in every root folder, so every process, command, query and validator of a service can be listed at a glance and one operation is the files with its name across them. This replaces the job engine's feature folder per operation, which the first draft of this guide followed.
 
 The layout keeps rule 6 checkable by namespace: a request and its processor share `BusinessProcesses.<Capability>`, a command and its handler share `BusinessTasks.Commands.<Capability>`, a query and its handler share `BusinessTasks.Queries.<Capability>`. An error that no aggregate owns sits beside the handlers that return it; aggregate errors stay in Domain (rule 12).
+
+### Project roots
+
+**Decided by the owner on 2026-10-29.** A project's root holds only its composition files: `Program.cs`, `DependencyContainer.cs` and `ApiDependencyModule.cs` in an Api project, and the layer's dependency module in Application and Infrastructure, beside `AssemblyReference.cs`, the marker the architecture tests load the assembly by. Everything else sits in a folder named for its concern: `Controllers/`, `Contracts/`, `Filters/`, `Identity/`, `Idempotency/`, `Live/` in an Api project; `Abstractions/`, `BusinessProcesses/`, `BusinessTasks/`, `Validators/`, `Options/`, `Services/` in Application; `DependencyInjection/`, `Messaging/`, `Persistence/`, `Security/` and the like in Infrastructure. A file still at a root is one of the grab-bag files the inventory below schedules for a later step.
 
 Tests mirror the structure: the approval handlers' tests sit in `BusinessTasks/Commands/Approvals/` and the aggregate's in `Domain/`.
 
