@@ -95,9 +95,3 @@ public sealed class TemporalFixture : IAsyncLifetime
         return ((IPEndPoint)listener.LocalEndpoint).Port;
     }
 }
-
-[CollectionDefinition(Name)]
-public sealed class TemporalCollection : ICollectionFixture<TemporalFixture>
-{
-    public const string Name = "temporal";
-}

@@ -7,8 +7,6 @@ using Microsoft.Extensions.Hosting;
 
 namespace Sentinel.ServiceDefaults;
 
-public sealed record ReplayDeadLetter(string Stream, string EntryId);
-
 /// <summary>
 /// Operator controls every service exposes (Phase 02): list dead-lettered messages and replay one
 /// after its cause is fixed. They are mapped only in the Development environment or when
