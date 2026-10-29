@@ -5,6 +5,7 @@
 - [Full Sentinel product architecture](architecture.md)
 - [Concise architecture overview](overview.md)
 - [Frontend design system](frontend-design-system.md)
+- [Application composition and CQRS guide](application-composition-and-cqrs.md)
 - [Phase-wise implementation plan](../implementation/README.md)
 - [Architecture-to-phase coverage matrix](../implementation/coverage-matrix.md)
 - [Phase status ledger](../implementation/phase-status.md)
