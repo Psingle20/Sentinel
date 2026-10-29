@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Reference.Scenarios.Api.Contracts;
 using Reference.Scenarios.Api.Manifests;
@@ -200,8 +201,9 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         await Assertions.Expect(dialog).ToContainTextAsync(incident.Plan.Plan.PlanHash[..20]);
         await dialog.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { Name = "Confirm approval" }).ClickAsync();
 
-        // The approval reaches Runtime as a message and comes back to the page as a live event, so give it time.
-        await Assertions.Expect(page.GetByText("Approved by responder@example.test")).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 60_000 });
+        // The approval reaches Runtime as a message and comes back to the page as a live event, so give it time. The
+        // timeline and the policy line also mention the approver; only the plan's confirmation starts with these words.
+        await Assertions.Expect(page.GetByText(new Regex("^Approved by responder@example\\.test at "))).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 60_000 });
         output.WriteLine("Approved in Sentinel.Web.");
     }
 
