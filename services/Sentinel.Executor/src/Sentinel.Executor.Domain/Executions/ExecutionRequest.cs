@@ -3,26 +3,6 @@ using Sentinel.Contracts.Primitives.Identifiers;
 
 namespace Sentinel.Executor.Domain.Executions;
 
-/// <summary>Executor's durable execution states (ADR-006).</summary>
-public enum ExecutionState
-{
-    Received,
-    Rejected,
-    Reserved,
-    Aborted,
-    StartConfirmed,
-    Executing,
-    ActionVerified,
-    Failed,
-    OutcomeUnknown,
-    Reconciling,
-    Compensating,
-    Compensated,
-    CompensationFailed
-}
-
-public sealed record ExecutionTransition(ExecutionState From, ExecutionState To, string? Detail, DateTimeOffset At);
-
 /// <summary>
 /// One execute request and its state machine. Every transition is persisted before the next
 /// external call, so after a crash the request's state says exactly how far it got.
@@ -222,25 +202,3 @@ public sealed class ExecutionRequest
         return Result.Success();
     }
 }
-
-/// <summary>The persisted form of an <see cref="ExecutionRequest"/>.</summary>
-public sealed record ExecutionSnapshot(
-    Guid RequestId,
-    string IdempotencyKey,
-    TenantId TenantId,
-    EnvironmentId EnvironmentId,
-    IncidentId IncidentId,
-    PlanId PlanId,
-    int PlanVersion,
-    string PlanHash,
-    long FencingToken,
-    string Plan,
-    AttestationId? AttestationId,
-    string? ApproverId,
-    string? PolicyVersion,
-    ExecutionState State,
-    string? Detail,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    IReadOnlyList<ExecutionTransition> History,
-    IReadOnlyList<ActionId>? CompletedActions = null);

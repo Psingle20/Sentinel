@@ -18,5 +18,12 @@ public abstract class ApiController : ControllerBase
         return result.IsSuccess ? Results.Ok(result.Value) : Problem(result.Error);
     }
 
+    protected static IResult MatchNoContent(Result result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        return result.IsSuccess ? Results.NoContent() : Problem(result.Error);
+    }
+
     protected static IResult Problem(Error error) => error.ToProblem();
 }

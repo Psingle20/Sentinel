@@ -1,19 +1,21 @@
 using CleanArchitecture.BuildingBlocks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Sentinel.Executor.Application.Services;
 
 namespace Sentinel.Executor.Application;
 
-/// <summary>Executor's application layer: the building-block pipeline for its processes and tasks, and the services not yet split into them (ADR-020).</summary>
+/// <summary>
+/// Executor's application layer (ADR-020): the building-block pipeline for its processes and tasks,
+/// and the policy engine, attestation verification and execution state machine they share.
+/// </summary>
 public sealed class ApplicationDependencyModule : IDependencyModule
 {
     public void RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddBuildingBlocks(AssemblyReference.Assembly);
 
-        // Policy evaluation and administration, verification and the execution state machine become processes and tasks in Executor's own step.
         services.AddScoped<PolicyService>();
-        services.AddScoped<PolicyAdministration>();
         services.AddScoped<AttestationVerifier>();
         services.AddScoped<ExecutionService>();
     }

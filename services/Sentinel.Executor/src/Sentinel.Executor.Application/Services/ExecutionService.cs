@@ -10,94 +10,12 @@ using Sentinel.Executor.Domain.Capabilities;
 using Sentinel.Executor.Domain.Executions;
 using Sentinel.Executor.Domain.Policy;
 using DomainVerdict = Sentinel.Executor.Domain.Policy.PolicyVerdict;
+using Sentinel.Executor.Application.Abstractions.Persistence;
+using Sentinel.Executor.Application.Abstractions.Providers;
+using Sentinel.Executor.Application.Abstractions.Remediation;
+using Sentinel.Executor.Application.Options;
 
-namespace Sentinel.Executor.Application;
-
-/// <summary>Configured as <c>Executor</c>.</summary>
-public sealed class ExecutorOptions
-{
-    public const string Section = "Executor";
-
-    /// <summary>Denies every action, independent of Runtime, Api and every model path (ADR-006). Operators can also engage it at run time.</summary>
-    public bool EmergencyStop { get; set; }
-
-    /// <summary>The remediation policy document, relative to the content root.</summary>
-    public string PolicyFile { get; set; } = "policies/remediation-policy.json";
-
-    /// <summary>How long action verification waits for the target to show the action took effect.</summary>
-    public TimeSpan VerifyTimeout { get; set; } = TimeSpan.FromSeconds(90);
-
-    public TimeSpan VerifyPollInterval { get; set; } = TimeSpan.FromSeconds(2);
-
-    /// <summary>An unfinished request untouched for this long is reconciled.</summary>
-    public TimeSpan ReconcileAfter { get; set; } = TimeSpan.FromSeconds(20);
-
-    /// <summary>A capability expires this long after it is issued; the adapter call must start before then.</summary>
-    public TimeSpan CapabilityLifetime { get; set; } = TimeSpan.FromMinutes(2);
-}
-
-/// <summary>
-/// The only policy engine (ADR-006): advisory at plan time for Runtime, authoritative at execution
-/// time. It evaluates the versioned policy document with the operator controls; a plan's verdict is
-/// the most restrictive verdict of its actions, and every evaluation records its rule trace.
-/// </summary>
-public sealed class PolicyService(IPolicyStore policies, IControlStore controls, IOptions<ExecutorOptions> options, TimeProvider time)
-{
-    public async Task<PolicyEvaluation> EvaluateAsync(PolicyEvaluationRequest request, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        PolicyDocument policy = await policies.CurrentAsync(cancellationToken);
-        DateTimeOffset now = time.GetUtcNow();
-        if (!RemediationPlanHash.Matches(request.Plan))
-        {
-            return new PolicyEvaluation(PolicyDecision.Deny, policy.Version, ["plan.hash: the hash does not match the plan content"], now);
-        }
-
-        ExecutorControls current = await controls.GetAsync(cancellationToken);
-        if (options.Value.EmergencyStop)
-        {
-            current = current with { EmergencyStop = true };
-        }
-
-        int blastRadius = request.Plan.BlastRadius?.Count ?? request.Plan.Actions.Select(action => action.TargetServiceId).Distinct().Count();
-        PolicyOutcome[] outcomes = [.. request.Plan.Actions.Select(action => PolicyEngine.Evaluate(
-            policy,
-            new PolicyInput(
-                request.TenantId.Value,
-                request.EnvironmentId.Value,
-                ActionKind(action),
-                action.TargetServiceId.Value,
-                request.Plan.Risk.ToString().ToLowerInvariant(),
-                request.Confidence,
-                request.Severity?.ToString().ToLowerInvariant(),
-                blastRadius,
-                now),
-            current))];
-
-        DomainVerdict verdict = outcomes.Length == 0
-            ? DomainVerdict.Deny
-            : outcomes.Select(outcome => outcome.Verdict).Aggregate(PolicyEngine.MostRestrictive);
-        return new PolicyEvaluation(
-            verdict switch
-            {
-                DomainVerdict.Allow => PolicyDecision.Allow,
-                DomainVerdict.ApprovalRequired => PolicyDecision.ApprovalRequired,
-                DomainVerdict.SuggestionOnly => PolicyDecision.SuggestionOnly,
-                _ => PolicyDecision.Deny
-            },
-            policy.Version,
-            outcomes.Length == 0 ? ["plan: no actions"] : [.. outcomes.SelectMany(outcome => outcome.RuleTrace)],
-            now);
-    }
-
-    public static string ActionKind(RemediationAction action) => action switch
-    {
-        RollbackAction => "rollback",
-        PauseBatchAction => "pause-batch",
-        _ => action.GetType().Name
-    };
-}
+namespace Sentinel.Executor.Application.Services;
 
 /// <summary>
 /// The durable execution state machine (ADR-006) behind <c>ExecuteRemediationCommandHandler</c>,

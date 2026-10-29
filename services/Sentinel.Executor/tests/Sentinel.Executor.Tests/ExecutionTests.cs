@@ -10,6 +10,9 @@ using Sentinel.Executor.Domain.Executions;
 using Sentinel.Executor.Domain.Policy;
 using Shouldly;
 using MicrosoftOptions = Microsoft.Extensions.Options.Options;
+using Sentinel.Executor.Application.Abstractions.Remediation;
+using Sentinel.Executor.Application.Options;
+using Sentinel.Executor.Application.Services;
 
 namespace Sentinel.Executor.Tests;
 

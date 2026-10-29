@@ -5,8 +5,9 @@ using System.Text.Json;
 using CleanArchitecture.BuildingBlocks;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Remediation;
+using Sentinel.Executor.Application.Abstractions.Security;
 
-namespace Sentinel.Executor.Application;
+namespace Sentinel.Executor.Application.Services;
 
 /// <summary>
 /// Verifies Api's approval attestation (ADR-006): an ES256 compact JWS whose signature checks out

@@ -44,14 +44,6 @@ public sealed class LayerDependencyTests
         "Sentinel.AgentWorker"
     ];
 
-    // Rule 9 (ADR-020): controllers Executor's own refactoring step migrates.
-    private static readonly string[] PendingControllers =
-    [
-        "Sentinel.Executor.Api.Controllers.PolicyController",
-        "Sentinel.Executor.Api.Controllers.ExecutionsController",
-        "Sentinel.Executor.Api.Controllers.AdminController"
-    ];
-
     [Fact]
     public void Domain_references_only_core_building_blocks_and_contract_primitives()
     {
@@ -114,7 +106,7 @@ public sealed class LayerDependencyTests
 
     [Fact]
     public void Controllers_derive_from_the_api_controller_and_send_requests() =>
-        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Executor.Domain"], PendingControllers).ShouldBeEmpty();
+        ArchitectureRules.Controllers(HostAssembly, HostNamespace + ".Controllers", typeof(ApiController), [ApplicationNamespace, InfrastructureNamespace, "Sentinel.Executor.Domain"], []).ShouldBeEmpty();
 
     [Fact]
     public void Program_maps_no_endpoint_itself() =>
