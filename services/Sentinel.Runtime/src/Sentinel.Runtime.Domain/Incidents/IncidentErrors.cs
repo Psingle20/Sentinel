@@ -5,6 +5,8 @@ namespace Sentinel.Runtime.Domain.Incidents;
 
 public static class IncidentErrors
 {
+    public static readonly Error NotFound = Error.NotFound("Incident.NotFound", "The incident does not exist.");
+
     public static readonly Error AlreadyDecided = Error.Conflict("Incident.AlreadyDecided", "The incident already has a decision.");
 
     public static readonly Error PlanWithoutDiagnosis = Error.Conflict("Incident.PlanWithoutDiagnosis", "A plan must remediate the diagnosed leading hypothesis.");

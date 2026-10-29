@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CleanArchitecture.BuildingBlocks;
 using CleanArchitecture.BuildingBlocks.Infrastructure.Messaging;
@@ -6,10 +8,14 @@ using CleanArchitecture.BuildingBlocks.Messaging;
 using FluentValidation;
 using NetArchTest.Rules;
 
+// The rules read private fields and attributes on purpose: a transition table or a framework attribute is
+// what they look for, wherever it is declared.
+#pragma warning disable S3011
+
 namespace Sentinel.Testing.Architecture;
 
 /// <summary>
-/// Rules 6 to 10 of the application composition guide's enforceable rules (ADR-020), shared by every
+/// Rules 6 to 13 of the application composition guide's enforceable rules (ADR-020), shared by every
 /// service's architecture tests. Each returns its violations. <c>pending</c> names types, by full
 /// name, that a later refactoring step migrates; they are not reported, and a pending entry that no
 /// longer exists or already complies is reported instead, so the list can only shrink.
@@ -26,6 +32,18 @@ public static partial class ArchitectureRules
     ];
 
     private static readonly Type[] Dispatchers = [typeof(ICommandDispatcher), typeof(IQueryDispatcher)];
+
+    private static readonly string[] FrameworkAttributeNamespaces =
+    [
+        "System.Text.Json.Serialization",
+        "System.ComponentModel.DataAnnotations",
+        "System.Runtime.Serialization",
+        "Microsoft.EntityFrameworkCore",
+        "Newtonsoft.Json",
+        "Orleans"
+    ];
+
+    private static readonly Type[] AllowedDomainAttributes = [typeof(JsonDerivedTypeAttribute), typeof(JsonPolymorphicAttribute)];
 
     /// <summary>Rule 6: every command, query and request has exactly one handler or processor, in its own namespace.</summary>
     public static IReadOnlyList<string> HandlerPlacement(Assembly application)
@@ -124,6 +142,113 @@ public static partial class ArchitectureRules
             pending);
     }
 
+    /// <summary>
+    /// Rule 11: domain classes are sealed or abstract and expose no public setter (an init accessor
+    /// sets a value at construction and is allowed), and every <c>&lt;Name&gt;State</c> enum has a
+    /// transition table in its own namespace: a static field mapping each state to the states it may
+    /// move to.
+    /// </summary>
+    public static IReadOnlyList<string> DomainModel(Assembly domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        Type[] types = [.. domain.GetTypes().Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), false))];
+        var problems = new List<string>();
+        foreach (Type type in types.Where(type => type.IsClass))
+        {
+            if (!type.IsSealed && !type.IsAbstract)
+            {
+                problems.Add($"{type.FullName} is neither sealed nor abstract.");
+            }
+
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            {
+                if (property.SetMethod is { IsPublic: true } setter && !setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)))
+                {
+                    problems.Add($"{type.FullName}.{property.Name} has a public setter.");
+                }
+            }
+        }
+
+        foreach (Type state in types.Where(type => type.IsEnum && type.Name.EndsWith("State", StringComparison.Ordinal)))
+        {
+            bool tabled = types
+                .Where(type => type.Namespace == state.Namespace)
+                .SelectMany(type => type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                .Any(field => IsTransitionTable(field.FieldType, state));
+            if (!tabled)
+            {
+                problems.Add($"{state.FullName} has no transition table in {state.Namespace}.");
+            }
+        }
+
+        return problems;
+    }
+
+    /// <summary>
+    /// Rule 12: an error whose code names an aggregate (<c>&lt;Aggregate&gt;.…</c>) is declared in that
+    /// aggregate's <c>&lt;Aggregate&gt;Errors</c> catalogue in Domain. It checks every error Application
+    /// declares as a static field or property; an aggregate is a name with a catalogue in Domain.
+    /// </summary>
+    public static IReadOnlyList<string> ErrorCatalogues(Assembly domain, Assembly application)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+        ArgumentNullException.ThrowIfNull(application);
+
+        HashSet<string> aggregates = [.. domain.GetTypes()
+            .Where(type => type is { IsAbstract: true, IsSealed: true } && type.Name.EndsWith("Errors", StringComparison.Ordinal))
+            .Select(type => type.Name[..^"Errors".Length])];
+        var problems = new List<string>();
+        foreach (Type type in application.GetTypes().Where(type => !type.ContainsGenericParameters))
+        {
+            const BindingFlags Declared = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            IEnumerable<(string Name, Error? Error)> errors =
+            [
+                .. type.GetFields(Declared).Where(field => typeof(Error).IsAssignableFrom(field.FieldType)).Select(field => (field.Name, field.GetValue(null) as Error)),
+                .. type.GetProperties(Declared).Where(property => typeof(Error).IsAssignableFrom(property.PropertyType) && property.GetIndexParameters().Length == 0).Select(property => (property.Name, property.GetValue(null) as Error))
+            ];
+            foreach ((string name, Error? error) in errors)
+            {
+                if (error is not null && aggregates.Contains(error.Code.Split('.')[0]))
+                {
+                    problems.Add($"{type.FullName}.{name} declares {error.Code}; it belongs in Domain's {error.Code.Split('.')[0]}Errors.");
+                }
+            }
+        }
+
+        return problems;
+    }
+
+    /// <summary>
+    /// Rule 13: domain types carry no persistence, serialization or framework attributes, other than the
+    /// polymorphism attributes on event-stream and aggregate-command base types.
+    /// </summary>
+    public static IReadOnlyList<string> DomainAttributes(Assembly domain)
+    {
+        ArgumentNullException.ThrowIfNull(domain);
+
+        const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var problems = new List<string>();
+        foreach (Type type in domain.GetTypes().Where(type => !type.IsDefined(typeof(CompilerGeneratedAttribute), false)))
+        {
+            IEnumerable<MemberInfo> members = [type, .. type.GetProperties(All), .. type.GetFields(All), .. type.GetMethods(All)];
+            foreach (MemberInfo member in members)
+            {
+                foreach (CustomAttributeData attribute in member.GetCustomAttributesData())
+                {
+                    string ns = attribute.AttributeType.Namespace ?? string.Empty;
+                    if (FrameworkAttributeNamespaces.Any(framework => ns == framework || ns.StartsWith(framework + ".", StringComparison.Ordinal))
+                        && !AllowedDomainAttributes.Contains(attribute.AttributeType))
+                    {
+                        problems.Add($"{type.FullName}{(member == type ? string.Empty : "." + member.Name)} carries {attribute.AttributeType.Name}.");
+                    }
+                }
+            }
+        }
+
+        return problems;
+    }
+
     /// <summary>The source file of a project, found by walking up from the test's output directory.</summary>
     public static string SourceFile(string relativePath)
     {
@@ -205,6 +330,13 @@ public static partial class ArchitectureRules
 
         return problems;
     }
+
+    // A map from a state to the states it may move to: a dictionary keyed by the state whose values are its states.
+    private static bool IsTransitionTable(Type fieldType, Type state) =>
+        fieldType.IsGenericType
+        && fieldType.GetGenericArguments() is [Type key, Type value]
+        && key == state
+        && (value == state.MakeArrayType() || value.IsGenericType && value.GetGenericArguments() is [Type element] && element == state);
 
     private static Type[] Parameters(Type type) =>
         [.. type.GetConstructors().SelectMany(constructor => constructor.GetParameters()).Select(parameter => parameter.ParameterType).Distinct()];

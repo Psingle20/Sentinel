@@ -36,7 +36,6 @@ public sealed class IncidentSteps(
     IOptions<RuntimeOptions> options,
     ILogger<IncidentSteps> logger)
 {
-    public static readonly Error Missing = IncidentCommandProcessor.NotFound;
 
     /// <summary>An ID derived from the incident, its cycle and the step, so a retried step names the same investigation.</summary>
     public static InvestigationId StepInvestigationId(IncidentId incidentId, int cycle, string step)

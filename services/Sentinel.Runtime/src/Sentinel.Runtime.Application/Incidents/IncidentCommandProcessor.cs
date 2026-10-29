@@ -12,8 +12,6 @@ namespace Sentinel.Runtime.Application.Incidents;
 /// </summary>
 public static class IncidentCommandProcessor
 {
-    public static readonly Error NotFound = Error.NotFound("Incident.NotFound", "The incident does not exist.");
-
     /// <summary>The execution idempotency key Executor and the deploy controller deduplicate on (ADR-006).</summary>
     public static string IdempotencyKey(Incident incident)
     {
@@ -37,7 +35,7 @@ public static class IncidentCommandProcessor
 
         if (incident is null)
         {
-            return Result.Failure<Incident>(NotFound);
+            return Result.Failure<Incident>(IncidentErrors.NotFound);
         }
 
         Result result = command switch

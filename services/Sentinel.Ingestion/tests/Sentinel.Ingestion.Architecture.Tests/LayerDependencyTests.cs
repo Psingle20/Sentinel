@@ -119,6 +119,18 @@ public sealed class LayerDependencyTests
     public void Only_the_application_module_registers_the_building_blocks() =>
         ArchitectureRules.BuildingBlocksRegistration(ServiceAssemblies, []).ShouldBeEmpty();
 
+    [Fact]
+    public void Domain_classes_are_closed_and_every_state_has_a_transition_table() =>
+        ArchitectureRules.DomainModel(DomainAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Errors_that_name_an_aggregate_are_declared_in_its_domain_catalogue() =>
+        ArchitectureRules.ErrorCatalogues(DomainAssembly, ApplicationAssembly).ShouldBeEmpty();
+
+    [Fact]
+    public void Domain_types_carry_no_persistence_serialization_or_framework_attributes() =>
+        ArchitectureRules.DomainAttributes(DomainAssembly).ShouldBeEmpty();
+
     private static void AssertNoDependency(Assembly assembly, params string[] forbiddenNamespaces)
     {
         TestResult result = Types.InAssembly(assembly)

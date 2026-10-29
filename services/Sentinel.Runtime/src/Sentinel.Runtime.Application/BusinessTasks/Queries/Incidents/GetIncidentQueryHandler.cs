@@ -3,6 +3,7 @@ using CleanArchitecture.BuildingBlocks.Messaging;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Runtime.Application.Abstractions.Persistence;
 using Sentinel.Runtime.Application.Incidents;
+using Sentinel.Runtime.Domain.Incidents;
 
 namespace Sentinel.Runtime.Application.BusinessTasks.Queries.Incidents;
 
@@ -15,6 +16,6 @@ public sealed class GetIncidentQueryHandler(IIncidentStore incidents) : IQueryHa
 
         return await incidents.GetDetailAsync(query.IncidentId, cancellationToken) is { } detail
             ? Result.Success(detail)
-            : Result.Failure<IncidentDetail>(IncidentCommandProcessor.NotFound);
+            : Result.Failure<IncidentDetail>(IncidentErrors.NotFound);
     }
 }
