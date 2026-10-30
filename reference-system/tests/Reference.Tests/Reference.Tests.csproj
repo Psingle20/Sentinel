@@ -10,11 +10,18 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="AWSSDK.CloudWatch" />
+        <PackageReference Include="AWSSDK.CloudWatchLogs" />
+        <PackageReference Include="AWSSDK.ECS" />
+        <PackageReference Include="AWSSDK.IdentityManagement" />
+        <PackageReference Include="AWSSDK.SecurityToken" />
+        <PackageReference Include="AWSSDK.SQS" />
         <PackageReference Include="coverlet.collector" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
         <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Shouldly" />
+        <PackageReference Include="Testcontainers" />
         <PackageReference Include="Testcontainers.Redis" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />
@@ -31,6 +38,7 @@
 
     <ItemGroup>
         <Content Include="..\..\scenarios\manifests\*.json" LinkBase="manifests" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="..\..\deploy\aws\emulator.json" Link="Aws\emulator.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>
