@@ -8,6 +8,8 @@ Operational procedures for running Sentinel. Each runbook says when to use it, t
 | [Models, spend and demonstrations](models-and-spend.md) | Switching between the test double and live Meta models, preparing a demonstration, or a spend cap was reached. |
 | [Dead letters](dead-letters.md) | A message failed repeatedly and was moved to a dead-letter stream. |
 | [Projection rebuild](projection-rebuild.md) | Incident views disagree with the event stream, or a projection was lost. |
+| [Signing key rotation](signing-key-rotation.md) | Checking or forcing rotation of the approval signing key, or a key may be compromised. |
+| [Backup and restore](backup-and-restore.md) | Taking a backup of Sentinel's databases, or putting Sentinel back to one. |
 
 ## Conventions
 
