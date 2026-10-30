@@ -1,6 +1,10 @@
 using System.Net;
 using System.Text;
+using Amazon.ECS;
+using Amazon.Runtime;
+using Amazon.SQS;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Sentinel.Contracts;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
@@ -17,7 +21,10 @@ namespace Sentinel.Ingestion.Tests;
 /// a new vendor is added by adding a case here, not by trusting its own tests: provenance reaches
 /// the provider resource, IDs are deterministic, results are tenant-scoped and inside the requested
 /// range, and an outage, throttling, malformed or oversized response is an explicit unavailable
-/// result rather than an exception or an empty success.
+/// result rather than an exception or an empty success. The AWS adapters of the AWS-emulated
+/// environment (Phase E01) run through the AWS SDK over the same stubbed transport, answered per
+/// operation; the SDK streams its responses, which the AWS APIs bound by page size, so the
+/// buffer-size rule applies to the HTTP adapters alone.
 /// </summary>
 public sealed class ProviderConformanceTests
 {
@@ -26,7 +33,34 @@ public sealed class ProviderConformanceTests
     private static readonly TenantId Tenant = TenantId.From("acme");
     private static readonly EnvironmentId Environment = EnvironmentId.From("reference");
 
-    public static TheoryData<string> Adapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller" };
+    public static TheoryData<string> Adapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller", "ecs-deployments", "aws-topology", "sqs-metrics" };
+
+    public static TheoryData<string> BufferedAdapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller" };
+
+    private const string Cluster = "arn:aws:ecs:us-east-1:000000000000:cluster/reference";
+    private const string Definition = "arn:aws:ecs:us-east-1:000000000000:task-definition/queue-consumer";
+    private const string Queue = "http://aws-emulator:4566/000000000000/orders";
+
+    // One answer per AWS operation, as the emulator gives them: a queue-consumer service rolled out to revision 2, whose
+    // task definition calls order-service and names its queue, and that queue's attributes.
+    private static string Aws(HttpRequestMessage request)
+    {
+        string target = request.Headers.TryGetValues("X-Amz-Target", out IEnumerable<string>? values) ? values.Single() : string.Empty;
+        string body = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? string.Empty;
+        return target.Split('.')[^1] switch
+        {
+            "ListServices" => """{"serviceArns":["arn:aws:ecs:us-east-1:000000000000:service/reference/queue-consumer"]}""",
+            "DescribeServices" => $$$"""{"services":[{"serviceName":"queue-consumer","clusterArn":"{{{Cluster}}}","status":"ACTIVE","taskDefinition":"{{{Definition}}}:2","createdAt":1793170000,"deployments":[{"id":"ecs-svc/2","status":"PRIMARY","taskDefinition":"{{{Definition}}}:2","createdAt":1793178005,"rolloutState":"COMPLETED"}]}],"failures":[]}""",
+            "DescribeTaskDefinition" when body.Contains("queue-consumer:1", StringComparison.Ordinal) =>
+                $$$"""{"taskDefinition":{"family":"queue-consumer","revision":1,"taskDefinitionArn":"{{{Definition}}}:1","containerDefinitions":[{"name":"consumer","image":"reference-queue-consumer:v1.4.0"}]}}""",
+            "DescribeTaskDefinition" =>
+                $$$"""{"taskDefinition":{"family":"queue-consumer","revision":2,"taskDefinitionArn":"{{{Definition}}}:2","containerDefinitions":[{"name":"consumer","image":"reference-queue-consumer:v1.4.1","environment":[{"name":"services__order-service__http__0","value":"http://host.docker.internal:5000"},{"name":"Reference__Queue__Sqs__QueueName","value":"orders"}]}]}}""",
+            "ListQueues" => $$$"""{"QueueUrls":["{{{Queue}}}"]}""",
+            "GetQueueUrl" => $$$"""{"QueueUrl":"{{{Queue}}}"}""",
+            "GetQueueAttributes" => """{"Attributes":{"ApproximateNumberOfMessages":"2","ApproximateNumberOfMessagesNotVisible":"1"}}""",
+            _ => throw new InvalidOperationException($"No answer for {target}.")
+        };
+    }
 
     private const string Alerts = """
         {"status":"success","data":{"alerts":[
@@ -80,8 +114,8 @@ public sealed class ProviderConformanceTests
     {
         AdapterCase subject = Case(adapter);
 
-        (ProviderStatus status, IReadOnlyList<Observation> first) = await subject.Run(Client(HttpStatusCode.OK, subject.HealthyBody));
-        (_, IReadOnlyList<Observation> second) = await subject.Run(Client(HttpStatusCode.OK, subject.HealthyBody));
+        (ProviderStatus status, IReadOnlyList<Observation> first) = await subject.Run(Client(HttpStatusCode.OK, subject.Answer));
+        (_, IReadOnlyList<Observation> second) = await subject.Run(Client(HttpStatusCode.OK, subject.Answer));
 
         status.ShouldBe(ProviderStatus.Healthy);
         first.ShouldNotBeEmpty();
@@ -126,11 +160,11 @@ public sealed class ProviderConformanceTests
     }
 
     [Theory]
-    [MemberData(nameof(Adapters))]
+    [MemberData(nameof(BufferedAdapters))]
     public async Task An_oversized_response_fails_the_pull_instead_of_growing_memory(string adapter)
     {
         AdapterCase subject = Case(adapter);
-        HttpClient client = Client(HttpStatusCode.OK, subject.HealthyBody);
+        HttpClient client = Client(HttpStatusCode.OK, subject.Answer);
         client.MaxResponseContentBufferSize = 16;
 
         (await subject.Run(client)).Status.ShouldBe(ProviderStatus.Unavailable);
@@ -211,22 +245,81 @@ public sealed class ProviderConformanceTests
                 return (result.Status, result.Observations);
             },
             EventTimesInRange: false),
+        "ecs-deployments" => new AdapterCase(
+            EcsDeploymentProvider.ProviderName,
+            string.Empty,
+            async client =>
+            {
+                var provider = new EcsDeploymentProvider(Ecs(client), AwsOptions, TimeProvider.System, NullLogger<EcsDeploymentProvider>.Instance);
+                ProviderResult<DeploymentObservation> result = await provider.GetDeploymentsAsync(new DeploymentRequest(Tenant, Environment, Range), CancellationToken.None);
+                return (result.Status, result.Observations);
+            },
+            EventTimesInRange: false,
+            Route: Aws),
+        "aws-topology" => new AdapterCase(
+            AwsTopologyProvider.ProviderName,
+            string.Empty,
+            async client =>
+            {
+                var provider = new AwsTopologyProvider(Ecs(client), Sqs(client), AwsOptions, TimeProvider.System, NullLogger<AwsTopologyProvider>.Instance);
+                ProviderResult<TopologyObservation> result = await provider.GetDependenciesAsync(new TopologyRequest(Tenant, Environment, Range), CancellationToken.None);
+                return (result.Status, result.Observations);
+            },
+            EventTimesInRange: false,
+            Route: Aws),
+        "sqs-metrics" => new AdapterCase(
+            SqsQueueMetricsProvider.ProviderName,
+            string.Empty,
+            async client =>
+            {
+                // SQS keeps no history, so a sample is stamped at the step of its reading, not inside the requested range.
+                var provider = new SqsQueueMetricsProvider(Sqs(client), new FakeTimeProvider(From.AddMinutes(10)), NullLogger<SqsQueueMetricsProvider>.Instance);
+                var series = new MetricSeriesDefinition { Name = "queue_depth", Expression = "orders:ApproximateNumberOfMessages+ApproximateNumberOfMessagesNotVisible", Service = "queue-consumer", Provider = SqsQueueMetricsProvider.ProviderName };
+                ProviderResult<MetricObservation> result = await provider.QueryRangeAsync(new MetricRangeRequest(Tenant, Environment, series, Range, TimeSpan.FromSeconds(5)), CancellationToken.None);
+                return (result.Status, result.Observations);
+            },
+            EventTimesInRange: false,
+            Route: Aws),
         _ => throw new ArgumentOutOfRangeException(nameof(adapter), adapter, "Unknown adapter.")
     };
 
-    private static HttpClient Client(HttpStatusCode status, string body) =>
+    private static AwsProviderOptions AwsOptions => new() { ServiceUrl = new Uri("http://backend.test"), AccessKey = "000000000000", SecretKey = "test-not-a-secret", Clusters = ["reference"] };
+
+    private static AmazonECSClient Ecs(HttpClient client) =>
+        new(new BasicAWSCredentials(AwsOptions.AccessKey, AwsOptions.SecretKey), new AmazonECSConfig { ServiceURL = "http://backend.test", AuthenticationRegion = "us-east-1", MaxErrorRetry = 0, HttpClientFactory = new Transport(client) });
+
+    private static AmazonSQSClient Sqs(HttpClient client) =>
+        new(new BasicAWSCredentials(AwsOptions.AccessKey, AwsOptions.SecretKey), new AmazonSQSConfig { ServiceURL = "http://backend.test", AuthenticationRegion = "us-east-1", MaxErrorRetry = 0, HttpClientFactory = new Transport(client) });
+
+    private static HttpClient Client(HttpStatusCode status, string body) => Client(status, _ => body);
+
+    private static HttpClient Client(HttpStatusCode status, Func<HttpRequestMessage, string> body) =>
         new(new Stub(status, body)) { BaseAddress = new Uri("http://backend.test") };
 
     private sealed record AdapterCase(
         string Provider,
         string HealthyBody,
         Func<HttpClient, Task<(ProviderStatus Status, IReadOnlyList<Observation> Observations)>> Run,
-        bool EventTimesInRange = true);
+        bool EventTimesInRange = true,
+        Func<HttpRequestMessage, string>? Route = null)
+    {
+        public Func<HttpRequestMessage, string> Answer => Route ?? (_ => HealthyBody);
+    }
 
-    private sealed class Stub(HttpStatusCode status, string body) : HttpMessageHandler
+    private sealed class Stub(HttpStatusCode status, Func<HttpRequestMessage, string> body) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+            Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body(request), Encoding.UTF8, "application/json") });
+    }
+
+    // Hands the AWS SDK the stubbed client, so the AWS adapters meet the same transport faults as the HTTP ones.
+    private sealed class Transport(HttpClient client) : HttpClientFactory
+    {
+        public override HttpClient CreateHttpClient(IClientConfig clientConfig) => client;
+
+        public override bool UseSDKHttpClientCaching(IClientConfig clientConfig) => false;
+
+        public override bool DisposeHttpClientsAfterUse(IClientConfig clientConfig) => false;
     }
 
     private sealed class Refusing : HttpMessageHandler
