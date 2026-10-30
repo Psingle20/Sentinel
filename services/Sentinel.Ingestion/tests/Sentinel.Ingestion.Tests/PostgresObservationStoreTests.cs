@@ -1,6 +1,8 @@
+using System.Text.Json;
 using CleanArchitecture.BuildingBlocks.Infrastructure.PostgreSql;
 using Npgsql;
 using Sentinel.Contracts;
+using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Observations;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Queries;
@@ -72,6 +74,36 @@ public sealed class PostgresObservationStoreTests : IAsyncLifetime
         page.Observations.Count.ShouldBe(3);
         page.Truncated.ShouldBeFalse();
         page.ContinuationToken.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task An_alert_query_answers_alerts_only_and_each_reads_back_whole()
+    {
+        var alert = new AlertObservation
+        {
+            ObservationId = ObservationId.From("prometheus:alert:CheckoutSloFastBurn:f1:1793178000:firing"),
+            TenantId = Tenant,
+            EnvironmentId = Environment,
+            ServiceId = ServiceId.From("checkout-service"),
+            SourceProvider = "prometheus",
+            SourceResource = "alerts/CheckoutSloFastBurn",
+            EventTime = Start.AddMinutes(30),
+            IngestTime = Start.AddMinutes(30).AddSeconds(5),
+            AlertName = "CheckoutSloFastBurn",
+            State = "firing",
+            Severity = "critical",
+            ActiveAt = Start.AddMinutes(30),
+            Value = 14.8,
+            Summary = "Checkout is burning its error budget 14.8 times faster than it can sustain."
+        };
+        await SaveAsync([alert, Sample(200, Start.AddMinutes(30))]);
+
+        ObservationPage page = await Store().QueryAsync(
+            Query(limit: 10) with { Kind = ObservationKind.Alert, Filters = new Dictionary<string, string>(), Range = new TimeRange(Start.AddMinutes(30), Start.AddMinutes(31)) },
+            CancellationToken.None);
+
+        Observation stored = page.Observations.ShouldHaveSingleItem();
+        JsonSerializer.Serialize(stored, SentinelJson.Options).ShouldBe(JsonSerializer.Serialize<Observation>(alert, SentinelJson.Options));
     }
 
     private PostgresObservationStore Store(IPostgresTransaction? transaction = null) => new(transaction ?? new SingleTransaction(_dataSource), _dataSource);

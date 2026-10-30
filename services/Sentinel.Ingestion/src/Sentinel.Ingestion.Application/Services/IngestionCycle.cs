@@ -43,6 +43,8 @@ public sealed class IngestionCycle(
 
     public static string TopologySourceId(string provider) => $"{provider}:topology";
 
+    public static string AlertsSourceId(string provider) => $"{provider}:alerts";
+
     public async Task<int> PullMetricsAsync(IMetricsProvider provider, MetricSeriesDefinition series, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -155,6 +157,27 @@ public sealed class IngestionCycle(
         return await CommitAsync(state, result, to, now, cancellationToken);
     }
 
+    /// <summary>
+    /// Reads the alerts active now. Alerts are state rather than history: each pull sees what is pending or firing, and
+    /// deterministic IDs keep an alert that is still active from being stored again.
+    /// </summary>
+    public async Task<int> PullAlertsAsync(IAlertProvider provider, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        DateTimeOffset now = time.GetUtcNow();
+        string sourceId = AlertsSourceId(provider.Name);
+        SourceState? state = await states.GetAsync(sourceId, cancellationToken);
+        if (state is not null && state.IsCoolingDown(now))
+        {
+            return 0;
+        }
+
+        state ??= SourceState.Start(sourceId, provider.Name, now, TimeSpan.Zero);
+        ProviderResult<AlertObservation> result = await provider.GetActiveAlertsAsync(new AlertRequest(Tenant, Environment, now), cancellationToken);
+        return await CommitAsync(state, result, now, now, cancellationToken);
+    }
+
     // Logs and traces are indexed late, so each pull re-reads the last LateDataOverlap; deterministic
     // IDs make the overlap free of duplicates and anything new in it is marked late (ADR-016).
     private (DateTimeOffset From, DateTimeOffset To) Range(SourceState state, DateTimeOffset now, TimeSpan lag)
@@ -218,6 +241,7 @@ public sealed class IngestionCycle(
         TraceObservation => ObservationKind.Trace,
         DeploymentObservation => ObservationKind.Deployment,
         TopologyObservation => ObservationKind.Topology,
+        AlertObservation => ObservationKind.Alert,
         _ => throw new ArgumentOutOfRangeException(nameof(observation), observation.GetType().Name, "Unknown observation type.")
     };
 

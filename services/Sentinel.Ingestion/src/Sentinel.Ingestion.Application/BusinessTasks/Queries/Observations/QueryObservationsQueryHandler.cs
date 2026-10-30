@@ -49,6 +49,7 @@ public sealed class QueryObservationsQueryHandler(
             ObservationKind.Log => [.. sources.Where(source => source.SourceId.Contains(":logs:", StringComparison.Ordinal))],
             ObservationKind.Trace => [.. sources.Where(source => source.SourceId.Contains(":traces:", StringComparison.Ordinal))],
             ObservationKind.Topology => [.. sources.Where(source => source.SourceId.EndsWith(":topology", StringComparison.Ordinal))],
+            ObservationKind.Alert => [.. sources.Where(source => source.SourceId.EndsWith(":alerts", StringComparison.Ordinal))],
             _ => []
         };
     }
@@ -116,6 +117,7 @@ public sealed class QueryObservationsQueryHandler(
     private static bool IsMetricSource(SourceState source) =>
         !source.SourceId.EndsWith(":deployments", StringComparison.Ordinal)
         && !source.SourceId.EndsWith(":topology", StringComparison.Ordinal)
+        && !source.SourceId.EndsWith(":alerts", StringComparison.Ordinal)
         && !source.SourceId.Contains(":logs:", StringComparison.Ordinal)
         && !source.SourceId.Contains(":traces:", StringComparison.Ordinal);
 

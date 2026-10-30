@@ -10,5 +10,6 @@ public enum ObservationKind
     Log,
     Trace,
     Deployment,
-    Topology
+    Topology,
+    Alert
 }

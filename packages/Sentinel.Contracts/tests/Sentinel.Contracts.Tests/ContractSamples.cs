@@ -321,6 +321,23 @@ internal static class ContractSamples
                     Confidence = 0.95,
                     FirstSeen = Opened.AddHours(-6),
                     LastSeen = Opened
+                },
+                new AlertObservation
+                {
+                    ObservationId = ObservationId.From("prometheus:alert:CheckoutSloFastBurn:5f3a9c1e7b2d4a60:1793093040:firing"),
+                    TenantId = Tenant,
+                    EnvironmentId = Environment,
+                    ServiceId = Checkout,
+                    SourceProvider = "prometheus",
+                    SourceResource = "alerts/CheckoutSloFastBurn",
+                    EventTime = Opened.AddSeconds(-60),
+                    IngestTime = Opened.AddSeconds(5),
+                    AlertName = "CheckoutSloFastBurn",
+                    State = "firing",
+                    Severity = "critical",
+                    ActiveAt = Opened.AddSeconds(-60),
+                    Value = 14.8,
+                    Summary = "Checkout is burning its error budget 14.8 times faster than it can sustain."
                 }
             ],
             new QueryMetadata

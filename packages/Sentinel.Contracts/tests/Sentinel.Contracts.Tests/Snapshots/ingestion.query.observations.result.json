@@ -73,6 +73,24 @@
       "eventTime": "2026-10-28T09:05:00+00:00",
       "ingestTime": "2026-10-28T09:05:05+00:00",
       "attributes": {}
+    },
+    {
+      "kind": "alert",
+      "alertName": "CheckoutSloFastBurn",
+      "state": "firing",
+      "severity": "critical",
+      "activeAt": "2026-10-28T09:04:00+00:00",
+      "value": 14.8,
+      "summary": "Checkout is burning its error budget 14.8 times faster than it can sustain.",
+      "observationId": "prometheus:alert:CheckoutSloFastBurn:5f3a9c1e7b2d4a60:1793093040:firing",
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "serviceId": "checkout-service",
+      "sourceProvider": "prometheus",
+      "sourceResource": "alerts/CheckoutSloFastBurn",
+      "eventTime": "2026-10-28T09:04:00+00:00",
+      "ingestTime": "2026-10-28T09:05:05+00:00",
+      "attributes": {}
     }
   ],
   "metadata": {

@@ -118,6 +118,7 @@ internal sealed class PostgresObservationStore(IPostgresTransaction transaction,
         TraceObservation => "trace",
         DeploymentObservation => "deployment",
         TopologyObservation => "topology",
+        AlertObservation => "alert",
         _ => throw new ArgumentOutOfRangeException(nameof(observation), observation.GetType().Name, "Unknown observation kind.")
     };
 }

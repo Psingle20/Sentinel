@@ -39,6 +39,9 @@ public sealed class IngestionOptions
 
     public bool TopologyEnabled { get; set; }
 
+    /// <summary>Whether Ingestion reads the metrics provider's alerts on every poll (Phase 02).</summary>
+    public bool AlertsEnabled { get; set; }
+
     /// <summary>Queries served at once; the bulkhead that keeps an investigation burst from starving ingestion (Phase 02).</summary>
     public int QueryConcurrency { get; set; } = 16;
 

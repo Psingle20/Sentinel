@@ -14,6 +14,7 @@ namespace Sentinel.Contracts.Observations;
 [JsonDerivedType(typeof(TraceObservation), "trace")]
 [JsonDerivedType(typeof(DeploymentObservation), "deployment")]
 [JsonDerivedType(typeof(TopologyObservation), "topology")]
+[JsonDerivedType(typeof(AlertObservation), "alert")]
 public abstract record Observation
 {
     public required ObservationId ObservationId { get; init; }

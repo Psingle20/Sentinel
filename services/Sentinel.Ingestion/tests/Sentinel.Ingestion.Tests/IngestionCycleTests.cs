@@ -175,6 +175,28 @@ public sealed class IngestionCycleTests
     }
 
     [Fact]
+    public async Task Active_alerts_are_stored_once_while_they_stay_active_and_answer_alert_queries()
+    {
+        var alerts = new FakeAlerts();
+
+        int first = await Cycle().PullAlertsAsync(alerts, CancellationToken.None);
+        _time.Advance(TimeSpan.FromSeconds(5));
+        int second = await Cycle().PullAlertsAsync(alerts, CancellationToken.None);
+        alerts.State = "firing";
+        _time.Advance(TimeSpan.FromSeconds(5));
+        int fired = await Cycle().PullAlertsAsync(alerts, CancellationToken.None);
+
+        first.ShouldBe(1);
+        second.ShouldBe(0, "an alert still pending adds nothing");
+        fired.ShouldBe(1, "the alert starting to fire is a new observation");
+        SourceState source = _states.States[IngestionCycle.AlertsSourceId("prometheus")];
+        source.Watermark.ShouldBe(Now.AddSeconds(10));
+        ObservationQueryResult answer = (await Queries().Handle(new QueryObservationsQuery(Query([]) with { Kind = ObservationKind.Alert }), CancellationToken.None)).Value;
+        answer.Metadata.ObservedThrough.ShouldBe(Now.AddSeconds(10), "only the alerts source is measured for an alert query");
+        answer.Metadata.Completeness.ShouldBe(QueryCompleteness.Complete);
+    }
+
+    [Fact]
     public void Only_observation_kinds_with_event_consumers_are_published_by_default()
     {
         new IngestionOptions().EffectivePublishKinds.ShouldBe([ObservationKind.Metric, ObservationKind.Deployment, ObservationKind.Topology]);
@@ -261,6 +283,32 @@ public sealed class IngestionCycleTests
 
         public void SourceFailed(string sourceId, bool unavailable)
         {
+        }
+    }
+
+    private sealed class FakeAlerts : IAlertProvider
+    {
+        public string State { get; set; } = "pending";
+
+        public string Name => "prometheus";
+
+        public Task<ProviderResult<AlertObservation>> GetActiveAlertsAsync(AlertRequest request, CancellationToken cancellationToken)
+        {
+            var alert = new AlertObservation
+            {
+                ObservationId = ObservationId.From($"prometheus:alert:CheckoutSloFastBurn:f1:1793178000:{State}"),
+                TenantId = request.TenantId,
+                EnvironmentId = request.EnvironmentId,
+                ServiceId = ServiceId.From("checkout-service"),
+                SourceProvider = "prometheus",
+                SourceResource = "alerts/CheckoutSloFastBurn",
+                EventTime = Now.AddSeconds(-20),
+                IngestTime = request.At,
+                AlertName = "CheckoutSloFastBurn",
+                State = State,
+                ActiveAt = Now.AddSeconds(-20)
+            };
+            return Task.FromResult(new ProviderResult<AlertObservation>([alert], request.At, false, ProviderStatus.Healthy));
         }
     }
 

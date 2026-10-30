@@ -98,7 +98,7 @@ internal sealed class PrometheusMetricsProvider(HttpClient http, TimeProvider ti
         return observations;
     }
 
-    private static bool TryServiceId(string? value, out ServiceId serviceId)
+    internal static bool TryServiceId(string? value, out ServiceId serviceId)
     {
         serviceId = default;
         if (string.IsNullOrWhiteSpace(value))

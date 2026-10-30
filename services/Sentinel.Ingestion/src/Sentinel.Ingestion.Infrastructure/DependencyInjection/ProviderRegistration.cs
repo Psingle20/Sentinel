@@ -20,6 +20,7 @@ internal static class ProviderRegistration
     {
         Uri prometheus = RequiredUri(configuration, "Ingestion:Providers:Prometheus:Endpoint");
         services.AddHttpClient<IMetricsProvider, PrometheusMetricsProvider>(client => Bounded(client, prometheus));
+        services.AddHttpClient<IAlertProvider, PrometheusAlertsProvider>(client => Bounded(client, prometheus));
 
         string deployToken = Required(configuration, "Ingestion:Providers:DeployController:Token");
         Uri deployController = new(configuration["Ingestion:Providers:DeployController:Endpoint"] ?? "http://deploy-controller");

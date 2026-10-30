@@ -35,6 +35,8 @@ public sealed record SourceConfigurationDocument : IVersionedDocument
 
     public TimeSpan TopologyLookback { get; init; } = TimeSpan.FromMinutes(15);
 
+    public bool AlertsEnabled { get; init; }
+
     public IReadOnlyList<MetricSeriesDefinition> MetricSeries { get; init; } = [];
 
     public IReadOnlyList<LogSourceDefinition> LogSources { get; init; } = [];

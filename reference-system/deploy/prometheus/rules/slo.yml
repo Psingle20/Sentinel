@@ -10,3 +10,25 @@ groups:
           / clamp_min(sum(rate(reference_checkout_requests_total[1m])), 1e-9)
       - record: slo:checkout_success:burn_rate1m
         expr: slo:checkout_error_ratio:rate1m / 0.01
+
+  # Alerting rules (Phase 02): what an on-call engineer would be paged by. Sentinel reads them as alert
+  # observations; each names the service it concerns in its service label.
+  - name: reference-alerts
+    interval: 5s
+    rules:
+      - alert: CheckoutSloFastBurn
+        expr: slo:checkout_success:burn_rate1m > 14.4
+        for: 15s
+        labels:
+          severity: critical
+          service: checkout-service
+        annotations:
+          summary: "Checkout is burning its error budget {{ $value | printf \"%.1f\" }} times faster than it can sustain."
+      - alert: RedisClientsNearLimit
+        expr: sum(reference_redis_connected_clients) / max(reference_redis_maxclients) > 0.9
+        for: 10s
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis has used {{ $value | humanizePercentage }} of its client connections."

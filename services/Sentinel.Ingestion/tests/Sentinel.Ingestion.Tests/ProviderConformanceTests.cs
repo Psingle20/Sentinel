@@ -26,7 +26,53 @@ public sealed class ProviderConformanceTests
     private static readonly TenantId Tenant = TenantId.From("acme");
     private static readonly EnvironmentId Environment = EnvironmentId.From("reference");
 
-    public static TheoryData<string> Adapters => new() { "prometheus", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller" };
+    public static TheoryData<string> Adapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller" };
+
+    private const string Alerts = """
+        {"status":"success","data":{"alerts":[
+          {"labels":{"alertname":"CheckoutSloFastBurn","service":"checkout-service","severity":"critical"},"annotations":{"summary":"Checkout burns 14.8 times too fast; page oncall@example.test"},"state":"firing","activeAt":"2026-10-28T09:00:05Z","value":"1.48e+01"},
+          {"labels":{"alertname":"RedisClientsNearLimit","service":"redis","severity":"warning"},"annotations":{"summary":"Redis has used 92% of its client connections."},"state":"pending","activeAt":"2026-10-28T09:00:10Z","value":"0.92"},
+          {"labels":{"alertname":"Watchdog"},"annotations":{},"state":"firing","activeAt":"2026-10-28T08:00:00Z","value":"1"},
+          {"labels":{"alertname":"OrdersSlow","service":"order-service"},"annotations":{},"state":"inactive","activeAt":"2026-10-28T09:00:00Z","value":"0"}
+        ]}}
+        """;
+
+    [Fact]
+    public async Task Alerts_keep_their_rule_state_severity_and_value_and_skip_what_names_no_service()
+    {
+        IReadOnlyList<AlertObservation> alerts = await AlertsAsync(Alerts);
+
+        alerts.Select(alert => alert.AlertName).ShouldBe(["CheckoutSloFastBurn", "RedisClientsNearLimit"], "an alert with no service label or no longer active is not an observation");
+        AlertObservation burn = alerts[0];
+        burn.ServiceId.Value.ShouldBe("checkout-service");
+        burn.State.ShouldBe("firing");
+        burn.Severity.ShouldBe("critical");
+        burn.Value.ShouldBe(14.8);
+        burn.EventTime.ShouldBe(burn.ActiveAt);
+        burn.SourceResource.ShouldBe("alerts/CheckoutSloFastBurn");
+        burn.Summary.ShouldBe("Checkout burns 14.8 times too fast; page [redacted:email]");
+        burn.Attributes["redacted"].ShouldBe("true");
+        burn.Attributes.ShouldNotContainKey("alertname");
+        alerts[1].State.ShouldBe("pending");
+    }
+
+    [Fact]
+    public async Task A_pending_alert_that_starts_firing_is_a_new_observation()
+    {
+        IReadOnlyList<AlertObservation> pending = await AlertsAsync(Alerts);
+        IReadOnlyList<AlertObservation> firing = await AlertsAsync(Alerts.Replace("\"state\":\"pending\"", "\"state\":\"firing\"", StringComparison.Ordinal));
+
+        firing[1].ObservationId.ShouldNotBe(pending[1].ObservationId);
+        firing[0].ObservationId.ShouldBe(pending[0].ObservationId, "an alert still firing adds nothing");
+    }
+
+    private static async Task<IReadOnlyList<AlertObservation>> AlertsAsync(string body)
+    {
+        var provider = new PrometheusAlertsProvider(Client(HttpStatusCode.OK, body), TimeProvider.System, NullLogger<PrometheusAlertsProvider>.Instance);
+        ProviderResult<AlertObservation> result = await provider.GetActiveAlertsAsync(new AlertRequest(Tenant, Environment, From), CancellationToken.None);
+        result.Status.ShouldBe(ProviderStatus.Healthy);
+        return result.Observations;
+    }
 
     [Theory]
     [MemberData(nameof(Adapters))]
@@ -107,6 +153,16 @@ public sealed class ProviderConformanceTests
                 ProviderResult<MetricObservation> result = await provider.QueryRangeAsync(new MetricRangeRequest(Tenant, Environment, series, Range, TimeSpan.FromSeconds(5)), CancellationToken.None);
                 return (result.Status, result.Observations);
             }),
+        "prometheus-alerts" => new AdapterCase(
+            PrometheusMetricsProvider.ProviderName,
+            Alerts,
+            async client =>
+            {
+                var provider = new PrometheusAlertsProvider(client, TimeProvider.System, NullLogger<PrometheusAlertsProvider>.Instance);
+                ProviderResult<AlertObservation> result = await provider.GetActiveAlertsAsync(new AlertRequest(Tenant, Environment, From), CancellationToken.None);
+                return (result.Status, result.Observations);
+            },
+            EventTimesInRange: false),
         "loki" => new AdapterCase(
             LokiLogsProvider.ProviderName,
             """

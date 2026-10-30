@@ -26,6 +26,7 @@ public static class SourceConfigurationMapping
             TopologyEnabled = options.TopologyEnabled,
             TopologyInterval = options.TopologyInterval,
             TopologyLookback = options.TopologyLookback,
+            AlertsEnabled = options.AlertsEnabled,
             MetricSeries = [.. options.MetricSeries],
             LogSources = [.. options.LogSources],
             TraceSources = [.. options.TraceSources]
@@ -47,6 +48,7 @@ public static class SourceConfigurationMapping
         options.TopologyEnabled = document.TopologyEnabled;
         options.TopologyInterval = document.TopologyInterval;
         options.TopologyLookback = document.TopologyLookback;
+        options.AlertsEnabled = document.AlertsEnabled;
         Replace(options.MetricSeries, document.MetricSeries);
         Replace(options.LogSources, document.LogSources);
         Replace(options.TraceSources, document.TraceSources);

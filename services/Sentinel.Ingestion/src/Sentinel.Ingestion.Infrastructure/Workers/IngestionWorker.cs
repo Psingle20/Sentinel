@@ -67,6 +67,11 @@ internal sealed class IngestionWorker(
             pulls.Add((-1, "topology", (cycle, provider) => cycle.PullTopologyAsync(provider.GetRequiredService<ITopologyProvider>(), stoppingToken)));
         }
 
+        if (settings.AlertsEnabled)
+        {
+            pulls.Add((0, "alerts", (cycle, provider) => cycle.PullAlertsAsync(provider.GetRequiredService<IAlertProvider>(), stoppingToken)));
+        }
+
         (int Priority, string Name, Func<IngestionCycle, IServiceProvider, Task<int>> Pull)[] ordered = [.. pulls.OrderByDescending(pull => pull.Priority)];
         await Task.WhenAll(ordered.Select(pull => LoopAsync(pull.Name, pull.Pull, settings.PollInterval, generation, stoppingToken)));
     }
