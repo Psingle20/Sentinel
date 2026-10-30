@@ -49,7 +49,7 @@ public sealed class DeployControllerEndpointTests : IDisposable
         anonymous.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         services.StatusCode.ShouldBe(HttpStatusCode.OK);
         JsonElement[] views = [.. (await BodyAsync(services)).EnumerateArray()];
-        views.Select(view => view.GetProperty("name").GetString()).ShouldBe(["checkout-service", "order-service", "reporting-worker"]);
+        views.Select(view => view.GetProperty("name").GetString()).ShouldBe(["checkout-service", "order-service", "queue-consumer", "reporting-worker"]);
         JsonElement checkout = await BodyAsync(one);
         Names(checkout).ShouldBe(["name", "servingRevision", "baselineRevision", "revisions", "activeDeployment", "error"]);
         checkout.GetProperty("servingRevision").GetString().ShouldBe("v2.4.0");
@@ -184,7 +184,8 @@ public sealed class DeployControllerEndpointTests : IDisposable
         {
             ["checkout-service"] = "v2.4.0",
             ["order-service"] = "v1.7.0",
-            ["reporting-worker"] = "v3.1.0"
+            ["reporting-worker"] = "v3.1.0",
+            ["queue-consumer"] = "v1.4.0"
         };
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -215,7 +216,7 @@ public sealed class DeployControllerEndpointTests : IDisposable
             builder.UseSetting("DeployController:RolloutSeconds", "3600");
             builder.UseSetting("Reference:FailureControls:Enabled", "true");
             builder.UseSetting("Reference:ControlToken", ControlToken);
-            foreach (string service in new[] { "checkout-service", "order-service", "reporting-worker" })
+            foreach (string service in new[] { "checkout-service", "order-service", "reporting-worker", "queue-consumer" })
             {
                 builder.UseSetting($"services:{service}:http:0", $"http://{service}");
             }

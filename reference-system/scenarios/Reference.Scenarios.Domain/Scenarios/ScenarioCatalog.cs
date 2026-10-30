@@ -3,7 +3,7 @@ namespace Reference.Scenarios.Domain.Scenarios;
 /// <summary>The scenarios a runner can run, each satisfying the manifest rules, by ID.</summary>
 public sealed class ScenarioCatalog
 {
-    private static readonly string[] Actions = ["deploy", "configChange", "startBatch", "stopBatch"];
+    private static readonly string[] Actions = ["deploy", "configChange", "startBatch", "stopBatch", "poisonMessage"];
     private static readonly string[] Kinds = ["golden", "confounder", "control"];
     private static readonly string[] BaselineOutcomes = ["rollback", "abstain", "noIncident"];
     private static readonly string[] Expectations = ["above", "below"];

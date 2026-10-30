@@ -9,8 +9,9 @@ internal static class ReferenceSystemExtensions
 
     /// <summary>
     /// Adds the Phase 01 reference system: its own Redis (separate from Sentinel's messaging Redis,
-    /// ADR-008), the observability stack Sentinel ingests from, the three reference services, the
-    /// deploy controller, a Redis client exporter and the scenario runner. Tokens are generated
+    /// ADR-008), the observability stack Sentinel ingests from, the reference services, the queue
+    /// consumer with a Redis of its own for its queue (Phase E01), the deploy controller, a Redis
+    /// client exporter and the scenario runner. Tokens are generated
     /// parameters kept in the AppHost's user secrets, never in source.
     /// </summary>
     public static ReferenceSystemResources AddReferenceSystem(this IDistributedApplicationBuilder builder)
@@ -26,6 +27,12 @@ internal static class ReferenceSystemExtensions
         IResourceBuilder<ContainerResource> redis = builder.AddContainer($"{Prefix}-redis", "redis", "8.6")
             .WithEndpoint(targetPort: 6379, scheme: "tcp", name: "tcp")
             .WithArgs("--maxclients", "200", "--save", "", "--appendonly", "no");
+
+        // The queue-consumer's queue lives apart from the shared Redis, as a managed queue lives apart from a cache, so that
+        // S1's leak and S2's batch exhausting the shared Redis never back the queue up (S6).
+        IResourceBuilder<ContainerResource> queueRedis = builder.AddContainer($"{Prefix}-queue", "redis", "8.6")
+            .WithEndpoint(targetPort: 6379, scheme: "tcp", name: "tcp")
+            .WithArgs("--save", "", "--appendonly", "no");
 
         IResourceBuilder<ContainerResource> prometheus = builder.AddContainer("prometheus", "prom/prometheus", "v3.5.0")
             .WithContainerFiles("/etc/prometheus", Path.Combine(root, "deploy", "prometheus"))
@@ -53,6 +60,9 @@ internal static class ReferenceSystemExtensions
             .WithReference(orders)
             .WaitFor(orders);
         IResourceBuilder<ProjectResource> reporting = AddReferenceService<Projects.Reference_ReportingWorker>("reporting-worker");
+        IResourceBuilder<ProjectResource> queueConsumer = AddReferenceService<Projects.Reference_QueueConsumer>("queue-consumer")
+            .WithEnvironment("Reference__Redis", ReferenceExpression.Create($"{queueRedis.GetEndpoint("tcp").Property(EndpointProperty.HostAndPort)}"))
+            .WaitFor(queueRedis);
         AddReferenceService<Projects.Reference_RedisExporter>("redis-exporter");
 
         IResourceBuilder<ProjectResource> deployController = AddReferenceService<Projects.Reference_DeployController_Api>("deploy-controller")
@@ -60,17 +70,19 @@ internal static class ReferenceSystemExtensions
             .WithEnvironment("DeployController__ReadToken", readToken)
             .WithReference(checkout)
             .WithReference(orders)
-            .WithReference(reporting);
+            .WithReference(reporting)
+            .WithReference(queueConsumer);
 
         IResourceBuilder<ProjectResource> scenarioRunner = AddReferenceService<Projects.Reference_Scenarios_Api>("scenario-runner")
             .WithEnvironment("DeployController__DeployToken", deployToken)
             .WithReference(checkout)
             .WithReference(reporting)
+            .WithReference(queueConsumer)
             .WithReference(deployController)
             .WaitFor(checkout)
             .WaitFor(deployController);
 
-        foreach (string scenario in new[] { "S0", "S1", "S2", "S3" })
+        foreach (string scenario in new[] { "S0", "S1", "S2", "S3", "S6" })
         {
             scenarioRunner.WithHttpCommand("/api/runs", $"Run {scenario}", commandName: $"run-{scenario.ToLowerInvariant()}", commandOptions: Command(controlToken, $$"""{"scenarioId":"{{scenario}}"}"""));
         }
@@ -79,7 +91,7 @@ internal static class ReferenceSystemExtensions
             .WithHttpCommand("/api/reset", "Reset to healthy", commandName: "reset", commandOptions: Command(controlToken, null))
             .WithHttpCommand("/api/actions/stop-batch", "Stop reporting batch", commandName: "stop-batch", commandOptions: Command(controlToken, null));
 
-        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"));
+        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"));
 
         IResourceBuilder<ProjectResource> AddReferenceService<TProject>(string name)
             where TProject : IProjectMetadata, new() =>

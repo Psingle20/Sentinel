@@ -61,6 +61,7 @@
     <Project Path="reference-system/services/Reference.Checkout/Reference.Checkout.csproj" />
     <Project Path="reference-system/services/Reference.Common/Reference.Common.csproj" />
     <Project Path="reference-system/services/Reference.Orders/Reference.Orders.csproj" />
+    <Project Path="reference-system/services/Reference.QueueConsumer/Reference.QueueConsumer.csproj" />
     <Project Path="reference-system/services/Reference.ReportingWorker/Reference.ReportingWorker.csproj" />
   </Folder>
   <Folder Name="/reference-system/tests/">

@@ -35,7 +35,7 @@ public sealed class ScenarioRunnerEndpointTests
         using HttpResponseMessage unknown = await client.GetAsync(new Uri("/api/scenarios/S9", UriKind.Relative));
 
         JsonElement[] scenarios = [.. (await BodyAsync(list)).EnumerateArray()];
-        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).ShouldBe(["S0", "S1", "S2", "S3"]);
+        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).ShouldBe(["S0", "S1", "S2", "S3", "S6"]);
         Names(scenarios[0]).ShouldBe(["id", "slug", "kind", "version", "description"]);
         (await BodyAsync(one)).GetProperty("steps").GetArrayLength().ShouldBeGreaterThan(0);
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -160,7 +160,7 @@ public sealed class ScenarioRunnerEndpointTests
             builder.UseSetting("Reference:ControlToken", ControlToken);
             builder.UseSetting("DeployController:DeployToken", "deploy-test-not-a-token");
             builder.UseSetting("Reference:ManifestDirectory", Path.Combine(AppContext.BaseDirectory, "manifests"));
-            foreach (string service in new[] { "deploy-controller", "checkout-service", "order-service", "reporting-worker" })
+            foreach (string service in new[] { "deploy-controller", "checkout-service", "order-service", "reporting-worker", "queue-consumer" })
             {
                 builder.UseSetting($"services:{service}:http:0", $"http://{service}");
             }

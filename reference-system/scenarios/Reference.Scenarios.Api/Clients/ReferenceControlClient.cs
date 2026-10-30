@@ -7,7 +7,8 @@ namespace Reference.Scenarios.Api.Clients;
 
 /// <summary>
 /// The runner's view of the reference system: the deploy controller, as a CI pipeline would use
-/// it, and the reporting-worker's batch control. Tokens come from configuration, never source.
+/// it, the reporting-worker's batch control and the queue-consumer's queue. Tokens come from
+/// configuration, never source.
 /// </summary>
 public sealed class ReferenceControlClient(HttpClient http, IConfiguration configuration) : IReferenceControl
 {
@@ -17,6 +18,7 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
     {
         await SendControlAsync(HttpMethod.Post, Address("deploy-controller", "/_reference/reset"), cancellationToken);
         await StopBatchAsync(cancellationToken);
+        await SendControlAsync(HttpMethod.Post, Address("queue-consumer", "/_reference/queue/reset"), cancellationToken);
     }
 
     public async Task DeployAsync(ScenarioStep step, string runId, CancellationToken cancellationToken)
@@ -49,6 +51,13 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
 
     public Task StopBatchAsync(CancellationToken cancellationToken) =>
         SendControlAsync(HttpMethod.Post, Address("reporting-worker", "/_reference/batch/stop"), cancellationToken);
+
+    public Task InjectPoisonMessageAsync(ScenarioStep step, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/queue/poison"), cancellationToken);
+    }
 
     private Task SendControlAsync(HttpMethod method, Uri uri, CancellationToken cancellationToken, object? body = null)
     {

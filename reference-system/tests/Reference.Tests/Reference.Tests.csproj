@@ -30,6 +30,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\services\Reference.Checkout\Reference.Checkout.csproj" />
         <ProjectReference Include="..\..\services\Reference.Orders\Reference.Orders.csproj" />
+        <ProjectReference Include="..\..\services\Reference.QueueConsumer\Reference.QueueConsumer.csproj" />
         <ProjectReference Include="..\..\services\Reference.ReportingWorker\Reference.ReportingWorker.csproj" />
         <ProjectReference Include="..\..\deploy\redis-exporter\Reference.RedisExporter\Reference.RedisExporter.csproj" />
         <ProjectReference Include="..\..\deploy-controller\Reference.DeployController.Api\Reference.DeployController.Api.csproj" />

@@ -23,6 +23,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\reference-system\services\Reference.Checkout\Reference.Checkout.csproj" />
         <ProjectReference Include="..\..\..\reference-system\services\Reference.Orders\Reference.Orders.csproj" />
+        <ProjectReference Include="..\..\..\reference-system\services\Reference.QueueConsumer\Reference.QueueConsumer.csproj" />
         <ProjectReference Include="..\..\..\reference-system\services\Reference.ReportingWorker\Reference.ReportingWorker.csproj" />
         <ProjectReference Include="..\..\..\reference-system\deploy\redis-exporter\Reference.RedisExporter\Reference.RedisExporter.csproj" />
         <ProjectReference Include="..\..\..\reference-system\deploy-controller\Reference.DeployController.Api\Reference.DeployController.Api.csproj" />

@@ -7,7 +7,7 @@ public sealed record ScenarioStep
 {
     public required int AtSeconds { get; init; }
 
-    /// <summary><c>deploy</c>, <c>configChange</c>, <c>startBatch</c> or <c>stopBatch</c>.</summary>
+    /// <summary><c>deploy</c>, <c>configChange</c>, <c>startBatch</c>, <c>stopBatch</c> or <c>poisonMessage</c>.</summary>
     public required string Action { get; init; }
 
     public required string Service { get; init; }

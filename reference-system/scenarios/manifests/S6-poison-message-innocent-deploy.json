@@ -1,0 +1,116 @@
+{
+  "id": "S6",
+  "slug": "poison-message-innocent-deploy",
+  "version": 1,
+  "kind": "confounder",
+  "description": "One order message whose amount is not a number reaches the queue-consumer's queue. No revision can process it, so it fails on every receive, returns after its visibility timeout and keeps the queue's oldest message growing older while the other orders pass through. A benign queue-consumer v1.4.1 deployment starts 30 s later with a 20 s rollout, before the age crosses the detection threshold.",
+  "affectedService": "queue-consumer",
+  "downstreamServices": [],
+  "warmupSeconds": 75,
+  "durationSeconds": 300,
+  "steps": [
+    { "atSeconds": 0, "action": "poisonMessage", "service": "queue-consumer", "role": "cause" },
+    { "atSeconds": 30, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "rolloutSeconds": 20, "role": "confounder" }
+  ],
+  "cause": {
+    "description": "A poison order message fails on every receive.",
+    "service": "queue-consumer",
+    "change": "poison message published",
+    "activationSeconds": 0
+  },
+  "confounders": [
+    { "description": "Benign queue-consumer v1.4.1 deployment, serving from 50 s.", "service": "queue-consumer", "change": "deploy queue-consumer v1.4.1", "atSeconds": 30, "servingFromSeconds": 50 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "queue-consumer",
+    "metric": "queue_oldest_message_age",
+    "threshold": 60,
+    "withinSeconds": 120
+  },
+  "expectedObservations": [
+    {
+      "description": "Order messages fail.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 30
+    },
+    {
+      "description": "One message's receive count keeps rising.",
+      "query": "max(reference_queue_max_receive_count)",
+      "expectation": "above",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 60
+    },
+    {
+      "description": "The queue's oldest message crosses the detection threshold.",
+      "query": "max(reference_queue_oldest_message_age_seconds)",
+      "expectation": "above",
+      "threshold": 60,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Failures begin before the v1.4.1 deployment serves at 50 s.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 45
+    },
+    {
+      "description": "The other orders are still processed.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 2,
+      "fromSeconds": 60,
+      "withinSeconds": 120
+    },
+    {
+      "description": "The queue does not back up behind the message.",
+      "query": "max_over_time(max(reference_queue_depth)[2m:5s])",
+      "expectation": "below",
+      "threshold": 20,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 1006,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The consumer's own producer publishes four orders a second; the poison message's receives are spaced by its two-second visibility timeout and by the other orders ahead of it."
+  },
+  "hypotheses": {
+    "leading": { "service": "queue-consumer", "cause": "a poison order message fails on every receive" },
+    "rejected": [
+      { "service": "queue-consumer", "cause": "queue-consumer v1.4.1 deployment" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "quarantine-message", "service": "queue-consumer", "mode": "approval-required" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "queue-consumer" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "queue-consumer",
+    "fromVersion": "v1.4.1",
+    "toVersion": "v1.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "quarantine the message received again and again",
+    "criteria": [
+      { "description": "The oldest message is young again.", "query": "max(reference_queue_oldest_message_age_seconds)", "comparison": "lessThan", "threshold": 20 },
+      { "description": "No message fails.", "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))", "comparison": "lessThan", "threshold": 0.02 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

@@ -34,7 +34,7 @@ public class SentinelSystem : IAsyncLifetime
 
     private static readonly string[] ReferenceResources =
     [
-        "checkout-service", "order-service", "reporting-worker", "redis-exporter", "deploy-controller", "scenario-runner", "prometheus"
+        "checkout-service", "order-service", "reporting-worker", "queue-consumer", "redis-exporter", "deploy-controller", "scenario-runner", "prometheus"
     ];
 
     private static readonly string[] SentinelResources = ["ingestion-service", "runtime-service", "agent-worker-service", "executor-service", "gateway-service", "web"];

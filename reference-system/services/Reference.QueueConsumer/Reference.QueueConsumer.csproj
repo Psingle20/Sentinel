@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <Description>Reference queue-consumer. It processes order messages from a queue in the reference Redis; a poison message that never processes keeps returning, receive after receive (scenario S6).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Reference.Common\Reference.Common.csproj" />
+    </ItemGroup>
+
+</Project>

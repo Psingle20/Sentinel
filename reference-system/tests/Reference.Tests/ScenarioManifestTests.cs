@@ -5,6 +5,7 @@ using Reference.Scenarios.Domain.Scenarios;
 using Shouldly;
 using Reference.Checkout.Revisions;
 using Reference.Orders.Revisions;
+using Reference.QueueConsumer.Revisions;
 
 namespace Reference.Tests;
 
@@ -15,15 +16,17 @@ public sealed class ScenarioManifestTests
     private static readonly Dictionary<string, string> Baselines = new(StringComparer.Ordinal)
     {
         [CheckoutRevisions.ServiceName] = CheckoutRevisions.Baseline,
-        [OrderRevisions.ServiceName] = OrderRevisions.Baseline
+        [OrderRevisions.ServiceName] = OrderRevisions.Baseline,
+        [QueueRevisions.ServiceName] = QueueRevisions.Baseline
     };
 
-    public static TheoryData<string> ScenarioIds => new() { "S0", "S1", "S2", "S3" };
+    public static TheoryData<string> ScenarioIds => new() { "S0", "S1", "S2", "S3", "S6" };
 
     [Fact]
-    public void The_suite_contains_the_golden_case_two_confounders_and_a_control()
+    public void The_suite_contains_the_golden_case_three_confounders_and_a_control()
     {
-        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["S0", "S1", "S2", "S3"]);
+        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["S0", "S1", "S2", "S3", "S6"]);
+        Catalog.Manifests["S6"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S1"].Kind.ShouldBe("golden");
         Catalog.Manifests["S2"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S3"].Kind.ShouldBe("confounder");
@@ -99,6 +102,21 @@ public sealed class ScenarioManifestTests
             confounder.Service.ShouldBe(CheckoutRevisions.ServiceName);
             manifest.Hypotheses!.Leading.Service.ShouldNotBe(CheckoutRevisions.ServiceName);
         }
+    }
+
+    [Fact]
+    public void In_the_poison_message_the_deployment_follows_the_first_failure_and_the_cause_is_no_deployment()
+    {
+        ScenarioManifest manifest = Catalog.Manifests["S6"];
+        ScenarioStep cause = manifest.Steps.Single(step => step.Role == "cause");
+        ScenarioStep confounder = manifest.Steps.Single(step => step.Role == "confounder");
+
+        cause.Action.ShouldBe("poisonMessage");
+        confounder.Action.ShouldBe("deploy");
+        confounder.Service.ShouldBe(manifest.AffectedService, "the innocent deployment is to the consumer itself");
+        confounder.AtSeconds.ShouldBeGreaterThan(cause.AtSeconds);
+        (confounder.AtSeconds + confounder.RolloutSeconds!.Value).ShouldBeLessThan(manifest.Detection.WithinSeconds, "it serves before the incident opens, so proximity favours it");
+        manifest.Remediation.Permitted.ShouldHaveSingleItem().Action.ShouldBe("quarantine-message");
     }
 
     [Fact]

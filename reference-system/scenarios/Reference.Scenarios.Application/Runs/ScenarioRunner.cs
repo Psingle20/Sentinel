@@ -180,6 +180,9 @@ public sealed class ScenarioRunner(
                 case "stopBatch":
                     await control.StopBatchAsync(cancellationToken);
                     break;
+                case "poisonMessage":
+                    await control.InjectPoisonMessageAsync(step, cancellationToken);
+                    break;
                 default:
                     return $"Unknown action {step.Action}.";
             }

@@ -8,6 +8,7 @@ internal sealed record ReferenceSystemResources(
     IResourceBuilder<ProjectResource> DeployController,
     IResourceBuilder<ProjectResource> ScenarioRunner,
     IResourceBuilder<ProjectResource> ReportingWorker,
+    IResourceBuilder<ProjectResource> QueueConsumer,
     IResourceBuilder<ContainerResource> Prometheus,
     IResourceBuilder<ContainerResource> Loki,
     IResourceBuilder<ContainerResource> Jaeger,
