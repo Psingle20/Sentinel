@@ -9,6 +9,7 @@ using Reference.Scenarios.Domain.Scenarios;
 using Sentinel.Contracts.Incidents;
 using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Messaging;
+using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
 using Shouldly;
 using Xunit.Abstractions;
@@ -211,12 +212,17 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         await page.GotoAsync($"{system.WebUrl}/incidents/{incident.Summary.IncidentId}");
 
         // Phase 08 journeys 1 to 3 before the approval: the impact and its correlated change, the evidence, the competing
-        // hypotheses, and the checks the leading explanation survived.
+        // hypotheses, and the checks the leading explanation survived. The texts come from the incident itself, so the
+        // journey holds for a live model's wording as for the test double's.
+        HypothesisId? leadingId = incident.Decision!.LeadingHypothesisId;
+        string leading = incident.Hypotheses.Single(hypothesis => hypothesis.Finding.HypothesisId == leadingId).Finding.Statement;
+        string rival = incident.Hypotheses.First(hypothesis => hypothesis.Finding.HypothesisId != leadingId).Finding.Statement;
+        string evidence = incident.Evidence.First(item => item.Status == EvidenceStatus.Accepted).Finding.Statement;
         await Assertions.Expect(page.GetByLabel("Correlated changes")).ToContainTextAsync("checkout-service deploy v2.4.1");
-        await Assertions.Expect(page.GetByRole(AriaRole.Table, new PageGetByRoleOptions { Name = "Evidence" })).ToContainTextAsync("checkout-service Redis connections rose from");
+        await Assertions.Expect(page.GetByRole(AriaRole.Table, new PageGetByRoleOptions { Name = "Evidence" })).ToContainTextAsync(evidence);
         ILocator comparison = page.GetByRole(AriaRole.Table, new PageGetByRoleOptions { Name = "Hypothesis comparison" });
-        await Assertions.Expect(comparison).ToContainTextAsync("The checkout-service v2.4.1 deployment caused the symptoms.");
-        await Assertions.Expect(comparison).ToContainTextAsync("A change in load on checkout-service");
+        await Assertions.Expect(comparison).ToContainTextAsync(leading);
+        await Assertions.Expect(comparison).ToContainTextAsync(rival);
         await Assertions.Expect(page.GetByText("Diagnosed", new PageGetByTextOptions { Exact = true })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByLabel("Decision checks")).ToContainTextAsync("Passed: ");
 
