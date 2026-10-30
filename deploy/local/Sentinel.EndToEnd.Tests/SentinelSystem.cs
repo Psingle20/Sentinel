@@ -248,6 +248,14 @@ public class SentinelSystem : IAsyncLifetime
         }
     }
 
+    /// <summary>Restarts one resource and waits until it is healthy again, as a single service crash and recovery would.</summary>
+    public async Task RestartAsync(string resource)
+    {
+        await CommandAsync(resource, KnownResourceCommands.RestartCommand);
+        using var healthy = new CancellationTokenSource(StartupTimeout);
+        await App.ResourceNotifications.WaitForResourceHealthyAsync(resource, healthy.Token);
+    }
+
     public async Task<string> ParameterAsync(string name)
     {
         ParameterResource parameter = App.Services.GetRequiredService<DistributedApplicationModel>()

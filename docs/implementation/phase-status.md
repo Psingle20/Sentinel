@@ -20,7 +20,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | --- | --- | --- | --- |
 | [00 – Foundations](#phase-00--foundations) | In progress | Five layered services and the web app, building blocks, contracts with snapshots, design system, architecture tests, 20 ADRs | CI pipeline |
 | [01 – Reference system](#phase-01--reference-system) | Complete | Reference services, deploy controller, scenario runner, scenarios `S0`–`S3`, baseline, tests | None open; no recorded pass |
-| [01A – Walking skeleton](#phase-01a--walking-skeleton) | In progress | Golden path across all services, end-to-end suite, `S1`, `S2` and `S3` records, a live `S1` run on Muse Spark | Single-service restart test, CI check |
+| [01A – Walking skeleton](#phase-01a--walking-skeleton) | In progress | Golden path across all services, end-to-end suite, `S1`, `S2` and `S3` records, a live `S1` run on Muse Spark | CI check |
 | [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | In progress | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging | Operational dashboard |
 | [03 – Incident runtime](#phase-03--incident-runtime) | Complete | Event-sourced incidents, grains, Temporal workflow with every ADR-005 test, correlation, projections, PostgreSQL store tests | None |
 | [04 – AI investigation](#phase-04--ai-investigation) | Complete | Six specialists, typed tools, Meta adapter, profiles and spend caps, findings validation, blackboard, a live run with findings | None |
@@ -95,13 +95,13 @@ Delivered:
 - The golden path end to end. `S1` runs from the break to approval in the browser, a single rollback and verified recovery; `S2` and `S3` run through decision and plan; `S0` opens no incident: [GoldenPathTests](../../deploy/local/Sentinel.EndToEnd.Tests/GoldenPathTests.cs).
 - Approval signed in the Gateway and verified in Executor, with negative tests: [ApprovePlanCommandHandler](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Application/BusinessTasks/Commands/Approvals/ApprovePlanCommandHandler.cs), [LocalApprovalSigner](../../services/Sentinel.Gateway/src/Sentinel.Gateway.Infrastructure/Security/LocalApprovalSigner.cs), [AttestationVerifier](../../services/Sentinel.Executor/src/Sentinel.Executor.Application/Services/AttestationVerifier.cs), [AttestationTests](../../services/Sentinel.Executor/tests/Sentinel.Executor.Tests/AttestationTests.cs), [ApprovalEndpointTests](../../services/Sentinel.Gateway/tests/Sentinel.Gateway.Tests/ApprovalEndpointTests.cs).
 - The deploy-blame baseline running in shadow: [DeployBlameInvestigator](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/DeployBlameInvestigator.cs).
+- Single-service restarts repeat nothing: Runtime and Executor restart while the golden plan awaits approval, and the approval still ends in one rollback and a verified recovery, with one incident and one plan; it passed on 2026-10-30: [ServiceRestartTests](../../deploy/local/Sentinel.EndToEnd.Tests/ServiceRestartTests.cs).
 - Idempotent handling of duplicate delivery: [RuntimeFlowTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/RuntimeFlowTests.cs), [InboundMessageProcessorTests](../../packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Infrastructure.Tests/InboundMessageProcessorTests.cs).
 - The comparison report, with `S1`, `S2` and `S3` records: [comparison.md](../../artifacts/reports/walking-skeleton/comparison.md). `S1` ran from the break through approval in the browser to a verified rollback and recovery on 2026-10-30: [S1.outcome.json](../../artifacts/reports/walking-skeleton/S1.outcome.json).
 - A live run on `muse-spark-1.3`, with every role on the `meta` profile, documented with its agent executions: `S1` diagnosed the v2.4.1 deployment with confidence 0.87, proposed the rollback, and recovered after approval, for an estimated $0.24 ([S1.meta.json](../../artifacts/reports/evaluation/runs/S1.meta.json)). Two earlier live runs that day exposed the defects fixed by prompt `investigator-v4` (71db520) and `consensus-v3` (fcccfce); an earlier live `S2` run on 2026-10-29 produced no findings, and its record was overwritten before the harness kept live runs apart (9c2dd19).
 
 Open:
 
-- A test that restarts a single service between steps without repeating the rollback.
 - The deterministic CI run, and the end-to-end suite as a required CI check.
 
 ## Phase 02 – Telemetry ingestion
@@ -282,7 +282,7 @@ Open:
 - A deployment definition beyond `deploy/local/`, which waits on the choice of production environment.
 - Service-to-service authentication, which has no ADR. Until then Runtime's operator endpoints stay unauthenticated ([ADR-017](../decisions/ADR-017-runtime-actor-and-workflow-hosting.md)).
 - Alerting on the SLOs. They are defined and measured, but nothing pages anyone yet; that arrives with the deployment definition.
-- Failure injection beyond `S4` and `S5`, such as a service restarted between steps or a slow database.
+- Failure injection beyond `S4`, `S5` and single-service restarts, such as a slow database or a partitioned message broker.
 - Runbooks for deployment, key rotation and restore, which arrive with the deployment definition.
 - The local stack sometimes fails to start: in two of eleven end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
 
