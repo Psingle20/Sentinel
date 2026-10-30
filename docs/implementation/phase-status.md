@@ -332,7 +332,7 @@ Delivered:
 Open:
 
 - Stage 3: a web journey against the real system rather than the mock API, and replay of a captured AWS run. The CloudWatch adapters stay out: the emulator passes write-and-read-back, but no workload publishes to CloudWatch, so the hybrid OpenTelemetry path stays and the fidelity statement says so.
-- Stage 4: `AWS-S4`, `AWS-S7` and `AWS-S12`, each admitted by the proposal's admission rules.
+- Stage 4. `AWS-S7`, route drift, passed its emulator check on 2026-10-31 and can be admitted; it needs an EventBridge client in the reference system, Ingestion and Executor. `AWS-S4`, permission drift, is not admitted on the pinned image, which stores IAM policies but enforces none ([ADR-021](../decisions/ADR-021-aws-emulator.md#stage-4-admission-checks-2026-10-31)). `AWS-S12`, colliding resources in two accounts, needs Ingestion to read two accounts as two tenants.
 - Stage 5, real-cloud validation, is deferred by the owner.
 
 ## Phase E02 – Frontend design-system depth

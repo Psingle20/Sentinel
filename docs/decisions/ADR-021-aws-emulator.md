@@ -87,6 +87,13 @@ Gate check 8 ran with `AWS-S1` through the AppHost, on the developer machine tha
 
 The figures are samples of `docker stats` during the runs, not a profile, and a slower machine needs more time.
 
+### Stage 4 admission checks, 2026-10-31
+
+Two checks decide which of Stage 4's scenarios the pinned image can carry, kept as [admission tests](../../reference-system/tests/Reference.Tests/Aws/FlociStage4AdmissionTests.cs):
+
+- EventBridge, for `AWS-S7`: a rule delivers a matching event to its SQS target, a changed pattern stops the delivery, and `DescribeRule` and `ListTargetsByRule` report the pattern and target, so route drift is emulator-modelled and readable as a change. `AWS-S7` can be admitted.
+- IAM, for `AWS-S4`: policies are stored and versioned, and an approved default version can be restored, but no policy is enforced, so a permission removed from a role changes nothing a workload does. A permission-drift failure could only be faked by the workload itself, so `AWS-S4` is not admitted on this image; it waits for an emulator that enforces IAM or for the real-cloud validation of Stage 5.
+
 ### Known incompatibilities
 
 - An ECS task container outlives the emulator that started it; the environment must remove containers by label when it stops, and the conformance fixture does.
@@ -95,6 +102,7 @@ The figures are samples of `docker stats` during the runs, not a profile, and a 
 - There is no reset endpoint. A scenario's reset is a restart in memory mode; snapshots exist only through Floci's separate CLI and are not used.
 - ECS reports one `PRIMARY` deployment at a time and `pendingCount` is always 0, so a partial rollout (`AWS-S9`) needs its own check before it is admitted.
 - `QueueUrl` values carry the emulator's network hostname, `aws-emulator`; SDK clients reach it through their configured endpoint instead.
+- IAM policies are not enforced: a role denied `sqs:*` still calls SQS. Policies, their versions and their default are stored and reported faithfully.
 - A redrive policy a queue was created with never changes. `SetQueueAttributes` stores a new one and `GetQueueAttributes` reports it, but receives keep applying the original, so a quarantine that lowers it moves nothing. On SQS the new policy applies at the next receive. Found in Stage 2, when `AWS-S1`'s quarantine timed out on a message received 86 times under a lowered limit of 3, and pinned by a conformance test that fails once a newer image fixes it.
 
 ## Consequences
@@ -114,7 +122,7 @@ The figures are samples of `docker stats` during the runs, not a profile, and a 
 ## Follow-up work
 
 - A host-gateway entry in the consumer's task definition for Linux Docker engines, before CI runs the AWS environment.
-- A check of partial ECS rollouts before `AWS-S9` is admitted, and of EventBridge before `AWS-S7` (Phase E01, Stage 4).
+- A check of partial ECS rollouts before `AWS-S9` is admitted (Phase E01, Stage 4); EventBridge passed its check for `AWS-S7` on 2026-10-31.
 
 Stage 1's `aws-emulator` resource and gate check 9, listed here when the decision was accepted, were done on 2026-10-30; see the Stage 1 results above.
 
