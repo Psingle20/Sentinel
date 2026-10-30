@@ -11,7 +11,7 @@ All five backend services and `Sentinel.Web`. Phase 00 scaffolds the accepted to
 ## In scope
 
 - Pin .NET 10 LTS in `global.json`, Orleans 10.x, and all dependencies in `Directory.Packages.props` ([ADR-003](../decisions/ADR-003-dotnet-backend-platform.md)). Select and record the persistence baseline, event transport and local orchestration approach.
-- Adopt and evolve `CleanArchitecture.BuildingBlocks` according to the [building-blocks evolution plan](building-blocks-evolution.md), keeping domain primitives separate from application and hosting integrations.
+- Build and evolve `CleanArchitecture.BuildingBlocks` according to the [building-blocks evolution plan](building-blocks-evolution.md), keeping domain primitives separate from application and hosting integrations.
 - Create `apps/Sentinel.Web` and the five accepted hosts under `services/`: API, ingestion, runtime, agent worker and executor.
 - Scaffold `Sentinel.Web` with Next.js, React and TypeScript; configure Tailwind CSS, shadcn/ui and Radix UI as the only approved general-purpose styling/component stack.
 - Establish the [frontend design system](../architecture/frontend-design-system.md): foundation and semantic tokens, CVA variants, dark/light themes, component ownership and documented custom-CSS exceptions.
@@ -29,12 +29,12 @@ All five backend services and `Sentinel.Web`. Phase 00 scaffolds the accepted to
 ## Primary deliverables
 
 1. Compiling five-service and web skeleton with explicit internal modules in their owning services (ADR-007): the incident domain in Runtime, providers in Ingestion, agents in AgentWorker, policy and remediation in Executor, and presentation in Api. The only shared packages are the building blocks, `Sentinel.Contracts.Primitives`, `Sentinel.Contracts` and `Sentinel.ServiceDefaults`.
-2. Split, versioned Clean Architecture building-block packages with explicit Core, Application and Hosting dependency boundaries.
+2. Versioned Clean Architecture building-block packages with explicit Core, Application and Hosting dependency boundaries.
 3. Versioned Sentinel contract package containing the core contract shapes and IDs, with no domain behavior.
 4. Provider and model abstractions with test doubles.
 5. Local development bootstrap and health/readiness endpoints.
 6. CI pipeline executing build, unit tests, contract checks and linting.
-7. ADRs for building-block reuse, provider abstraction, model abstraction, persistence baseline and event semantics. Topology, frontend design system, backend platform, runtime state ownership, workflow engine, remediation control path and cross-service access are already recorded in ADR-001 to ADR-007.
+7. ADRs for the building-block package, provider abstraction, model abstraction, persistence baseline and event semantics. Topology, frontend design system, backend platform, runtime state ownership, workflow engine, remediation control path and cross-service access are already recorded in ADR-001 to ADR-007.
 8. Frontend component catalogue containing the minimal shell, status, evidence, approval and recovery primitives needed by the first vertical slice.
 
 ## Dependency direction
@@ -90,7 +90,7 @@ The domain must not reference HTTP, Orleans, database, cloud, telemetry-vendor o
 - A fake provider and fake model can drive a minimal incident use case.
 - Observability and secret-handling baselines are operational.
 - Consequential foundation choices have ADRs and explicit revisit criteria.
-- Building-block adoption satisfies the Phase 00 acceptance criteria in the [evolution plan](building-blocks-evolution.md).
+- The building-block package satisfies the Phase 00 acceptance criteria in the [evolution plan](building-blocks-evolution.md).
 - The frontend foundation satisfies the acceptance criteria in the [design-system plan](../architecture/frontend-design-system.md).
 
 ## Deferred deliberately

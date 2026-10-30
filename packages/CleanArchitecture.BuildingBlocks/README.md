@@ -1,6 +1,6 @@
 # Clean Architecture Building Blocks
 
-Generic primitives shared by Sentinel's five services and, later, the distributed job engine. The adoption, layering and extraction plan is in the [building-blocks evolution guide](../../docs/implementation/building-blocks-evolution.md).
+Generic primitives written for Sentinel's five services and kept free of Sentinel concepts, so that the packages can stand alone once they have a second consumer. The layering, hardening and extraction plan is in the [building-blocks evolution guide](../../docs/implementation/building-blocks-evolution.md), and the decision is [ADR-013](../../docs/decisions/ADR-013-building-block-reuse.md).
 
 ## Packages
 
@@ -13,19 +13,16 @@ Generic primitives shared by Sentinel's five services and, later, the distribute
 | `CleanArchitecture.BuildingBlocks.Infrastructure.Redis` | Redis Streams publisher and consumer, with reclaiming and dead-lettering | Service infrastructure projects and hosts |
 | `CleanArchitecture.BuildingBlocks.Hosting` | Service registration, validator scanning and handler decorators | Composition roots only |
 
-Namespaces were preserved during the split, so types keep their original `CleanArchitecture.BuildingBlocks.*` namespaces regardless of assembly.
+Namespaces follow a type's role, not its assembly: every type lives under `CleanArchitecture.BuildingBlocks.*`, so a type can move between assemblies without consumer edits.
 
-## Provenance
+## Versioning
 
 | Item | Value |
 | --- | --- |
-| Source | `distributed-job-engine` project, `packages/CleanArchitecture.BuildingBlocks` |
-| Source revision | `df9da58af89a78e8f4ab2afac02eda162110bf8c` (last change to the package, 2026-09-08); repository head `f77cdeb074b83b357a0a74ba5bcb5f238f87c2d4` |
-| Imported | 2026-10-28, by copy without history; the source had no uncommitted changes |
-| License | None declared in the source repository. Choose one before Stage F extraction |
-| Version | `0.1.0-alpha.3` |
-
-Sentinel builds these packages from this directory and never references the source repository's path.
+| Version | `0.1.0-alpha.8`, carried by `Directory.Build.props` |
+| Owner | Sentinel, during `0.x` ([ADR-013](../../docs/decisions/ADR-013-building-block-reuse.md)) |
+| License | None declared yet. Choose one before Stage F extraction |
+| Publication | Built from this directory by project reference; not published to a feed until extraction |
 
 ## Messaging
 
@@ -63,4 +60,4 @@ Run from the Sentinel project root:
 dotnet test packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Tests
 ```
 
-See [CHANGELOG.md](CHANGELOG.md) for changes since the import.
+See [CHANGELOG.md](CHANGELOG.md) for the history of every version.

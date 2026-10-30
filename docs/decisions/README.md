@@ -18,7 +18,7 @@ Each decision should record status, context, constraints, considered options, de
 - [ADR-010: Local orchestration](ADR-010-local-orchestration.md) — Accepted (.NET Aspire)
 - [ADR-011: Reference system location](ADR-011-reference-system-location.md) — Accepted; amended 2026-10-29 with the internal composition rule
 - [ADR-012: Event semantics and message envelope](ADR-012-event-semantics.md) — Accepted
-- [ADR-013: Building-block reuse](ADR-013-building-block-reuse.md) — Accepted
+- [ADR-013: Building-block package](ADR-013-building-block-reuse.md) — Accepted
 - [ADR-014: Provider abstraction](ADR-014-provider-abstraction.md) — Accepted
 - [ADR-015: Model abstraction](ADR-015-model-abstraction.md) — Accepted
 - [ADR-016: Event time, watermarks and late data](ADR-016-event-time-and-late-data.md) — Accepted

@@ -98,7 +98,6 @@ Stage C of the evolution guide: correct and harden.
 
 Stages A and B of the [evolution guide](../../docs/implementation/building-blocks-evolution.md).
 
-- Imported from the distributed job engine at revision `df9da58`.
-- Split the single assembly into `Core`, `Application` and `Hosting` without behavior changes. Namespaces are unchanged.
-- Dispatcher implementations remain internal to `Application` and are visible to `Hosting` for registration.
-- The original nine tests pass unchanged against the split assemblies.
+- Created the package with `Core`, `Application` and `Hosting` assemblies: `Result`, errors, an entity with domain events, commands, queries, dispatchers, FluentValidation-based validation and logging decorators. Namespaces follow the type's role under `CleanArchitecture.BuildingBlocks.*`.
+- Dispatcher implementations are internal to `Application` and visible to `Hosting` for registration.
+- Nine tests cover results, errors, domain events and dispatch.

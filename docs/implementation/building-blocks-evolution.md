@@ -2,25 +2,23 @@
 
 ## Status
 
-Phase 00 foundation work. Stages A to C are complete as of 2026-10-28, and Stage E's messaging packages exist with unit and container-based integration tests and are adopted in all five services. Stage E2, added on 2026-10-29 by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md), is not started. The [package changelog](../../packages/CleanArchitecture.BuildingBlocks/CHANGELOG.md) records each change. This document defines how the existing `CleanArchitecture.BuildingBlocks` package should be adopted, improved and eventually extracted into an independently versioned project.
-
-The reviewed source currently lives under `distributed-job-engine/packages/CleanArchitecture.BuildingBlocks`. Sentinel must not depend on that machine-specific repository path. Adoption requires a reproducible source or package boundary.
+Phase 00 foundation work. Stages A to C are complete as of 2026-10-28, and Stage E's messaging packages exist with unit and container-based integration tests and are adopted in all five services. Stage E2, added on 2026-10-29 by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md), is complete. The [package changelog](../../packages/CleanArchitecture.BuildingBlocks/CHANGELOG.md) records each change. This document defines how Sentinel's `CleanArchitecture.BuildingBlocks` package is built, layered, hardened and eventually extracted into an independently versioned project.
 
 ## Decision summary
 
-Reuse the package as a seed, not as a frozen framework.
+Build the package as Sentinel's own, generic by design, and keep it small.
 
-- Preserve useful, proven primitives instead of rebuilding them.
-- Split dependency-free domain types from application messaging, infrastructure mechanics and host integrations.
+- Write the primitives once, in one package, rather than once per service.
+- Keep dependency-free domain types apart from application messaging, infrastructure mechanics and host integrations, in separate assemblies from the first version.
 - Add an infrastructure layer for the mechanics every service would otherwise re-implement: outbox, inbox, idempotency, transport adapters, options validation and resilience defaults.
 - Keep Sentinel-specific concepts in Sentinel.
 - Core and Application are in-process. The infrastructure packages adapt existing systems (PostgreSQL, Redis Streams) and never become a message broker, workflow engine, event store or Orleans abstraction.
-- Keep package APIs at `0.x` while Sentinel and the distributed job engine expose design gaps.
-- Extract to a standalone repository only after its boundaries and compatibility policy are proven by both consumers.
+- Keep package APIs at `0.x` while Sentinel's services expose design gaps.
+- Extract to a standalone repository only after its boundaries and compatibility policy are proven by a second consumer.
 
-## Why it is a good foundation
+## What the package provides
 
-The current implementation already provides:
+The package provides:
 
 - `Result` and `Result<T>` success/failure semantics;
 - structured errors and validation errors;
@@ -30,24 +28,22 @@ The current implementation already provides:
 - FluentValidation-based command validation;
 - handler logging decorators;
 - dependency-registration conventions;
-- focused unit tests and demonstrated use in a real distributed system.
+- focused unit tests, and use in all five services, the deploy controller and the scenario runner.
 
-These capabilities directly support the clean internal architecture of each Sentinel service and its shared stable primitives. Reuse also aligns Sentinel with .NET and Microsoft dependency injection, which is coherent with Microsoft Orleans.
+These capabilities directly support the clean internal architecture of each Sentinel service and its shared stable primitives. The package builds on .NET and Microsoft dependency injection, which is coherent with Microsoft Orleans.
 
-## Current limitations
+## Design hazards the package must avoid
 
-The present package combines several architectural layers. A domain project referencing `Entity` or `Result` also receives dependencies on dependency injection, configuration, logging, FluentValidation, Scrutor and Serilog.
+A single assembly that mixes layers is the usual failure of a building-block package: a domain project referencing `Entity` or `Result` would also receive dependency injection, configuration, logging, FluentValidation, Scrutor and a logging provider. The layering below exists to prevent that, and the hardening stage checks the smaller hazards:
 
-Other issues to resolve during adoption:
-
-- the logging decorator directly uses `Serilog.Context` despite accepting `ILogger`;
-- validation does not pass the caller's cancellation token to validators;
-- decorator application depends on handler-registration order;
-- `Entity.DomainEvents` exposes a copied mutable `List` rather than a read-only contract;
-- `Raise` and `ClearDomainEvents` are public application surface;
-- command/query and `IDto`/`IProcessor` provide overlapping request pipelines;
-- target framework and dependency versions are inherited from the parent repository;
-- tests do not yet cover composition order, cancellation, missing handlers, exception behavior or package compatibility.
+- a logging decorator that uses a provider-specific context instead of the `ILogger` it accepts;
+- validation that does not pass the caller's cancellation token to validators;
+- decorator application that depends on handler-registration order;
+- `Entity.DomainEvents` exposing a copied mutable `List` rather than a read-only contract;
+- `Raise` and `ClearDomainEvents` as public application surface;
+- two overlapping request pipelines without defined roles;
+- target framework and dependency versions left implicit;
+- tests that do not cover composition order, cancellation, missing handlers, exception behavior or package compatibility.
 
 ## Target package architecture
 
@@ -84,12 +80,12 @@ Initial public surface:
 - `Error`, `ErrorType` and `ValidationError` without a validation-framework dependency;
 - `IDomainEvent`;
 - `Entity` or a more explicit `Entity<TId>` after consumer validation;
-- clock abstraction, renamed to `IClock` only if both consumers agree.
+- clock abstraction, renamed to `IClock` only by a recorded decision.
 
 Constraints:
 
 - no dependency injection, configuration, HTTP, logging, validation, serialization, persistence, Orleans or telemetry packages;
-- no Sentinel or job-engine concepts;
+- no Sentinel concepts;
 - no assumptions about database-generated IDs or event storage;
 - nullable reference types and analyzers enabled;
 - domain events exposed as `IReadOnlyCollection<IDomainEvent>`;
@@ -118,7 +114,7 @@ Constraints:
 - missing and ambiguous handlers and processors fail with intentional, tested behavior;
 - reflection caches must be bounded by application request types and must preserve original exceptions.
 
-`0.1.0-alpha.2` removed `IDto`, `IProcessor` and `IRequestHandler` because they duplicated the command and query pipeline without a defined role. ADR-020 gives them one: they are the only way inbound adapters reach the application layer. They return under the names above, with `IRequest` replacing `IDto` and `IRequestDispatcher` replacing `IRequestHandler` so that "handler" keeps meaning the use case. The distributed job engine still uses the original names; aligning it is part of the Stage F two-consumer criteria, not a Sentinel task.
+`0.1.0-alpha.2` removed `IDto`, `IProcessor` and `IRequestHandler` because they duplicated the command and query pipeline without a defined role. ADR-020 gives them one: they are the only way inbound adapters reach the application layer. They return under the names above, with `IRequest` replacing `IDto` and `IRequestDispatcher` replacing `IRequestHandler` so that "handler" keeps meaning the use case.
 
 ### `CleanArchitecture.BuildingBlocks.Infrastructure`
 
@@ -139,7 +135,7 @@ Initial public surface:
 Constraints:
 
 - depends on Core, Application and Microsoft.Extensions abstractions only; no database, broker or vendor SDK;
-- contains no Sentinel or job-engine concepts. Tenant, incident or job identity travels in envelope headers defined by the consumer;
+- contains no Sentinel concepts. Tenant or incident identity travels in envelope headers defined by the consumer;
 - implements ports declared in Application, such as the outbox port, rather than exposing infrastructure types to application code;
 - no generic repository, ORM wrapper or unit-of-work abstraction;
 - HTTP client resilience, service discovery and telemetry export belong to the host's service defaults, not to this package.
@@ -191,11 +187,11 @@ Constraints:
 - optional integrations should not become transitive dependencies for consumers that do not use them;
 - Hosting does not reference the infrastructure packages. Each infrastructure package provides its own registration extension, so a host takes only the integrations it uses;
 - a service's Application project may reference Hosting for registration only, because `AddBuildingBlocks` and `IDependencyModule` live here. Application code must not use anything else from Hosting; the architecture tests check that Application types depend only on the `IDependencyModule` and registration namespaces. Domain never references Hosting;
-- Hosting stays free of ASP.NET Core. The `Result`-to-HTTP mapping each Sentinel host needs lives in that host until the job engine needs the same helper, at which point it becomes a separate `Hosting.AspNetCore` package.
+- Hosting stays free of ASP.NET Core. The `Result`-to-HTTP mapping each Sentinel host needs lives in that host until a second consumer needs the same helper, at which point it becomes a separate `Hosting.AspNetCore` package.
 
 ### `CleanArchitecture.BuildingBlocks.Testing` — optional
 
-Create only when both consumers have concrete use for shared testing helpers.
+Create only when more than one consumer has concrete use for shared testing helpers.
 
 Possible surface:
 
@@ -242,15 +238,14 @@ One marker interface must not be used for all five categories.
 
 ## Adoption stages
 
-### Stage A – Reproducible import
+### Stage A – Package skeleton
 
-1. Record an ADR approving reuse and the initial ownership model.
-2. Import the source with history where practical, or publish a pinned prerelease package to an internal/local feed.
-3. Do not add a project reference to the external OneDrive directory.
-4. Add explicit target framework, package versions, license/provenance and deterministic-build settings.
-5. Establish a `0.1.0` prerelease version and changelog.
+1. Record an ADR approving the package and the initial ownership model.
+2. Create the package under `packages/` in the Sentinel repository, built from source until extraction.
+3. Add explicit target framework, package versions, license and deterministic-build settings.
+4. Establish a `0.1.0` prerelease version and changelog.
 
-Preferred initial location if source is temporarily maintained with Sentinel:
+Location:
 
 ```text
 packages/
@@ -265,21 +260,20 @@ packages/
     tests/
 ```
 
-### Stage B – Split without behavior changes
+### Stage B – Layered assemblies
 
-1. Move types into Core, Application and Hosting assemblies.
-2. Preserve namespaces where possible to reduce migration noise.
+1. Place types in Core, Application and Hosting assemblies from the first version.
+2. Name namespaces for the type's role, `CleanArchitecture.BuildingBlocks.*`, so a type can move between assemblies without consumer edits.
 3. Add package-boundary tests proving Domain references Core only.
-4. Keep behavior unchanged until characterization tests pass.
-5. Produce packages and validate their dependency graphs.
+4. Produce packages and validate their dependency graphs.
 
-### Stage C – Correct and harden
+### Stage C – Harden
 
-1. Remove direct Serilog coupling.
+1. Keep logging on `ILogger` scopes, with no provider-specific coupling.
 2. Propagate cancellation through validation and dispatch.
 3. Make decorator composition deterministic.
 4. Restrict domain-event mutation APIs.
-5. Select one request pipeline and deprecate the other.
+5. Keep one request pipeline, with a defined role for every abstraction in it.
 6. Define missing-handler, duplicate-handler and exception behavior.
 7. Add public API baselines, package compatibility checks and concurrency tests.
 
@@ -297,7 +291,7 @@ packages/
 1. Build the infrastructure packages only as far as the walking skeleton needs them. The first cross-service message drives the envelope, outbox, inbox and Redis Streams adapter.
 2. Add the PostgreSQL stores with their migrations, and integration tests against real PostgreSQL and Redis containers.
 3. Adopt the packages in all five Sentinel services and remove any per-service copies of the same mechanics.
-4. Offer the packages to the distributed job engine. The Stage F extraction criteria apply per package, so an infrastructure package used only by Sentinel stays with Sentinel.
+4. Apply the Stage F extraction criteria per package, so an infrastructure package used only by Sentinel stays with Sentinel.
 
 ### Stage E2 – Inbound seam, composition and file layout
 
@@ -311,13 +305,13 @@ Added by [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md). Th
 
 Stage E2 precedes the first service slice in the composition guide because the services cannot adopt the processor seam until the package provides it.
 
-**Status (2026-10-29).** Stage E2 is complete in `0.1.0-alpha.6`, which also renamed the inbound call to `IRequestDispatcher.HandleRequestAsync`. All five services and the reference system's deploy controller and scenario runner compose through `IDependencyModule` and `AddModules` and send every request through the processor seam; the deploy controller's `DeploymentLedger` derives from `Entity`. The reference system is therefore the third consumer this plan anticipated, and the first that uses the domain-event support, for logging only.
+**Status (2026-10-29).** Stage E2 is complete in `0.1.0-alpha.6`, which also renamed the inbound call to `IRequestDispatcher.HandleRequestAsync`. All five services and the reference system's deploy controller and scenario runner compose through `IDependencyModule` and `AddModules` and send every request through the processor seam; the deploy controller's `DeploymentLedger` derives from `Entity`. The reference system is therefore the second, smaller consumer this plan anticipated, and the first that uses the domain-event support, for logging only.
 
 ### Stage F – Standalone extraction
 
 Extract the library into its own repository when all criteria below are satisfied:
 
-- Sentinel and the distributed job engine both consume the split packages; the reference system's deploy controller and scenario runner are a third, smaller consumer under the [ADR-011 amendment](../decisions/ADR-011-reference-system-location.md#internal-composition-amendment-2026-10-29) and count as evidence but not as the second product;
+- a second product besides Sentinel consumes the layered packages; the reference system's deploy controller and scenario runner are a smaller consumer in the same repository under the [ADR-011 amendment](../decisions/ADR-011-reference-system-location.md#internal-composition-amendment-2026-10-29) and count as evidence but not as the second product;
 - the public surface has survived at least two real feature cycles;
 - ownership and release responsibility are assigned;
 - package naming, license and repository metadata are decided;
@@ -394,12 +388,11 @@ Extract the library into its own repository when all criteria below are satisfie
 - How the integration envelope is serialized, and how schema versions are negotiated between producer and consumer.
 - Whether a maintained library covers Redis Streams consumer groups well enough to wrap, instead of implementing the consumer loop.
 
-These decisions should be based on both consumers, not Sentinel alone.
+These decisions should wait for a second consumer rather than be settled by Sentinel's services alone.
 
 ## Phase 00 acceptance criteria
 
-- An ADR records the reuse decision, ownership and extraction strategy.
-- Sentinel contains no machine-specific reference to the original repository.
+- An ADR records the package decision, ownership and extraction strategy.
 - Core, Application, Infrastructure and Hosting dependencies are separated or an approved staged migration is documented.
 - Infrastructure packages are separated by technology, and no service's domain or application project references them.
 - Each service's domain depends only on Core.
@@ -407,7 +400,7 @@ These decisions should be based on both consumers, not Sentinel alone.
 - Cancellation, decorator composition and logging-provider coupling are corrected.
 - Both command and query paths work in a clean Sentinel build.
 - Package tests and Sentinel architecture tests pass.
-- A versioned package/source provenance record exists.
+- A versioned package record exists: version, changelog and API baselines.
 - Standalone extraction criteria remain documented and are not treated as already complete.
 
 ## Non-goals
