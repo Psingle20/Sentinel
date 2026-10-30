@@ -6,7 +6,7 @@ Give incident responders a coherent operational product for understanding, contr
 
 ## Primary service ownership
 
-`Sentinel.Web` owns the responder experience and `Sentinel.Api` owns its authenticated API and live-update boundary. All five backend services publish authoritative status through contracts; the frontend never calls their databases or internal endpoints directly.
+`Sentinel.Web` owns the responder experience and `Sentinel.Gateway` owns its authenticated API and live-update boundary. All five backend services publish authoritative status through contracts; the frontend never calls their databases or internal endpoints directly.
 
 ## Vertical-slice position
 

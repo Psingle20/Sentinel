@@ -24,13 +24,13 @@ The same reference system also runs confounder scenarios in which the most recen
 ## Production deployment boundaries
 
 ```text
-Sentinel.Web -> Sentinel.Api -> Sentinel.Runtime
+Sentinel.Web -> Sentinel.Gateway -> Sentinel.Runtime
                                   ^       |
 Sentinel.Ingestion ---------------'       v
         ^                         Sentinel.AgentWorker
         `--- observation queries ---------'
 
-Sentinel.Web -> Sentinel.Api -> signed approval -> Sentinel.Runtime
+Sentinel.Web -> Sentinel.Gateway -> signed approval -> Sentinel.Runtime
                                                        |
                          execute(plan, attestation) ---'
                                      |
@@ -77,7 +77,7 @@ This list mirrors the [implementation phases](../implementation/README.md).
 - Model outputs are untrusted proposals until schema validation and policy checks succeed.
 - Agents receive read capabilities and narrowly scoped action descriptions, not broad production credentials.
 - Only `Sentinel.Ingestion` holds external provider credentials; agents read through its query contract after redaction.
-- Approvals are signed by `Sentinel.Api` and verified by `Sentinel.Executor`; `Sentinel.Runtime` relays them but cannot create them.
+- Approvals are signed by `Sentinel.Gateway` and verified by `Sentinel.Executor`; `Sentinel.Runtime` relays them but cannot create them.
 - The remediation broker is the only component permitted to invoke action adapters.
 - Recovery is determined from expected system signals, not merely a successful action API response.
 

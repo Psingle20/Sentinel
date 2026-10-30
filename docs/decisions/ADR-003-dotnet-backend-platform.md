@@ -1,6 +1,6 @@
 # ADR-003: .NET backend platform
 
-- Status: Accepted
+- Status: Accepted; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-27
 
 ## Context

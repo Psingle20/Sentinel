@@ -6,7 +6,7 @@ Use Meta models through bounded, typed tools to collect attributable evidence, c
 
 ## Primary service ownership
 
-`Sentinel.AgentWorker` owns Meta calls, typed tool execution and structured investigation results. `Sentinel.Runtime` dispatches bounded tasks and decides which findings become authoritative evidence; `Sentinel.Api` owns model-related control-plane configuration.
+`Sentinel.AgentWorker` owns Meta calls, typed tool execution and structured investigation results. `Sentinel.Runtime` dispatches bounded tasks and decides which findings become authoritative evidence; `Sentinel.Gateway` owns model-related control-plane configuration.
 
 ## Vertical-slice position
 

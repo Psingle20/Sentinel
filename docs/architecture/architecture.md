@@ -584,7 +584,7 @@ ITraceProvider
  └── TempoProvider
 ```
 
-Observability, deployment, topology and knowledge adapters run in `Sentinel.Ingestion`, which is the only service holding their credentials. Remediation adapters run in `Sentinel.Executor`, and notification adapters in `Sentinel.Api` ([ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md)).
+Observability, deployment, topology and knowledge adapters run in `Sentinel.Ingestion`, which is the only service holding their credentials. Remediation adapters run in `Sentinel.Executor`, and notification adapters in `Sentinel.Gateway` ([ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md)).
 
 ---
 
@@ -2025,7 +2025,7 @@ Orleans hosting in a stateless request-oriented container platform may impose cl
 Sentinel begins with five coarse-grained backend services:
 
 ```text
-Sentinel.Api
+Sentinel.Gateway
 Sentinel.Ingestion
 Sentinel.Runtime
 Sentinel.AgentWorker
@@ -2084,7 +2084,7 @@ sentinel/
 │   └── Sentinel.Web/
 │
 ├── services/
-│   ├── Sentinel.Api/
+│   ├── Sentinel.Gateway/
 │   ├── Sentinel.Ingestion/
 │   ├── Sentinel.Runtime/
 │   ├── Sentinel.AgentWorker/
@@ -2123,7 +2123,7 @@ The sections below describe logical modules. `Sentinel.Contracts` is a shared pa
 
 ## Sentinel.Domain
 
-Location: the incident domain module inside `Sentinel.Runtime`. `Sentinel.Executor`, `Sentinel.Api`, `Sentinel.Ingestion` and `Sentinel.AgentWorker` each own their own domain module under the same rules.
+Location: the incident domain module inside `Sentinel.Runtime`. `Sentinel.Executor`, `Sentinel.Gateway`, `Sentinel.Ingestion` and `Sentinel.AgentWorker` each own their own domain module under the same rules.
 
 Contains:
 
@@ -2219,7 +2219,7 @@ Contains:
 
 ## Sentinel.Providers.*
 
-Location: observability, deployment, topology and knowledge adapters inside `Sentinel.Ingestion`; remediation adapters inside `Sentinel.Executor`; notification adapters inside `Sentinel.Api`. Each interface family lives in the service that consumes it, not in a shared package.
+Location: observability, deployment, topology and knowledge adapters inside `Sentinel.Ingestion`; remediation adapters inside `Sentinel.Executor`; notification adapters inside `Sentinel.Gateway`. Each interface family lives in the service that consumes it, not in a shared package.
 
 Contains:
 

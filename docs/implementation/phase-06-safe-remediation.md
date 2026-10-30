@@ -6,7 +6,7 @@ Convert an evidence-backed diagnosis into a constrained plan, obtain the require
 
 ## Primary service ownership
 
-`Sentinel.Executor` owns execution policy enforcement, capabilities, privileged credentials, adapters, action verification and execution audit. `Sentinel.Api` captures approval against an immutable plan and sends a signed attestation to `Sentinel.Runtime`, never to Executor. `Sentinel.Runtime` orchestrates the state transition and owns the recovery decision. The control path follows [ADR-006](../decisions/ADR-006-remediation-control-path.md).
+`Sentinel.Executor` owns execution policy enforcement, capabilities, privileged credentials, adapters, action verification and execution audit. `Sentinel.Gateway` captures approval against an immutable plan and sends a signed attestation to `Sentinel.Runtime`, never to Executor. `Sentinel.Runtime` orchestrates the state transition and owns the recovery decision. The control path follows [ADR-006](../decisions/ADR-006-remediation-control-path.md).
 
 ## Vertical-slice position
 

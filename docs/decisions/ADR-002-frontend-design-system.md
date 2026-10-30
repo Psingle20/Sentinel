@@ -1,6 +1,6 @@
 # ADR-002: Framework-first frontend design system
 
-- Status: Accepted
+- Status: Accepted; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-25
 
 ## Context

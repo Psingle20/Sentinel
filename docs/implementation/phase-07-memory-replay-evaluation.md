@@ -6,7 +6,7 @@ Make every incident reproducible, comparable and useful for future investigation
 
 ## Primary service ownership
 
-`Sentinel.Runtime` owns incident history and deterministic domain replay. `Sentinel.AgentWorker` supports captured-tool and model reevaluation; `Sentinel.Api` exposes authorized replay operations. A separate `Sentinel.ReplayWorker` remains optional until measured isolation or load justifies it.
+`Sentinel.Runtime` owns incident history and deterministic domain replay. `Sentinel.AgentWorker` supports captured-tool and model reevaluation; `Sentinel.Gateway` exposes authorized replay operations. A separate `Sentinel.ReplayWorker` remains optional until measured isolation or load justifies it.
 
 ## Vertical-slice position
 

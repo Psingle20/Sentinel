@@ -6,7 +6,7 @@ Convert logs, metrics, traces, deployment changes, topology and alerts from the 
 
 ## Primary service ownership
 
-`Sentinel.Ingestion` owns provider access, normalization, checkpoints and publication. `Sentinel.Runtime` consumes canonical observations; `Sentinel.Api` exposes provider configuration. The phase exits only when an observation crosses those boundaries into the golden incident path.
+`Sentinel.Ingestion` owns provider access, normalization, checkpoints and publication. `Sentinel.Runtime` consumes canonical observations; `Sentinel.Gateway` exposes provider configuration. The phase exits only when an observation crosses those boundaries into the golden incident path.
 
 ## Vertical-slice position
 

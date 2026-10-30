@@ -1,6 +1,6 @@
 # ADR-014: Provider abstraction
 
-- Status: Accepted
+- Status: Accepted; service names follow the ADR-020 rename (`Sentinel.Api` is `Sentinel.Gateway`)
 - Date: 2026-10-28
 
 ## Context

@@ -6,7 +6,7 @@ Transform canonical observations into a correlated, durable and queryable incide
 
 ## Primary service ownership
 
-`Sentinel.Runtime` owns authoritative incident state and workflow progress. `Sentinel.Ingestion` supplies observations and `Sentinel.Api` exposes commands and queries. Neither may read or write Runtime-owned storage directly.
+`Sentinel.Runtime` owns authoritative incident state and workflow progress. `Sentinel.Ingestion` supplies observations and `Sentinel.Gateway` exposes commands and queries. Neither may read or write Runtime-owned storage directly.
 
 ## Vertical-slice position
 
