@@ -84,6 +84,21 @@ public sealed class InvestigationTests
     }
 
     [Fact]
+    public async Task A_rate_limited_model_fails_the_investigation_after_one_call_and_says_why()
+    {
+        var telemetry = Telemetry.ConnectionLeak();
+
+        InvestigationRun run = await Harness.Investigator(new RateLimitedModel(), Harness.Catalog, Harness.AllTools(telemetry))
+            .InvestigateAsync(telemetry.Command(detectedAt: 70, InvestigationRoles.Metrics), shadow: false, CancellationToken.None);
+
+        run.Completed.Outcome.ShouldBe(InvestigationOutcome.Failed);
+        run.Completed.Evidence.ShouldBeEmpty();
+        run.Completed.AbstentionReason.ShouldNotBeNull().ShouldContain("rate limiting");
+        run.Execution.ModelCalls.ShouldBe(1, "a rate-limited call is not retried, so it spends nothing more");
+        run.Execution.ToolCalls.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Evidence_from_partial_data_is_marked_partial()
     {
         var complete = Telemetry.ConnectionLeak();

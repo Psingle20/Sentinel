@@ -75,6 +75,19 @@ public sealed class MetaModelProviderTests
     }
 
     [Fact]
+    public async Task A_rate_limited_request_is_reported_as_rate_limited_and_not_retried()
+    {
+        var handler = new RecordingHandler(HttpStatusCode.TooManyRequests, """{"error":{"message":"rate limit exceeded"}}""");
+
+        ModelResponse response = await Provider(handler, new MetaModelProfile { Model = "muse-spark-1.3" }).CompleteAsync(Request(), CancellationToken.None);
+
+        response.Finish.ShouldBe(ModelFinish.RateLimited);
+        response.Content.ShouldBeNull();
+        response.Error.ShouldBe("The model API is rate limiting requests.");
+        handler.Requests.ShouldBe(1, "the adapter leaves retrying to the harness");
+    }
+
+    [Fact]
     public void A_configuration_made_before_profiles_is_the_single_profile_meta()
     {
         var legacy = new MetaModelOptions { ChatCompletionsUri = Connection.ChatCompletionsUri, ApiKey = Connection.ApiKey, Model = "muse-spark-1.3" };
@@ -121,8 +134,11 @@ public sealed class MetaModelProviderTests
 
         public string? Authorization { get; private set; }
 
+        public int Requests { get; private set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            Requests++;
             Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
             Authorization = request.Headers.Authorization?.ToString();
             return new HttpResponseMessage(status) { Content = new StringContent(response, Encoding.UTF8, "application/json") };

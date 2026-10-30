@@ -19,6 +19,16 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
 
     public int Queries { get; private set; }
 
+    /// <summary>Every observation query received, in order, as Ingestion would have received it.</summary>
+    public IReadOnlyList<ObservationQuery> ObservationQueries => _observationQueries;
+
+    /// <summary>Every knowledge query received, in order.</summary>
+    public IReadOnlyList<KnowledgeQuery> KnowledgeQueries => _knowledgeQueries;
+
+    private readonly List<ObservationQuery> _observationQueries = [];
+
+    private readonly List<KnowledgeQuery> _knowledgeQueries = [];
+
     public bool Partial { get; init; }
 
     /// <summary>S1: checkout v2.4.1 serves from 20 s and leaks connections until the SLO burns from 60 s.</summary>
@@ -131,12 +141,16 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
 
     private readonly List<KnowledgeDocument> _runbooks = [];
 
-    public Task<KnowledgeResult> SearchAsync(KnowledgeQuery query, CancellationToken cancellationToken) =>
-        Task.FromResult(new KnowledgeResult([.. _runbooks], "test"));
+    public Task<KnowledgeResult> SearchAsync(KnowledgeQuery query, CancellationToken cancellationToken)
+    {
+        _knowledgeQueries.Add(query);
+        return Task.FromResult(new KnowledgeResult([.. _runbooks], "test"));
+    }
 
     public Task<ObservationQueryResult> QueryAsync(ObservationQuery query, CancellationToken cancellationToken)
     {
         Queries++;
+        _observationQueries.Add(query);
         Observation[] matching = [.. _observations.Where(observation =>
             Kind(observation) == query.Kind
             && observation.EventTime >= query.Range.From && observation.EventTime < query.Range.To
