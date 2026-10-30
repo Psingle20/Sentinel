@@ -61,7 +61,7 @@ flowchart LR
 
 | Threat | Mitigation | Evidence |
 | --- | --- | --- |
-| Instructions planted in logs or runbooks steer an investigation | Telemetry and documents reach the model only as tool results in the data channel, never as instructions; findings must cite observations a tool returned; runbook passages cannot be cited. | [InvestigatorPrompt](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/InvestigatorPrompt.cs), [planted runbook fixture](../../reference-system/knowledge/reporting-worker.md) |
+| Instructions planted in logs or runbooks steer an investigation | Telemetry and documents reach the model only as tool results in the data channel, never as instructions; findings must cite observations a tool returned; runbook passages cannot be cited. | [InvestigatorPrompt](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/InvestigatorPrompt.cs), [planted runbook fixture](../../reference-system/knowledge/reporting-worker.md), [runbook and log injection tests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/SpecialistTests.cs) |
 | A model fabricates evidence | Every cited observation must have been returned by a tool in that execution; the evaluation harness also scores hallucinated evidence. | [FindingsValidator](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/FindingsValidator.cs), [scoring.py](../../scripts/evaluation/sentinel_eval/scoring.py) |
 | Incident data trains a third-party model | Profiles use Meta's standard mode, whose content is not used for training; Contributor-mode models are not routed by default. | [ADR-015 revisit](../decisions/ADR-015-model-abstraction.md) |
 | Runaway model spend | Per-call cost estimates, total, daily and per-model caps; at a cap the investigation abstains. | [ModelSpendGuard](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Investigations/ModelSpendGuard.cs) |
@@ -83,7 +83,6 @@ These are accepted for local development only. Each must be closed, or explicitl
 2. **Internal storage is not tenant-scoped** (F-007). Tenant isolation is enforced at the Gateway; Runtime's and AgentWorker's internal reads trust the caller's scope.
 3. **The approval signing key is local.** The Gateway signs with a key on its own host. Production needs a managed, non-exportable signing facility (Phase 06), which depends on the deployment environment.
 4. **Investigation redelivery can repeat paid model work** (F-011) when the database commit fails after the model answered. A single local AgentWorker never handles one message twice at once, so the exposure is narrow; a result cache committed outside the message transaction would close it.
-5. **No prompt-injection fixture in logs.** The planted-instruction test covers runbooks only (Phase 04).
 
 ## Review findings of 2026-10-29
 
@@ -106,4 +105,4 @@ The [implementation review](../../artifacts/reports/reviews/2026-10-29-project-i
 | F-013 start confirmation unauthenticated | Open | [Open risks](#open-risks) 1 |
 | F-014 no test for reconciled unknown outcomes | Fixed | [IncidentWorkflowTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/IncidentWorkflowTests.cs) |
 | F-015 phase ledger out of date | Fixed | [Phase status ledger](../implementation/phase-status.md) |
-| F-016 architecture tests skip project references | Open | Low severity |
+| F-016 architecture tests skip project references | Fixed | [ProjectReferenceRuleTests](../../packages/Sentinel.Testing/tests/Sentinel.Testing.Tests/ProjectReferenceRuleTests.cs) |

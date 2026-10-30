@@ -7,6 +7,7 @@
 - [Frontend design system](frontend-design-system.md)
 - [Application composition and CQRS guide](application-composition-and-cqrs.md)
 - [Threat model](threat-model.md): trust boundaries, mitigations with evidence, open risks and the status of the 2026-10-29 review findings
+- [Service-level objectives](service-level-objectives.md): what Sentinel itself promises, the metric behind each promise and what to do when a budget is spent
 - [Phase-wise implementation plan](../implementation/README.md)
 - [Architecture-to-phase coverage matrix](../implementation/coverage-matrix.md)
 - [Phase status ledger](../implementation/phase-status.md)

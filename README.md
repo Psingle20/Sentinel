@@ -16,7 +16,7 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet; both are deliberate for now.
 
-Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 00 to 08 all have working implementations on the golden path, and Phases 09 and 10 have not started. Two gaps cut across several phases: there is no recorded outcome for the golden scenario `S1`, and the live model has not yet produced findings.
+Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 03, 04, 06 and 07 are complete, Phases 00, 01A, 02, 05, 08 and 09 are in progress, and Phase 10 waits for measured need. All six reference scenarios pass end to end with the deterministic test double, and the golden scenario `S1` also passes with Meta's `muse-spark-1.3` investigating: it blames the faulty deployment, rolls it back after approval and verifies recovery. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
 
 Models run through Sentinel's own model interface. The default provider is a deterministic test double, so every local run and test is reproducible; the Meta model adapter is used only when it is configured with credentials (see [Getting started](#getting-started)).
 
@@ -122,7 +122,7 @@ flowchart TB
     class tenants,autonomous planned
 ```
 
-Tenant and environment identity already scopes every observation, incident and query, and the Gateway routes live events to webhook and log channels by event, severity and tenant. Tenant administration and constrained autonomous execution are planned. The Gateway's control-plane API reads, updates and audits each service's configuration, including the service catalog, policy, operator controls, providers, models and SLO rules, with version history, and the web app has a page for each, plus a manual override that takes one kind of action out of service. Incident memory, replay and evaluation are being built in Phase 07.
+Tenant and environment identity already scopes every observation, incident and query, and the Gateway routes live events to webhook and log channels by event, severity and tenant. Tenant administration and constrained autonomous execution are planned. The Gateway's control-plane API reads, updates and audits each service's configuration, including the service catalog, policy, operator controls, providers, models and SLO rules, with version history, and the web app has a page for each, plus a manual override that takes one kind of action out of service. Incident memory, replay and evaluation, with a baseline evaluation report, are in place from Phase 07.
 
 ### Service topology and trust boundaries
 
@@ -386,7 +386,7 @@ flowchart TB
 
 - **Reliability.** Transactional outbox and inbox with dead-letter handling, idempotency keys, fencing tokens on execution, bounded and prioritized ingestion with backoff, a query bulkhead, and explicit completeness metadata so partial data is never mistaken for an absence of evidence.
 - **Observability.** Every service emits OpenTelemetry traces, metrics and logs, with ingestion lag, watermark, model call, token, cost and schema-failure telemetry. The Aspire dashboard shows them locally.
-- **Auditability and replay.** Incident streams, agent executions with captured inputs, policy rule traces and signed approvals make every conclusion and action traceable. Replay is designed at four levels: domain, investigation, model reevaluation and system simulation. Phase 07 is building the first three, and the reference system's scenario runner is the first simulation target.
+- **Auditability and replay.** Incident streams, agent executions with captured inputs, policy rule traces and signed approvals make every conclusion and action traceable. Replay is designed at four levels: domain, investigation, model reevaluation and system simulation. The first three are built, and the reference system's scenario runner is the first simulation target.
 - **Privacy and retention.** Redaction happens before storage, incident memory carries retention, legal-hold and privacy metadata, and purges are run by an operator, a dry run first.
 - **Multi-tenancy.** Every observation, incident, memory record and query is scoped by tenant and environment; similar-incident retrieval never crosses tenants.
 
