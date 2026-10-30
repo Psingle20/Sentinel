@@ -21,7 +21,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [00 – Foundations](#phase-00--foundations) | In progress | Five layered services and the web app, building blocks, contracts with snapshots, design system, architecture tests, 20 ADRs | CI pipeline |
 | [01 – Reference system](#phase-01--reference-system) | Complete | Reference services, deploy controller, scenario runner, scenarios `S0`–`S3`, baseline, tests | None open; no recorded pass |
 | [01A – Walking skeleton](#phase-01a--walking-skeleton) | In progress | Golden path across all services, end-to-end suite, `S1`, `S2` and `S3` records, a live `S1` run on Muse Spark | CI check |
-| [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | In progress | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging | Operational dashboard |
+| [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | Complete | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging, source health view | None |
 | [03 – Incident runtime](#phase-03--incident-runtime) | Complete | Event-sourced incidents, grains, Temporal workflow with every ADR-005 test, correlation, projections, PostgreSQL store tests | None |
 | [04 – AI investigation](#phase-04--ai-investigation) | Complete | Six specialists, typed tools, Meta adapter, profiles and spend caps, findings validation, blackboard, a live run with findings | None |
 | [05 – Verification and consensus](#phase-05--verification-and-consensus) | In progress | Deterministic adversarial verifier (`falsifiers-v2`), `consensus-v4` with dissent and abstention, replayable decisions | A correct diagnosis on `S3`, recorded end to end |
@@ -106,7 +106,7 @@ Open:
 
 ## Phase 02 – Telemetry ingestion
 
-Status: **In progress**.
+Status: **Complete**. Every exit criterion has evidence, and the golden scenario produced queryable observations of every kind end to end on 2026-10-30.
 
 Delivered:
 
@@ -115,14 +115,11 @@ Delivered:
 - Redaction before storage: [RedactionPolicy](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Domain/Observations/RedactionPolicy.cs), [RedactionTests](../../services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/RedactionTests.cs).
 - The query contract with trust metadata, and the query bulkhead: [QueryObservationsQueryHandler](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/BusinessTasks/Queries/Observations/QueryObservationsQueryHandler.cs), [QueryBulkhead](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/BusinessTasks/Queries/QueryBulkhead.cs), [IngestionEndpointTests](../../services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/IngestionEndpointTests.cs).
 - Prioritized pull loops, bounded provider clients and ingestion telemetry: [IngestionWorker](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Workers/IngestionWorker.cs), [IngestionTelemetry](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Diagnostics/IngestionTelemetry.cs), [ADR-018](../decisions/ADR-018-observation-publication-scope.md).
+- An operational view of the sources on the control plane: each source's health, how far its data is complete and how far that trailed its last pull, and for a failing source its failures in a row, its next try after backoff and its last error, failing sources first: [source-health.tsx](../../apps/Sentinel.Web/src/features/admin/source-health.tsx), [SourceSummary](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Application/BusinessProcesses/Sources/SourceSummary.cs).
 - Dead letters, with operator list and replay endpoints: [OperatorEndpoints](../../packages/Sentinel.ServiceDefaults/src/Sentinel.ServiceDefaults/OperatorEndpoints.cs). Replay after the cause is fixed is tested: [MessageDeliveryTests](../../packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Infrastructure.IntegrationTests/MessageDeliveryTests.cs).
 - Paging through continuation tokens against PostgreSQL: [PostgresObservationStoreTests](../../services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/PostgresObservationStoreTests.cs).
 - A compatibility snapshot of the query answer, which pins the log, trace, deployment, topology and alert observations: [ingestion.query.observations.result.json](../../packages/Sentinel.Contracts/tests/Sentinel.Contracts.Tests/Snapshots/ingestion.query.observations.result.json).
 - Alerts as a signal type: the reference Prometheus raises `CheckoutSloFastBurn` and `RedisClientsNearLimit`, Ingestion reads the pending and firing alerts on every poll as [AlertObservation](../../packages/Sentinel.Contracts/src/Sentinel.Contracts/Observations/AlertObservation.cs)s, with each state its own observation and annotations redacted, and answers alert queries. Alerts are stored and queried but not published, as [ADR-018](../decisions/ADR-018-observation-publication-scope.md) publishes only kinds with an event consumer: [PrometheusAlertsProvider](../../services/Sentinel.Ingestion/src/Sentinel.Ingestion.Infrastructure/Providers/PrometheusAlertsProvider.cs), [ProviderConformanceTests](../../services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/ProviderConformanceTests.cs), [slo.yml](../../reference-system/deploy/prometheus/rules/slo.yml).
-
-Open:
-
-- An operational dashboard beyond the Aspire dashboard and `/v1/sources`.
 
 ## Phase 03 – Incident runtime
 

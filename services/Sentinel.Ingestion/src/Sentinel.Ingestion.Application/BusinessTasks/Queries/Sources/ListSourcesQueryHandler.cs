@@ -19,6 +19,8 @@ public sealed class ListSourcesQueryHandler(ISourceStateStore states) : IQueryHa
             state.Health.ToString(),
             state.LastError,
             state.ConsecutiveFailures,
-            state.Health == SourceHealth.Healthy))]);
+            state.Health == SourceHealth.Healthy,
+            state.UpdatedAt,
+            state.NextAttemptAt))]);
     }
 }

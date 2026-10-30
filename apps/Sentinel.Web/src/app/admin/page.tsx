@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/des
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/design-system/primitives/table";
 import { ControlPlaneUnavailable } from "@/features/admin/control-plane-unavailable";
 import { ActionOverrides, EmergencyStop } from "@/features/admin/controls";
+import { SourceHealth } from "@/features/admin/source-health";
 import { TrackView } from "@/features/analytics/track-view";
 import { formatDateTime } from "@/features/incidents/presentation";
 import { type AnalyticsCount, remediationActionKinds } from "@/lib/api/contracts";
@@ -17,7 +18,7 @@ import { getAnalytics, getAudit, getControls, getPolicy, getSources } from "@/li
 export default function AdminPage() {
   return (
     <>
-      <PageHeader title="Control plane" description="Operator controls, provider sources and the audit history. Every change is audited." />
+      <PageHeader title="Control plane" description="Operator controls, source health and the audit history. Every change is audited." />
       <TrackView name="admin.viewed" properties={{ area: "overview" }} />
       <Suspense fallback={<DataState kind="loading" title="Loading the control plane" />}>
         <ControlPlane />
@@ -76,27 +77,11 @@ async function ControlPlane() {
         </Card>
         <Card aria-labelledby="sources-title">
           <CardHeader>
-            <CardTitle id="sources-title">Provider sources</CardTitle>
-            <CardDescription>Ingestion&apos;s sources with their health and watermarks.</CardDescription>
+            <CardTitle id="sources-title">Source health</CardTitle>
+            <CardDescription>Each source Ingestion pulls: its health, how far its data is complete and how its last pulls went.</CardDescription>
           </CardHeader>
           <CardContent>
-            {sources.length === 0 ? (
-              <DataState kind="empty" title="No source has been pulled yet" />
-            ) : (
-              <ul className="flex flex-col gap-2 text-xs" aria-label="Provider sources">
-                {sources.map((source, index) => (
-                  <li key={String(source.sourceId ?? index)} className="flex flex-col gap-0.5">
-                    <span className="font-mono text-text-primary">{String(source.sourceId ?? "source")}</span>
-                    <span className="text-text-muted">
-                      {Object.entries(source)
-                        .filter(([key]) => key !== "sourceId")
-                        .map(([key, value]) => `${key}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`)
-                        .join(" · ")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {sources.length === 0 ? <DataState kind="empty" title="No source has been pulled yet" /> : <SourceHealth sources={sources} />}
           </CardContent>
         </Card>
         <Card aria-labelledby="usage-title">

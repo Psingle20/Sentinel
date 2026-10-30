@@ -397,7 +397,18 @@ export type ExecutorControls = { emergencyStop: boolean; disabledActions: string
 
 export type AuditEntry = { sequence: number; actor: string; action: string; target: string; detail: unknown; occurredAt: string };
 
-export type SourceState = Record<string, unknown> & { sourceId?: string };
+// One Ingestion source as operators see it (Phase 02): how far its data is complete and how its last pulls went.
+export type SourceState = {
+  sourceId: string;
+  provider: string;
+  watermark: string;
+  health: "Healthy" | "Degraded" | "Unavailable";
+  lastError?: string;
+  consecutiveFailures: number;
+  healthy: boolean;
+  lastPulledAt: string;
+  nextAttemptAt?: string;
+};
 
 // Configuration areas (Phase 08): each document is owned and validated by one service.
 export const configurationAreas = ["runtime", "models", "sources", "api"] as const;

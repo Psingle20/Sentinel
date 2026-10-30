@@ -242,7 +242,12 @@ test.describe("control plane", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: "Control plane" })).toBeVisible();
     await expect(page.getByText("Remediation policy policy-2026.10.2")).toBeVisible();
-    await expect(page.getByRole("list", { name: "Provider sources" })).toContainText("loki-reference");
+    const sources = page.getByRole("table", { name: "Source health" });
+    await expect(page.getByText("2 healthy, 1 degraded, 0 unavailable.")).toBeVisible();
+    await expect(sources.getByRole("row").nth(1), "the failing source comes first").toContainText("loki:logs:warnings");
+    await expect(sources.getByRole("row").nth(1)).toContainText("2 in a row");
+    await expect(sources.getByRole("row").nth(1)).toContainText("Loki answered 503: the ingester is not ready.");
+    await expect(sources.getByRole("row").nth(1)).toContainText("90 s behind its last pull");
   });
 
   test("moves between its pages and marks the current one", async ({ page }) => {

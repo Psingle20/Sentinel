@@ -108,13 +108,14 @@ public sealed class IngestionEndpointTests
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         JsonElement source = (await BodyAsync(response)).EnumerateArray().Single();
-        Names(source).ShouldBe(["sourceId", "provider", "watermark", "health", "lastError", "consecutiveFailures", "healthy"]);
+        Names(source).ShouldBe(["sourceId", "provider", "watermark", "health", "lastError", "consecutiveFailures", "healthy", "lastPulledAt"], "nextAttemptAt appears only once a failing source backs off");
         source.GetProperty("sourceId").GetString().ShouldBe("prometheus:redis_connections");
         source.GetProperty("watermark").GetDateTimeOffset().ShouldBe(Now.AddSeconds(-40));
         source.GetProperty("health").GetString().ShouldBe("Degraded");
         source.GetProperty("lastError").GetString().ShouldBe("connection refused");
         source.GetProperty("consecutiveFailures").GetInt32().ShouldBe(1);
         source.GetProperty("healthy").GetBoolean().ShouldBeFalse();
+        source.GetProperty("lastPulledAt").ValueKind.ShouldBe(JsonValueKind.String);
     }
 
     [Fact]

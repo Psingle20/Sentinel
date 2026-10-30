@@ -40,16 +40,33 @@
   },
   "sources": [
     {
-      "sourceId": "prometheus-reference",
+      "sourceId": "prometheus:slo_burn_rate",
       "provider": "prometheus",
       "watermark": "2026-10-28T09:07:30+00:00",
-      "health": "Healthy"
+      "health": "Healthy",
+      "consecutiveFailures": 0,
+      "healthy": true,
+      "lastPulledAt": "2026-10-28T09:07:35+00:00"
     },
     {
-      "sourceId": "loki-reference",
+      "sourceId": "loki:logs:warnings",
       "provider": "loki",
-      "watermark": "2026-10-28T09:06:50+00:00",
-      "health": "Degraded"
+      "watermark": "2026-10-28T09:05:50+00:00",
+      "health": "Degraded",
+      "lastError": "Loki answered 503: the ingester is not ready.",
+      "consecutiveFailures": 2,
+      "healthy": false,
+      "lastPulledAt": "2026-10-28T09:07:20+00:00",
+      "nextAttemptAt": "2026-10-28T09:07:40+00:00"
+    },
+    {
+      "sourceId": "prometheus:alerts",
+      "provider": "prometheus",
+      "watermark": "2026-10-28T09:07:35+00:00",
+      "health": "Healthy",
+      "consecutiveFailures": 0,
+      "healthy": true,
+      "lastPulledAt": "2026-10-28T09:07:35+00:00"
     }
   ],
   "configuration": {
