@@ -8,6 +8,7 @@
 //   POST /__fail { route, status }    answer a route group with an error ("agent-executions", "similar", "admin")
 //   POST /__advance { summary }       append a timeline entry, as Runtime would, and publish it live
 //   GET  /__analytics                 the analytics events Api accepted, oldest first
+//   POST /__large { timeline, evidence } make the incident that large, for the performance tests
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
@@ -107,6 +108,31 @@ function publish(kind, summary) {
   }
 }
 
+// A long-running incident: many timeline entries, and many evidence items each in the causal graph and supporting the
+// leading hypothesis, built from the fixture's first evidence item so every view has realistic content.
+function makeLarge(timeline, evidence) {
+  const incident = state.incident;
+  const start = Date.parse(incident.timeline[0].occurredAt);
+  incident.timeline = Array.from({ length: timeline }, (_, index) => ({
+    streamVersion: index + 1,
+    occurredAt: new Date(start + index * 1000).toISOString(),
+    kind: index === 0 ? "incident.detected" : "signal.linked",
+    summary: index === 0 ? incident.timeline[0].summary : `Signal ${index} linked: checkout-service slo_burn_rate sample ${index}.`,
+  }));
+  incident.summary.streamVersion = timeline;
+  const template = incident.evidence[0];
+  const leading = incident.decision.leadingHypothesisId;
+  const generated = Array.from({ length: evidence }, (_, index) => {
+    const evidenceId = `0192f0c4-0000-7000-8000-${String(100000 + index).padStart(12, "0")}`;
+    return { ...template, finding: { ...template.finding, evidenceId, statement: `Signal ${index}: Redis connections rose with checkout traffic.`, sourceObservationIds: [`prometheus:redis_connections:checkout-service:${1793178000 + index}`] } };
+  });
+  incident.evidence = [...incident.evidence, ...generated];
+  incident.causalGraph = {
+    nodes: [...incident.causalGraph.nodes, ...generated.map((item, index) => ({ id: `evidence:${item.finding.evidenceId}`, kind: "evidence", label: `Signal ${index}` }))],
+    edges: [...incident.causalGraph.edges, ...generated.map((item) => ({ from: `evidence:${item.finding.evidenceId}`, to: `hypothesis:${leading}`, relation: "supports" }))],
+  };
+}
+
 // Appends to the incident stream the way Runtime would: a new version, a timeline entry and a live event.
 function append(kind, summary, change = {}) {
   const { incident } = state;
@@ -146,6 +172,15 @@ async function handleIncident(request, response, url) {
 
   if (request.method === "GET" && rest === "") {
     return send(response, 200, incident);
+  }
+
+  // One page of the timeline, newest first, as Api pages it: before is the stream version to page back from.
+  if (request.method === "GET" && rest === "/timeline") {
+    const before = url.searchParams.get("before");
+    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50), 1), 200);
+    const older = (incident.timeline ?? []).filter((entry) => before === null || entry.streamVersion < Number(before)).sort((left, right) => right.streamVersion - left.streamVersion);
+    const items = older.slice(0, limit);
+    return send(response, 200, { items, total: (incident.timeline ?? []).length, next: older.length > limit ? String(items.at(-1).streamVersion) : undefined });
   }
 
   if (request.method === "GET" && rest === "/agent-executions") {
@@ -426,6 +461,12 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && url.pathname === "/__fail") {
     const body = await readBody(request);
     state.failures.set(body.route, body.status ?? 503);
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__large") {
+    const body = await readBody(request);
+    makeLarge(body.timeline ?? 0, body.evidence ?? 0);
     return send(response, 204);
   }
 

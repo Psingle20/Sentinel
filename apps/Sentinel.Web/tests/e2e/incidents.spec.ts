@@ -149,6 +149,44 @@ test.describe("incidents", () => {
   });
 });
 
+// Phase 08 performance: a long incident, 5,000 timeline entries and 400 evidence items, each also a node of the causal
+// graph. The page must be usable within its budget and put only a page of the timeline and evidence in the document.
+test.describe("large incidents", () => {
+  test.beforeEach(async ({ request }) => {
+    await request.post(`${mockApi}/__reset`);
+    await request.post(`${mockApi}/__large`, { data: { timeline: 5000, evidence: 400 } });
+  });
+
+  test("are usable within the budget and page their timeline and evidence", async ({ page }) => {
+    const started = Date.now();
+    await page.goto(`/incidents/${incidentId}`);
+    await expect(page.getByRole("heading", { level: 1, name: incidentTitle })).toBeVisible();
+    await expect(page.getByRole("img", { name: `Causal graph of ${incidentTitle}` })).toBeVisible();
+    expect(Date.now() - started, "time until the incident and its graph are on screen").toBeLessThan(6_000);
+
+    const timeline = page.getByRole("list", { name: "Incident timeline" }).getByRole("listitem");
+    await expect(timeline).toHaveCount(50);
+    await expect(timeline.last()).toContainText("v5000");
+    await page.getByRole("button", { name: "Show earlier entries (4950 more)" }).click();
+    await expect(timeline).toHaveCount(100);
+    await expect(timeline.first()).toContainText("v4901");
+
+    const rows = page.getByRole("table", { name: "Evidence" }).getByRole("row");
+    await expect(rows).toHaveCount(51);
+    await page.getByRole("button", { name: "Show 50 more of 352 remaining" }).click();
+    await expect(rows).toHaveCount(101);
+  });
+
+  test("reveal evidence a link points to beyond the first page", async ({ page }) => {
+    const evidenceId = "0192f0c4-0000-7000-8000-000000100300";
+
+    await page.goto(`/incidents/${incidentId}#evidence-${evidenceId}`);
+
+    await expect(page.locator(`[id="evidence-${evidenceId}"]`)).toBeInViewport();
+    await expect(page.locator(`[id="evidence-${evidenceId}"]`)).toContainText("Signal 300");
+  });
+});
+
 test.describe("postmortem", () => {
   test.beforeEach(async ({ page, request }) => {
     await request.post(`${mockApi}/__reset`);

@@ -2,7 +2,6 @@ import { CircleCheck, CircleX } from "lucide-react";
 import Link from "next/link";
 
 import { ConfidenceDisplay } from "@/design-system/domain/confidence-display";
-import { EvidenceDirectionBadge } from "@/design-system/domain/evidence-direction-badge";
 import { IncidentStatusBadge } from "@/design-system/domain/incident-status-badge";
 import { SeverityIndicator } from "@/design-system/domain/severity-indicator";
 import { StatusBadge } from "@/design-system/domain/status-badge";
@@ -13,10 +12,11 @@ import { HypothesisComparison } from "@/design-system/patterns/hypothesis-compar
 import { RecoveryPanel } from "@/design-system/patterns/recovery-panel";
 import { RemediationReview } from "@/design-system/patterns/remediation-review";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/design-system/primitives/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/design-system/primitives/table";
 import type { AgentExecution, IncidentDetail, SimilarIncident } from "@/lib/api/contracts";
 
+import { EvidenceTable } from "./evidence-table";
 import { PlanDecision, RevokeApproval } from "./plan-decision";
+import { TimelineList } from "./timeline-list";
 import { describeAction, describeCriterion, executionLabel, formatDateTime, formatTime, incidentStatus, percent, recoveryStatus } from "./presentation";
 import { agentRuns, comparedHypotheses, graphOf, leadingHypothesis, reviewedPlan } from "./view-models";
 
@@ -247,47 +247,7 @@ function EvidenceSection({ incident }: { incident: IncidentDetail }) {
         <CardDescription>Every claim cites the observations it rests on.</CardDescription>
       </CardHeader>
       <CardContent>
-        {evidence.length === 0 ? (
-          <DataState kind="empty" title="No evidence yet" />
-        ) : (
-          <Table aria-label="Evidence">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Direction</TableHead>
-                <TableHead>Finding</TableHead>
-                <TableHead>Strength</TableHead>
-                <TableHead>Sources</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {evidence.map((item) => (
-                <TableRow key={item.finding.evidenceId} id={`evidence-${item.finding.evidenceId}`}>
-                  <TableCell>
-                    <EvidenceDirectionBadge direction={item.finding.direction} />
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    <span className="text-text-primary">{item.finding.statement}</span>
-                    {item.status === "rejected" ? (
-                      <span className="block text-xs text-incident-critical">Rejected: {item.rejectionReason}</span>
-                    ) : null}
-                    {item.finding.partial ? <span className="block text-xs text-incident-warning">Based on partial data</span> : null}
-                  </TableCell>
-                  <TableCell>{percent(item.finding.strength)}</TableCell>
-                  <TableCell className="text-text-muted">
-                    <details>
-                      <summary className="cursor-pointer">{item.finding.sourceObservationIds.length} observation(s)</summary>
-                      <ul className="mt-1 flex flex-col gap-0.5 font-mono text-xs break-all">
-                        {item.finding.sourceObservationIds.map((id) => (
-                          <li key={id}>{id}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        {evidence.length === 0 ? <DataState kind="empty" title="No evidence yet" /> : <EvidenceTable evidence={evidence} />}
       </CardContent>
     </Card>
   );
@@ -338,7 +298,13 @@ function ImpactSection({ incident }: { incident: IncidentDetail }) {
   );
 }
 
+const timelinePage = 50;
+
 function TimelineSection({ incident }: { incident: IncidentDetail }) {
+  // Only the latest page goes to the browser; the rest is paged in from Api on request.
+  const timeline = [...(incident.timeline ?? [])].sort((left, right) => left.streamVersion - right.streamVersion);
+  const latest = timeline.slice(-timelinePage);
+  const next = timeline.length > latest.length ? String(latest[0].streamVersion) : undefined;
   return (
     <Card aria-labelledby="timeline-title">
       <CardHeader>
@@ -346,16 +312,7 @@ function TimelineSection({ incident }: { incident: IncidentDetail }) {
         <CardDescription>The incident stream, in order.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ol className="flex flex-col gap-3" aria-label="Incident timeline">
-          {(incident.timeline ?? []).map((entry) => (
-            <li key={entry.streamVersion} className="flex flex-col gap-0.5 border-l border-border-subtle pl-3">
-              <span className="text-xs text-text-muted">
-                {formatTime(entry.occurredAt)} · v{entry.streamVersion}
-              </span>
-              <span className="text-sm text-text-primary">{entry.summary}</span>
-            </li>
-          ))}
-        </ol>
+        <TimelineList incidentId={incident.summary.incidentId} latest={latest} total={timeline.length} next={next} />
       </CardContent>
     </Card>
   );

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { DomainReplayResult } from "@/lib/api/contracts";
-import { ApiError, ApiUnavailableError, approvePlan, rejectPlan, replayDomain, revokePlan, saveNarrative } from "@/lib/api/server";
+import type { DomainReplayResult, TimelineEntry } from "@/lib/api/contracts";
+import { ApiError, ApiUnavailableError, approvePlan, getTimelinePage, rejectPlan, replayDomain, revokePlan, saveNarrative } from "@/lib/api/server";
 
 export type DecisionState = { status: "idle" | "done" | "error"; message?: string };
 
@@ -76,6 +76,19 @@ export async function replayAction(_previous: ReplayState, form: FormData): Prom
     const reproduced = result.stateStable && result.projectionMatches && decisionsMatch;
     const verdict = reproduced ? "reproduced exactly" : "differs from what is stored";
     return { status: "done", message: `Replayed ${result.eventCount} events: the incident ${verdict}.`, result, reproduced };
+  } catch (error) {
+    return { status: "error", message: describe(error) };
+  }
+}
+
+export type TimelinePage = { status: "done"; items: TimelineEntry[]; next?: string } | { status: "error"; message: string };
+
+// One page of older timeline entries, newest first, from Api's paged timeline (Phase 08): a long incident never sends
+// its whole stream to the browser.
+export async function olderTimelineAction(incidentId: string, before: string): Promise<TimelinePage> {
+  try {
+    const page = await getTimelinePage(incidentId, before);
+    return { status: "done", items: page.items, next: page.next };
   } catch (error) {
     return { status: "error", message: describe(error) };
   }
