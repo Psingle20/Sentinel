@@ -37,7 +37,7 @@ public sealed class GatewayPeers : IRuntimeHistory, IAgentExecutions, IExecutorC
 
     public ControlPlaneResponse Configuration { get; set; } = new(200, Json("""{"version":"deployment"}"""), null);
 
-    public ControlPlaneResponse ConfigurationPublication { get; set; } = new(422, null, "The configuration does not satisfy the owner's rules.");
+    public ControlPlaneResponse ConfigurationPublication { get; set; } = new(422, null, "The configuration does not satisfy the owner's rules.", "Configuration.Invalid");
 
     public ConcurrentQueue<string> Published { get; } = new();
 

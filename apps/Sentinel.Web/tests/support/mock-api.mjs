@@ -279,7 +279,7 @@ async function handleAdmin(request, response, url) {
 
     if (!body.document?.version || body.document.version === state.policy.version) {
       audit("policy.publish.refused", String(body.document?.version ?? "unknown"), { reason: "version unchanged" });
-      return problem(response, 400, "Policy.VersionUnchanged", "A published policy needs a new version.");
+      return problem(response, 422, "Policy.VersionUnchanged", "A published policy needs a new version.");
     }
 
     state.policy = body.document;
@@ -360,7 +360,7 @@ async function handleConfiguration(request, response, area, history) {
     return refuse(409, "Configuration.VersionConflict", "The configuration changed since it was read; reload it and apply the change again.");
   }
   if (version === "?" || version === current.document.version) {
-    return refuse(400, "Configuration.VersionUnchanged", "A published configuration needs a new version.");
+    return refuse(422, "Configuration.VersionUnchanged", "A published configuration needs a new version.");
   }
   if (current.history.some((entry) => entry.version === version)) {
     return refuse(409, "Configuration.DuplicateVersion", "That version was published before; versions are never reused.");

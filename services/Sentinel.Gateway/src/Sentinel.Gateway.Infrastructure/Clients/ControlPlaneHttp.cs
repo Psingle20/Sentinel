@@ -41,11 +41,38 @@ internal static class ControlPlaneHttp
         string text = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return new ControlPlaneResponse((int)response.StatusCode, null, Describe(text) ?? response.ReasonPhrase);
+            return new ControlPlaneResponse((int)response.StatusCode, null, Describe(text) ?? response.ReasonPhrase, CodeOf(text));
         }
 
         return new ControlPlaneResponse((int)response.StatusCode, text.Length > 0 ? JsonDocument.Parse(text).RootElement.Clone() : null, null);
     }
+    // The stable error code an owner's problem details carry: the code extension, or a title that is a code rather than prose.
+    private static string? CodeOf(string text)
+    {
+        try
+        {
+            using var problem = JsonDocument.Parse(text);
+            JsonElement root = problem.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (root.TryGetProperty("code", out JsonElement code) && code.ValueKind == JsonValueKind.String)
+            {
+                return code.GetString();
+            }
+
+            return root.TryGetProperty("title", out JsonElement title) && title.GetString() is { } named && named.Contains('.', StringComparison.Ordinal) && !named.Contains(' ', StringComparison.Ordinal)
+                ? named
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     // The owning service's problem details carry its reasons in detail (or title); pass those on, not the raw JSON.
     private static string? Describe(string text)
     {

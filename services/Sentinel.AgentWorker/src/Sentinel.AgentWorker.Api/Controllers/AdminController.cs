@@ -20,6 +20,6 @@ public sealed class AdminController(IRequestDispatcher requests) : ApiController
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        return MatchPublication(await requests.HandleRequestAsync(new PublishModelConfigurationRequest(body.Document, body.ExpectedVersion, body.Author), cancellationToken));
+        return Match(await requests.HandleRequestAsync(new PublishModelConfigurationRequest(body.Document, body.ExpectedVersion, body.Author), cancellationToken));
     }
 }

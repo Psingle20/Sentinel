@@ -190,7 +190,10 @@ public sealed class GatewayEndpointTests(GatewayFixture gateway) : IClassFixture
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await BodyAsync(unknown)).GetProperty("detail").GetString().ShouldBe("The configuration areas are runtime, models, sources, api.");
         publish.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
-        (await BodyAsync(publish)).GetProperty("detail").GetString().ShouldBe("The configuration does not satisfy the owner's rules.");
+        JsonElement refused = await BodyAsync(publish);
+        refused.GetProperty("detail").GetString().ShouldBe("The configuration does not satisfy the owner's rules.");
+        refused.GetProperty("title").GetString().ShouldBe("Configuration.Invalid", "the owner's error code is relayed with its status");
+        refused.GetProperty("code").GetString().ShouldBe("Configuration.Invalid");
         _peers.Published.ShouldContain($"models:deployment:{Operator}");
         (await BodyAsync(audit)).EnumerateArray().ShouldContain(entry => entry.GetProperty("target").GetString() == $"models/{version}" && entry.GetProperty("action").GetString() == "configuration.publish");
     }

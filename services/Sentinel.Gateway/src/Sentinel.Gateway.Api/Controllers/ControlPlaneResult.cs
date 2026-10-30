@@ -23,6 +23,10 @@ internal static class ControlPlaneResult
             return response.Body is { } body ? Results.Json(body, statusCode: response.StatusCode) : Results.StatusCode(response.StatusCode);
         }
 
-        return Results.Problem(response.Problem, statusCode: response.StatusCode);
+        return Results.Problem(
+            response.Problem,
+            statusCode: response.StatusCode,
+            title: response.Code,
+            extensions: response.Code is { } code ? new Dictionary<string, object?> { ["code"] = code } : null);
     }
 }

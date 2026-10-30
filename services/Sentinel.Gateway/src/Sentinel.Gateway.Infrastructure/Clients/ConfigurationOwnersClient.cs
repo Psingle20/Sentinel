@@ -63,7 +63,15 @@ internal sealed class ConfigurationOwnersClient(IHttpClientFactory clients, ApiC
         CleanArchitecture.BuildingBlocks.Result<PublishedDocument<ApiConfigurationDocument>> published = await api.PublishAsync(parsed, expectedVersion, author, cancellationToken);
         if (published.IsFailure)
         {
-            return new ControlPlaneResponse(published.Error.Type == CleanArchitecture.BuildingBlocks.ErrorType.Conflict ? 409 : 400, null, published.Error.Description);
+            // As every owner answers a refused publication: a conflict is 409 and a document refused on its content 422.
+            int status = published.Error.Type switch
+            {
+                CleanArchitecture.BuildingBlocks.ErrorType.Conflict => 409,
+                CleanArchitecture.BuildingBlocks.ErrorType.Validation => 400,
+                CleanArchitecture.BuildingBlocks.ErrorType.NotFound => 404,
+                _ => 422
+            };
+            return new ControlPlaneResponse(status, null, published.Error.Description, published.Error.Code);
         }
 
         current.Set(published.Value);

@@ -121,8 +121,8 @@ public sealed class AgentWorkerEndpointTests
         version.GetProperty("author").GetString().ShouldBe("operator@example.test");
         version.GetProperty("basedOn").GetString().ShouldBe("deployment");
         JsonElement conflict = await ShouldBeProblemAsync(stale, HttpStatusCode.Conflict, "Configuration.VersionConflict");
-        conflict.TryGetProperty("code", out _).ShouldBeFalse();
-        JsonElement invalid = await ShouldBeProblemAsync(unavailable, HttpStatusCode.BadRequest, "Configuration.Invalid");
+        conflict.GetProperty("code").GetString().ShouldBe("Configuration.VersionConflict", "publications answer like every other refusal");
+        JsonElement invalid = await ShouldBeProblemAsync(unavailable, HttpStatusCode.UnprocessableEntity, "Configuration.Invalid");
         invalid.GetProperty("detail").GetString()!.ShouldContain("Provider 'meta' is not configured in this deployment; available: test-double.");
 
         JsonObject current = (await client.GetFromJsonAsync<JsonObject>(new Uri("/v1/configuration", UriKind.Relative)))!;

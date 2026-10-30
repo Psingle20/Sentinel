@@ -45,22 +45,5 @@ public abstract class ApiController : ControllerBase
             : MatchFound(result);
     }
 
-    /// <summary>
-    /// A publication of the control-plane document: a conflict with the current version is 409 and any
-    /// other refusal 400, titled with the error's code, as AgentWorker has always answered it.
-    /// </summary>
-    protected static IResult MatchPublication<TValue>(Result<TValue> result)
-    {
-        ArgumentNullException.ThrowIfNull(result);
-
-        if (result.IsSuccess)
-        {
-            return Results.Ok(result.Value);
-        }
-
-        int status = result.Error.Type == ErrorType.Conflict ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest;
-        return Results.Problem(result.Error.Description, title: result.Error.Code, statusCode: status);
-    }
-
     protected static IResult Problem(Error error) => error.ToProblem();
 }
