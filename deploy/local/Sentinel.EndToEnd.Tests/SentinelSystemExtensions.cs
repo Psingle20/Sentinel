@@ -116,10 +116,17 @@ public static class SentinelSystemExtensions
 
     /// <summary>
     /// Records Sentinel's and the shadow deploy-blame baseline's outcome for a scenario under
-    /// artifacts/reports/walking-skeleton, and regenerates the comparison report from every record.
+    /// artifacts/reports/walking-skeleton, and regenerates the comparison report from every record. Only the test double's
+    /// runs are recorded there: a live model's run is kept in its own evaluation run file, which the harness scores as its
+    /// own investigator, so it never replaces the reproducible records the walking skeleton cites.
     /// </summary>
     public static async Task RecordOutcomeAsync(this SentinelSystem system, string scenarioId, IncidentDetail incident, bool approved)
     {
+        if (SentinelSystem.ModelProvider != SentinelSystem.TestDouble)
+        {
+            return;
+        }
+
         ScenarioManifest manifest = system.Scenarios.Manifests[scenarioId];
         using JsonDocument executions = (await system.AgentWorker.GetFromJsonAsync<JsonDocument>($"/v1/executions?incidentId={incident.Summary.IncidentId}"))!;
         JsonElement? baseline = executions.RootElement.EnumerateArray()

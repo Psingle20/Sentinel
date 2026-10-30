@@ -1,6 +1,6 @@
 # Walking skeleton comparison report
 
-Generated output of the Phase 01A end-to-end suite: one record per scenario run (`S1`–`S3`), Sentinel's outcome next to the shadow deploy-blame baseline's, scored against the scenario manifests in `reference-system/scenarios/manifests`.
+Generated output of the Phase 01A end-to-end suite: one record per scenario run (`S1`–`S3`), Sentinel's outcome next to the shadow deploy-blame baseline's, scored against the scenario manifests in `reference-system/scenarios/manifests`. Only runs with the model test double are recorded here, so the records are reproducible; a run with a live model is recorded in [the evaluation runs](../evaluation/runs/) as `<scenario>.<provider>.json` and scored in the [evaluation report](../evaluation/report.md).
 
 | File | Content |
 | --- | --- |
