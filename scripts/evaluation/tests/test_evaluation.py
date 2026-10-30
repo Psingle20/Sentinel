@@ -17,8 +17,8 @@ sys.path.insert(0, str(HERE.parent))
 import evaluate  # noqa: E402
 from sentinel_eval.calibration import MINIMUM_DECISIONS, calibrate, reliability  # noqa: E402
 from sentinel_eval.packages import PackageError, load_package, load_packages  # noqa: E402
-from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, parse_time  # noqa: E402
-from sentinel_eval.report import aggregate, gate  # noqa: E402
+from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, load_v2, parse_time  # noqa: E402
+from sentinel_eval.report import aggregate, gate, render  # noqa: E402
 from sentinel_eval.scoring import Score, classify_observation, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
 PACKAGES = HERE.parents[2] / "reference-system" / "scenarios" / "packages"
@@ -88,6 +88,29 @@ class PackageTests(unittest.TestCase):
             path = Path(directory) / "S2.json"
             path.write_text(json.dumps(data), encoding="utf-8")
             with self.assertRaises(PackageError):
+                load_package(path)
+
+    def test_an_aws_scenario_says_what_in_it_is_real_emulated_and_injected(self):
+        fidelity = load_packages(PACKAGES)["AWS-S1"].fidelity
+        self.assertEqual(fidelity.environment, "aws")
+        self.assertEqual({label.level for label in fidelity.labels}, {"contract-real", "data-plane-real", "emulator-modelled", "injected"})
+
+    def test_an_aws_scenario_without_a_fidelity_statement_is_rejected(self):
+        data = json.loads((PACKAGES / "AWS-S1.json").read_text(encoding="utf-8"))
+        del data["fidelity"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "AWS-S1.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaisesRegex(PackageError, "fidelity"):
+                load_package(path)
+
+    def test_a_fidelity_level_outside_the_model_is_rejected(self):
+        data = json.loads((PACKAGES / "AWS-S1.json").read_text(encoding="utf-8"))
+        data["fidelity"]["labels"][0]["level"] = "aws-equivalent"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "AWS-S1.json"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaisesRegex(PackageError, "fidelity level"):
                 load_package(path)
 
 
@@ -346,6 +369,24 @@ class CommandTests(unittest.TestCase):
             self.assertIn("## Gate", report)
             self.assertIn("Packages without a recorded run: AWS-S1, S0, S1, S2, S4, S5, S6, S7, S8.", report)
             self.assertFalse(json.loads((root / "out" / "report.json").read_text(encoding="utf-8"))["gatePassed"])
+
+
+class FidelityTests(unittest.TestCase):
+    def test_a_run_record_carries_the_environment_it_ran_in(self):
+        environment = {"name": "aws", "emulator": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "AWS-S1.json"
+            path.write_text(json.dumps({"schemaVersion": 2, "scenarioId": "AWS-S1", "packageVersion": 1, "environment": environment, "runRecord": None}), encoding="utf-8")
+            self.assertEqual(load_v2(path).environment, environment)
+
+    def test_the_report_labels_an_emulated_scenario_and_never_claims_aws_equivalence(self):
+        packages = load_packages(PACKAGES)
+        environments = {"AWS-S1": {"name": "aws", "emulator": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}}
+        report = render({"version": "scenarios-v2"}, packages, [], [], [], [], environments=environments)
+        self.assertIn("## Environments and fidelity", report)
+        self.assertIn("| AWS-S1 | aws | floci/floci:2.3.0 (sha256:0123), provisioning v2 |", report)
+        self.assertIn("it is not evidence of how AWS itself behaves", report)
+        self.assertNotIn("| S1 | local", report, "a local scenario declares no fidelity of its own")
 
 
 if __name__ == "__main__":

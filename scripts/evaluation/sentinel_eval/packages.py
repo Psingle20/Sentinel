@@ -17,6 +17,9 @@ OUTCOMES = {"no-incident", "resolved", "escalated"}
 EVIDENCE_KINDS = {"metric", "log", "trace", "deployment", "topology"}
 PERTURBATIONS = {"provider-outage", "action-failure"}
 MODES = {"approval-required", "suggestion-only"}
+# The AWS-emulated environment proposal's fidelity model (Phase E01).
+ENVIRONMENTS = {"local", "aws"}
+FIDELITY_LEVELS = {"contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"}
 
 
 class PackageError(ValueError):
@@ -47,6 +50,21 @@ class RootCause:
 
 
 @dataclass(frozen=True)
+class FidelityLabel:
+    element: str
+    level: str
+
+
+@dataclass(frozen=True)
+class Fidelity:
+    """What in a scenario is real, emulated and injected, and so which claims its result supports."""
+
+    environment: str
+    statement: str
+    labels: tuple[FidelityLabel, ...]
+
+
+@dataclass(frozen=True)
 class Package:
     id: str
     version: int
@@ -62,6 +80,7 @@ class Package:
     false_remediations: tuple[Action, ...]
     expected_missing: tuple[str, ...] = ()
     perturbations: tuple[dict, ...] = field(default_factory=tuple)
+    fidelity: Fidelity | None = None
 
     def is_false_remediation(self, action: str, service: str) -> bool:
         return any(remedy.action == action and remedy.service == service for remedy in self.false_remediations)
@@ -111,6 +130,9 @@ def load_package(path: Path) -> Package:
     for perturbation in perturbations:
         _require(perturbation.get("kind") in PERTURBATIONS, path, f"perturbation {perturbation.get('kind')!r} is not one of {sorted(PERTURBATIONS)}")
 
+    fidelity = _fidelity(data.get("fidelity"), path)
+    _require(not data["id"].startswith("AWS-") or (fidelity is not None and fidelity.environment == "aws"), path, "an AWS scenario needs a fidelity statement for the aws environment")
+
     return Package(
         id=data["id"],
         version=data["version"],
@@ -126,7 +148,22 @@ def load_package(path: Path) -> Package:
         false_remediations=tuple(Action(remedy["action"], remedy["service"]) for remedy in truth["falseRemediations"]),
         expected_missing=tuple(truth.get("expectedMissingEvidence", [])),
         perturbations=perturbations,
+        fidelity=fidelity,
     )
+
+
+def _fidelity(spec: dict | None, path: Path) -> Fidelity | None:
+    if spec is None:
+        return None
+    _require(spec.get("environment") in ENVIRONMENTS, path, f"fidelity environment {spec.get('environment')!r} is not one of {sorted(ENVIRONMENTS)}")
+    _require(bool(spec.get("statement")), path, "fidelity needs a statement")
+    labels = []
+    for label in spec.get("labels", []):
+        _require(label.get("level") in FIDELITY_LEVELS, path, f"fidelity level {label.get('level')!r} is not one of {sorted(FIDELITY_LEVELS)}")
+        _require(bool(label.get("element")), path, "a fidelity label needs an element")
+        labels.append(FidelityLabel(label["element"], label["level"]))
+    _require(bool(labels), path, "fidelity needs at least one label")
+    return Fidelity(spec["environment"], spec["statement"], tuple(labels))
 
 
 def load_packages(directory: Path) -> dict[str, Package]:

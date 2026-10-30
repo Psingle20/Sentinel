@@ -8,6 +8,18 @@
   "title": "Poison message with an innocent ECS revision, in the AWS-emulated environment",
   "description": "S6 on SQS and ECS. One order message no revision can process keeps failing on every receive while the queue-consumer's ECS task processes the rest; a benign queue-consumer v1.4.1 task definition rolls out before the incident opens. Quarantining the message, through the queue's redrive policy, is the remedy; rolling the ECS service back is the false remediation. Fidelity: SQS, its dead-letter queue and ECS are emulated by the pinned emulator; the consumer and its telemetry are real; the poison message is injected through the SQS API.",
   "perturbations": [],
+  "fidelity": {
+    "environment": "aws",
+    "statement": "SQS, its dead-letter queue and ECS are emulated by the pinned emulator; the consumer, its telemetry, which reaches Sentinel through OpenTelemetry rather than CloudWatch, and the AWS SDK calls on both sides are real; the poison message and the v1.4.1 rollout are injected by the scenario runner. The result shows Sentinel's diagnosis and its ECS, SQS and quarantine adapters against AWS-shaped APIs, not AWS's own timing, throttling or redrive behaviour, which differs: the emulator never changes a redrive policy a queue was created with (ADR-021).",
+    "labels": [
+      { "element": "AWS SDK calls from Sentinel's ECS, SQS and quarantine adapters", "level": "contract-real" },
+      { "element": "queue-consumer process, its OpenTelemetry signals and its ECS task container", "level": "data-plane-real" },
+      { "element": "SQS queue, dead-letter queue and redrive", "level": "emulator-modelled" },
+      { "element": "ECS service, task definitions and rollout state", "level": "emulator-modelled" },
+      { "element": "poison message", "level": "injected" },
+      { "element": "queue-consumer v1.4.1 rollout", "level": "injected" }
+    ]
+  },
   "groundTruth": {
     "expectIncident": true,
     "expectedOutcome": "resolved",

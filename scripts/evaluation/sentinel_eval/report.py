@@ -110,6 +110,7 @@ def render(
     *,
     calibrations: list[Calibration] | None = None,
     reliabilities: list[SourceReliability] | None = None,
+    environments: dict[str, dict] | None = None,
 ) -> str:
     generated = generated or datetime.now(timezone.utc)
     lines = [
@@ -145,6 +146,7 @@ def render(
             f"| {score.scenario_id} | {package.kind} | {score.label} | {score.decision} | {cause} | {_fmt(score.root_cause_correct)} | {score.proposed_action or 'none'} "
             f"| {_fmt(score.false_remediation)} | {_fmt(score.acceptable)} | {_fmt(score.evidence_precision, 'pct')} | {score.final_status or '-'} | {'; '.join(score.notes) or '-'} |"
         )
+    lines += _fidelity(packages, environments or {})
     lines += ["", "## Coverage", ""]
     lines.append(f"Packages in the dataset: {', '.join(f'{key} v{packages[key].version}' for key in sorted(packages))}.")
     lines.append(f"Packages without a recorded run: {', '.join(missing) if missing else 'none'}.")
@@ -152,6 +154,33 @@ def render(
     lines.append("Exclusions: " + ("; ".join(f"{item['scenario']} ({item['reason']}, reviewed by {item['reviewedBy']} on {item['since']})" for item in exclusions) if exclusions else "none") + ".")
     lines += ["", "The deterministic model test double proves the pipeline, not reasoning quality (ADR-015). A live model run is scored as its own group and never mixed with another model or prompt version.", ""]
     return "\n".join(lines)
+
+
+def _fidelity(packages: dict, environments: dict[str, dict]) -> list[str]:
+    labelled = [packages[key] for key in sorted(packages) if packages[key].fidelity is not None]
+    if not labelled:
+        return []
+    levels = ["contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"]
+    lines = [
+        "",
+        "## Environments and fidelity",
+        "",
+        "A scenario outside the local reference system says what in it is real, emulated and injected. An emulated result shows Sentinel's reasoning, and its adapters' contracts with AWS-shaped APIs; it is not evidence of how AWS itself behaves.",
+        "",
+        "| Scenario | Environment | Emulator in the scored run | " + " | ".join(level.capitalize() for level in levels) + " |",
+        "| --- | --- | --- | " + " | ".join("---" for _ in levels) + " |",
+    ]
+    for package in labelled:
+        environment = environments.get(package.id) or {}
+        emulator = environment.get("emulator")
+        digest = environment.get("imageDigest")
+        version = environment.get("provisioningVersion")
+        identity = (emulator + (f" ({digest})" if digest else "") + (f", provisioning v{version}" if version else "")) if emulator else "not recorded"
+        cells = ["; ".join(label.element for label in package.fidelity.labels if label.level == level) or "-" for level in levels]
+        lines.append(f"| {package.id} | {package.fidelity.environment} | {identity} | " + " | ".join(cells) + " |")
+    lines.append("")
+    lines.extend(f"- {package.id}: {package.fidelity.statement}" for package in labelled)
+    return lines
 
 
 def _calibration(calibrations: list[Calibration], reliabilities: list[SourceReliability]) -> list[str]:
@@ -194,6 +223,8 @@ def to_json(
     *,
     calibrations: list[Calibration] | None = None,
     reliabilities: list[SourceReliability] | None = None,
+    environments: dict[str, dict] | None = None,
+    fidelity: dict[str, dict] | None = None,
 ) -> str:
     return json.dumps(
         {
@@ -205,6 +236,8 @@ def to_json(
             "missingRuns": missing,
             "calibration": [asdict(item) for item in calibrations or []],
             "sourceReliability": [asdict(item) for item in reliabilities or []],
+            "environments": environments or {},
+            "fidelity": fidelity or {},
         },
         indent=2,
     ) + "\n"

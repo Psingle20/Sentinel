@@ -34,6 +34,8 @@ class Run:
     executions: list[dict] = field(default_factory=list)
     scenario_started_at: datetime | None = None
     legacy_baseline: str | None = None
+    # The reference environment the run used, as the scenario runner reported it: name, emulator, digest, provisioning.
+    environment: dict | None = None
 
     @property
     def legacy(self) -> bool:
@@ -70,6 +72,7 @@ def load_v2(path: Path) -> Run:
         versions=record.get("versions"),
         executions=list(data.get("agentExecutions", [])),
         scenario_started_at=parse_time(data.get("scenarioStartedAt")),
+        environment=data.get("environment"),
     )
 
 

@@ -6,6 +6,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "version", "kind", "manifest", "title", "groundTruth"],
+  "if": { "properties": { "id": { "pattern": "^AWS-" } } },
+  "then": { "required": ["fidelity"] },
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
@@ -27,6 +29,29 @@
           "action": { "type": "string", "description": "For action-failure: the action that fails, for example rollback." },
           "fromSeconds": { "type": "integer", "minimum": 0 },
           "untilSeconds": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "fidelity": {
+      "description": "What in the scenario is real, emulated and injected, after the AWS-emulated environment proposal's fidelity model, and so which claims its result supports (Phase E01). Required of a scenario outside the local reference system.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "statement", "labels"],
+      "properties": {
+        "environment": { "enum": ["local", "aws"] },
+        "statement": { "type": "string", "minLength": 1 },
+        "labels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["element", "level"],
+            "properties": {
+              "element": { "type": "string", "minLength": 1 },
+              "level": { "enum": ["contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"] }
+            }
+          }
         }
       }
     },

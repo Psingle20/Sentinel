@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -61,9 +62,13 @@ def main(argv: list[str] | None = None) -> int:
     reliabilities = [item for label in labels for item in reliability(label, [score for score in scores if score.label == label])]
     missing = sorted(set(packages) - {scenario_id for scenario_id, _ in runs})
 
+    # The environment each scenario's scored run used, beside the fidelity its package declares (Phase E01).
+    environments = {scenario_id: run.environment for scenario_id, run in latest_per_scenario(list(runs.values())).items() if run.environment}
+    fidelity = {key: asdict(package.fidelity) for key, package in sorted(packages.items()) if package.fidelity is not None}
+
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "report.md").write_text(render(dataset, packages, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities), encoding="utf-8")
-    (args.out / "report.json").write_text(to_json(dataset, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities), encoding="utf-8")
+    (args.out / "report.md").write_text(render(dataset, packages, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities, environments=environments), encoding="utf-8")
+    (args.out / "report.json").write_text(to_json(dataset, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities, environments=environments, fidelity=fidelity), encoding="utf-8")
     passed = all(result.passed for result in gates)
     print(f"Scored {len(runs)} run(s) against {len(packages)} package(s); gate {'passed' if passed else 'failed'}. Report: {args.out / 'report.md'}")
     return 1 if args.check and not passed else 0
