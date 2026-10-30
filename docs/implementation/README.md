@@ -40,6 +40,20 @@ The frontend follows the [framework-first design-system plan](../architecture/fr
 
 The [phase status ledger](phase-status.md) records each phase's status, the evidence for what it has delivered and its open exit criteria. Update it in the same change that moves a phase.
 
+## Enhancement phases
+
+Phases 00 to 10 implement the architecture document, and the [coverage matrix](coverage-matrix.md) is their completeness check. Enhancement phases, numbered `E01` onward, add capability the architecture permits but does not require: a new reference environment, a provider family, a scenario class, an integration. One is created when a design proposal under `docs/architecture/` is ready to be delivered, and more follow as features expand. Every enhancement phase:
+
+- starts from a Proposed design document under `docs/architecture/`, which it links as its design source and does not repeat; the phase document is the delivery view (outcome, ownership, entry evidence, workstreams, test plan, exit criteria, deferrals);
+- names the decision records it needs and gets them before implementation creates lock-in;
+- obeys the [universal definition of done](#universal-definition-of-done) and the [planning rules](#planning-rules), including the five-service boundary and the end-to-end suite;
+- enters the [phase status ledger](phase-status.md) when it is created and becomes Complete only when its exit criteria have evidence there;
+- appears in the coverage matrix's cross-cutting column where it touches an architecture section, but is never the primary phase for one.
+
+| Phase | Outcome | Design source | Depends on |
+| --- | --- | --- | --- |
+| [E01 – AWS-emulated reference environment](phase-e01-aws-emulated-reference-environment.md) | Non-deployment causes and non-rollback remedies, first with a queue in the existing reference system, then in an AWS-compatible environment behind an emulator gate | [Proposal](../architecture/aws-emulated-reference-environment.md) | 01, 06, 07 complete; ADR-011 amendment and ADR-021 |
+
 ## Universal definition of done
 
 Every phase must:

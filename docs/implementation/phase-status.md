@@ -30,6 +30,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API and pages, manual overrides, notifications, analytics, responder pages | Real-system journey tests, identity provider |
 | [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, first runbooks, threat model, failure scenarios `S4` and `S5`, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
+| [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | Not started | Nothing; the design proposal is written | Stage 0 decision evidence: emulator spike, ADR-011 amendment, ADR-021 |
 
 ## Recorded runs
 
@@ -286,6 +287,15 @@ Open:
 ## Phase 10 – Scale and evolution
 
 Status: **Not started**. Requires measured need and an ADR per item.
+
+## Phase E01 – AWS-emulated reference environment
+
+Status: **Not started**. The first enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e01-aws-emulated-reference-environment.md)). Its design source, the [AWS-emulated reference environment proposal](../architecture/aws-emulated-reference-environment.md), is Proposed as of 2026-10-30; no code, manifest or decision record exists yet.
+
+Open:
+
+- Stage 0 decision evidence: the one-day emulator spike with its operation matrix, the ADR-011 layout amendment and ADR-021 selecting the emulator.
+- Stage 0b, which needs no emulator: the queue-track scenarios in the existing reference system and the queue-related product changes in Contracts, Executor, Runtime and AgentWorker. This is where the first evidence will appear.
 
 ## Decisions this ledger surfaces
 

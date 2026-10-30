@@ -472,7 +472,7 @@ Keep this table synchronized with `PROJECT.json` and the scripts.
 
 - [Documentation index](docs/README.md)
 - [Architecture](docs/architecture/README.md): the [full architecture](docs/architecture/architecture.md), the [overview](docs/architecture/overview.md), the [product architecture diagram](docs/architecture/assets/sentinel-product-architecture.png) and the [frontend design system](docs/architecture/frontend-design-system.md)
-- [Phase-wise implementation plan](docs/implementation/README.md) and the [phase status ledger](docs/implementation/phase-status.md)
+- [Phase-wise implementation plan](docs/implementation/README.md) and the [phase status ledger](docs/implementation/phase-status.md); [enhancement phases](docs/implementation/README.md#enhancement-phases) extend the plan, starting with the [AWS-emulated reference environment](docs/implementation/phase-e01-aws-emulated-reference-environment.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [Business and API contracts](docs/business-contracts/README.md)
 - [Runbooks](docs/runbooks/README.md): emergency stop, models and spend, dead letters and projection rebuild; more arrive with the Phase 09 deployment definition.
