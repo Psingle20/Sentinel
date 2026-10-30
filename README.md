@@ -456,7 +456,7 @@ Findings are requested with the findings JSON Schema alongside the tools, so the
 | Lint | `powershell -NoProfile -File scripts/check.ps1 -Task lint` |
 | Build | `powershell -NoProfile -File scripts/check.ps1 -Task build` |
 
-Each task covers the .NET solution and `Sentinel.Web` and stops at the first failure; on Linux or macOS run the same script with `pwsh`. `build`, `test` and `lint` need no containers, except for the integration tests that start their own with Testcontainers. The .NET build treats analyzer and code-style warnings as errors, so `build` also enforces C# style. `lint` checks C# whitespace, runs ESLint with the design-system rules and typechecks the web app. [Sentinel.Web's README](apps/Sentinel.Web/README.md) lists its own commands.
+Each task covers the .NET solution and `Sentinel.Web` and stops at the first failure; on Linux or macOS run the same script with `pwsh`. `build`, `test` and `lint` need no containers, except for the integration tests that start their own with Testcontainers. `test` leaves out the AWS emulator's conformance tests ([ADR-021](docs/decisions/ADR-021-aws-emulator.md)), which need its pinned image and the Docker socket; run them with `dotnet test reference-system/tests/Reference.Tests --filter Category=Emulator`. The .NET build treats analyzer and code-style warnings as errors, so `build` also enforces C# style. `lint` checks C# whitespace, runs ESLint with the design-system rules and typechecks the web app. [Sentinel.Web's README](apps/Sentinel.Web/README.md) lists its own commands.
 
 The end-to-end suites start the whole system and drive real scenarios, so they take around half an hour:
 

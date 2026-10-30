@@ -1,7 +1,7 @@
 # ADR-011: Reference system location
 
 - Status: Accepted
-- Date: 2026-10-28; amended 2026-10-29 with the internal composition rule
+- Date: 2026-10-28; amended 2026-10-29 with the internal composition rule, and 2026-10-30 with the AWS-emulated environment layout
 
 ## Context
 
@@ -40,6 +40,18 @@ The reference system contains two kinds of code, and the [application compositio
 - **Nothing in the reference system references a `Sentinel.*` package**, including `Sentinel.Contracts` and `Sentinel.ServiceDefaults`. The isolation is symmetric: Sentinel does not know the fixture's code, and the fixture does not know Sentinel's.
 
 The guide's clutter inventory lists the reference-system files to split.
+
+### AWS-emulated environment (amendment, 2026-10-30)
+
+[Phase E01](../implementation/phase-e01-aws-emulated-reference-environment.md) adds a second reference environment that runs inside an AWS emulator, chosen in [ADR-021](ADR-021-aws-emulator.md). It stays inside this boundary and the AppHost, and follows the two composition levels above; the [proposal](../architecture/aws-emulated-reference-environment.md#proposed-repository-layout) gives the full tree.
+
+- `reference-system/deploy/aws/` holds the emulator's configuration and its pinned image digest.
+- `reference-system/services/Reference.QueueConsumer/` is a workload like checkout: the file and naming rules only, its fault in a clearly named file behind the control guard, and no building blocks.
+- `reference-system/scenarios/Reference.Scenarios.Infrastructure/` is new and holds the environment implementations, `Local` for today's behaviour and `Aws` for the AWS SDK calls, behind `IReferenceEnvironment` in `Reference.Scenarios.Application` and registered by their own dependency module. The scenario runner has had no Infrastructure project until now; the AWS SDK is the first dependency that justifies one.
+- Manifests and evaluation packages sit beside the existing ones. Queue-track scenarios built in the existing environment take the next free `S` numbers, from `S6`; AWS-track scenarios keep the `AWS-S` prefix and name the environment, account and region they run in.
+- Environment conformance tests live in `reference-system/tests/Reference.Tests/Aws/`, a folder of their own so the namespace does not shadow the hosting `Environments` class,, start the pinned emulator themselves and carry the `Emulator` trait.
+- In the AppHost, `AwsReferenceEnvironmentExtensions.cs` adds the `aws-emulator` resource and its workloads only when `Sentinel:ReferenceEnvironment=aws`, and returns `AwsReferenceEnvironmentResources` as `AddReferenceSystem()` returns `ReferenceSystemResources`. The existing environment remains the default.
+- AWS types never cross into Sentinel. Ingestion's and Executor's AWS adapters translate to canonical observations and typed actions, no `Sentinel.*` contract carries an AWS type, and replacing the emulator changes only `reference-system/` and the AppHost.
 
 ## Consequences
 

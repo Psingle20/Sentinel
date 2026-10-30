@@ -30,7 +30,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API and pages, manual overrides, notifications, analytics, responder pages, the responder journeys on the real system | The administrator journey on the real system, identity provider |
 | [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, local runbooks including key rotation and restore, threat model, failure scenarios `S4` and `S5`, a frozen message broker, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting, a whole-system restore drill |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
-| [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | Not started | Nothing; the design proposal is written | Stage 0 decision evidence: emulator spike, ADR-011 amendment, ADR-021 |
+| [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | In progress | Stage 0: Floci chosen and pinned (ADR-021), its operation matrix verified by conformance tests, the ADR-011 layout amendment | Stage 0b queue scenarios, the AWS environment in Aspire, `AWS-S0` and `AWS-S1` |
 | [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Not started | Nothing; the gap assessment is written | Tier 1: form and feedback primitives, the full token model, motion tokens and one status vocabulary |
 
 ## Recorded runs
@@ -299,12 +299,18 @@ Status: **Not started**. Requires measured need and an ADR per item.
 
 ## Phase E01 – AWS-emulated reference environment
 
-Status: **Not started**. The first enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e01-aws-emulated-reference-environment.md)). Its design source, the [AWS-emulated reference environment proposal](../architecture/aws-emulated-reference-environment.md), is Proposed as of 2026-10-30; no code, manifest or decision record exists yet.
+Status: **In progress**. The first enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e01-aws-emulated-reference-environment.md)). Its design source, the [AWS-emulated reference environment proposal](../architecture/aws-emulated-reference-environment.md), is Proposed as of 2026-10-30.
+
+Delivered:
+
+- Stage 0, decision evidence, on 2026-10-30. The owner chose Floci over LocalStack and MiniStack, and [ADR-021](../decisions/ADR-021-aws-emulator.md) records it, pinned to 2.3.0 by digest in [emulator.json](../../reference-system/deploy/aws/emulator.json), with the verified operation matrix, the known incompatibilities, the resource figures and the Docker-socket constraint. The matrix is the result of seven environment conformance tests that start the pinned image and exercise SQS with a dead-letter queue, an ECS service rolling out a real container, IAM and STS, account and region isolation, CloudWatch Logs and Metrics, and a reset that leaves no container behind; all pass: [Reference.Tests/Aws](../../reference-system/tests/Reference.Tests/Aws/). They carry the `Emulator` trait, which the default `test` task excludes.
+- The [ADR-011 amendment](../decisions/ADR-011-reference-system-location.md#aws-emulated-environment-amendment-2026-10-30) for the layout of the second environment.
 
 Open:
 
-- Stage 0 decision evidence: the one-day emulator spike with its operation matrix, the ADR-011 layout amendment and ADR-021 selecting the emulator.
-- Stage 0b, which needs no emulator: the queue-track scenarios in the existing reference system and the queue-related product changes in Contracts, Executor, Runtime and AgentWorker. This is where the first evidence will appear.
+- Stage 0b, which needs no emulator: the queue-track scenarios in the existing reference system and the queue-related product changes in Contracts, Executor, Runtime and AgentWorker. This is where the first scenario evidence will appear.
+- Stage 1: the `aws-emulator` resource in the AppHost behind `Sentinel:ReferenceEnvironment=aws`, the environment abstraction in the scenario runner, and `AWS-S0`; with it, gate check 9 with outbound access denied.
+- Stage 2: `AWS-S1` end to end, which also runs gate check 8 within a recorded budget.
 
 ## Phase E02 – Frontend design-system depth
 
@@ -318,7 +324,7 @@ Open:
 
 ## Decisions this ledger surfaces
 
-- Service-to-service authentication between the five services has no ADR; the [overview](../architecture/overview.md) lists it as open.
-- Approver identity has no ADR, although approvals are signed from Phase 01A and JWT identity exists.
+- Service-to-service authentication between the five services: [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) is Proposed and awaits the owner's decision.
+- Approver identity: [ADR-023](../decisions/ADR-023-approver-identity.md) is Proposed and awaits the owner's decision, although approvals are signed from Phase 01A and JWT identity exists.
 - [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md) is still Proposed, although its refactoring sequence has been carried out.
 - `packages/Sentinel.Testing` is a shared test-support package that [ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md) does not list.
