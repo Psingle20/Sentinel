@@ -164,6 +164,28 @@ public sealed class MessageDeliveryTests(MessagingInfrastructure infrastructure)
     }
 
     [Fact]
+    public async Task A_consumer_whose_group_the_broker_lost_creates_it_again_and_handles_each_message_once()
+    {
+        BillingBehavior behavior = new();
+        await using Services services = await StartAsync(behavior);
+        await PlaceOrderAsync(services.Orders, Guid.NewGuid());
+        await MessagingInfrastructure.EventuallyAsync(
+            async () => await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from invoices") == 1,
+            "billing invoices the first order");
+
+        // As if Redis restarted without its data for the group, while the stream itself survived.
+        (await infrastructure.Redis.GetDatabase().StreamDeleteConsumerGroupAsync(services.Stream, "billing")).ShouldBeTrue();
+        await PlaceOrderAsync(services.Orders, Guid.NewGuid());
+
+        await MessagingInfrastructure.EventuallyAsync(
+            async () => await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from invoices") == 2,
+            "billing invoices the order sent after the group was lost");
+        await MessagingInfrastructure.EventuallyAsync(async () => await PendingAsync(services.Stream) == 0, "both entries are acknowledged");
+        behavior.Attempts.ShouldBe(2, "the first order, delivered again from the start of the stream, is recognised by the inbox");
+        (await MessagingInfrastructure.ScalarAsync(services.BillingDb, "select count(*) from messaging.inbox")).ShouldBe(2);
+    }
+
+    [Fact]
     public async Task A_message_that_keeps_failing_is_dead_lettered_with_its_reason()
     {
         BillingBehavior behavior = new() { FailFirst = int.MaxValue };

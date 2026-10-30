@@ -19,7 +19,7 @@ Namespaces follow a type's role, not its assembly: every type lives under `Clean
 
 | Item | Value |
 | --- | --- |
-| Version | `0.1.0-alpha.8`, carried by `Directory.Build.props` |
+| Version | `0.1.0-alpha.9`, carried by `Directory.Build.props` |
 | Owner | Sentinel, during `0.x` ([ADR-013](../../docs/decisions/ADR-013-building-block-reuse.md)) |
 | License | None declared yet. Choose one before Stage F extraction |
 | Publication | Built from this directory by project reference; not published to a feed until extraction |

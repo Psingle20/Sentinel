@@ -11,6 +11,7 @@ namespace CleanArchitecture.BuildingBlocks.Infrastructure.Redis;
 /// Reads every stream the service consumes through a consumer group named after the service.
 /// Entries are acknowledged only after their handling commits; entries left pending by a
 /// crashed consumer are reclaimed, and entries that keep failing move to <c>&lt;stream&gt;.dlq</c>.
+/// A group the broker lost, for example by restarting without its data, is created again.
 /// </summary>
 internal sealed class RedisStreamsConsumer(
     IConnectionMultiplexer redis,
@@ -42,6 +43,7 @@ internal sealed class RedisStreamsConsumer(
             await EnsureGroupAsync(database, stream);
         }
 
+        var lost = new HashSet<string>(StringComparer.Ordinal);
         while (!stoppingToken.IsCancellationRequested)
         {
             int handled = 0;
@@ -49,7 +51,19 @@ internal sealed class RedisStreamsConsumer(
             {
                 try
                 {
+                    // Created again from the start of the stream, so what the stream still holds is delivered again and
+                    // the inbox recognises what was already handled.
+                    if (lost.Remove(stream))
+                    {
+                        await EnsureGroupAsync(database, stream);
+                    }
+
                     handled += await PollAsync(database, stream, stoppingToken);
+                }
+                catch (RedisServerException exception) when (exception.Message.StartsWith("NOGROUP", StringComparison.Ordinal))
+                {
+                    logger.LogWarning(exception, "Consumer group {Group} on stream {Stream} is gone; it is created again", _group, stream);
+                    lost.Add(stream);
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {

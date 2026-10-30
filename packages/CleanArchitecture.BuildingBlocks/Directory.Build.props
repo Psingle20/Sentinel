@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>alpha.8</VersionSuffix>
+    <VersionSuffix>alpha.9</VersionSuffix>
     <Title>Clean Architecture Building Blocks</Title>
     <Deterministic>true</Deterministic>
   </PropertyGroup>

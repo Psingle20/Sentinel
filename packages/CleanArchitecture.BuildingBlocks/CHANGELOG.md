@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-alpha.9 – 2026-10-30
+
+### Fixed
+
+- `Redis`: a consumer whose consumer group the broker lost, for example because Redis restarted without its data, creates the group again from the start of the stream and goes on reading. It used to log the `NOGROUP` error on every poll and read nothing until its service restarted. What the stream still holds is delivered again, and the inbox suppresses what was already handled.
+- `Directory.Build.props` carries `alpha.9`.
+
 ## 0.1.0-alpha.8 – 2026-10-29
 
 ### Added
