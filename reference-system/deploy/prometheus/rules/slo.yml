@@ -4,9 +4,11 @@ groups:
   - name: reference-slo
     interval: 5s
     rules:
+      # A run without a single failed checkout has no failure series at all; "or vector(0)" makes that a ratio of 0
+      # instead of no ratio, so a healthy SLO is measured as healthy rather than missing. With no traffic it stays absent.
       - record: slo:checkout_error_ratio:rate1m
         expr: |
-          sum(rate(reference_checkout_requests_total{outcome!="success"}[1m]))
+          (sum(rate(reference_checkout_requests_total{outcome!="success"}[1m])) or vector(0))
           / clamp_min(sum(rate(reference_checkout_requests_total[1m])), 1e-9)
       - record: slo:checkout_success:burn_rate1m
         expr: slo:checkout_error_ratio:rate1m / 0.01
