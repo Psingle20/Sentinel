@@ -1,5 +1,6 @@
 using CleanArchitecture.BuildingBlocks;
 using Reference.Scenarios.Application;
+using Reference.Scenarios.Infrastructure;
 
 namespace Reference.Scenarios.Api;
 
@@ -10,5 +11,6 @@ internal static class DependencyContainer
         services.AddModules(
             configuration,
             new ApplicationDependencyModule(),
+            new InfrastructureDependencyModule(),
             new ApiDependencyModule(environment));
 }

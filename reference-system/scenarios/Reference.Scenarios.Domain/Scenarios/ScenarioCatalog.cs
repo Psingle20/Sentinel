@@ -8,6 +8,7 @@ public sealed class ScenarioCatalog
     private static readonly string[] BaselineOutcomes = ["rollback", "abstain", "noIncident"];
     private static readonly string[] Expectations = ["above", "below"];
     private static readonly string[] Comparisons = ["lessThan", "lessThanOrEqual", "greaterThan", "greaterThanOrEqual"];
+    private static readonly string[] Environments = ["local", "aws"];
 
     private ScenarioCatalog(IReadOnlyDictionary<string, ScenarioManifest> manifests) => Manifests = manifests;
 
@@ -51,6 +52,16 @@ public sealed class ScenarioCatalog
         Require(manifest.WarmupSeconds >= 0 && manifest.DurationSeconds > 0, "warmup and duration must be positive.");
         Require(manifest.Steps.Count > 0, "a scenario needs at least one step.");
         Require(manifest.Steps.Select(step => step.AtSeconds).SequenceEqual(manifest.Steps.Select(step => step.AtSeconds).Order()), "steps must be in time order.");
+        Require(Environments.Contains(manifest.Environment), $"environment '{manifest.Environment}' is not one of {string.Join(", ", Environments)}.");
+        if (manifest.Environment == "aws")
+        {
+            Require(manifest.Account is { Length: 12 } account && account.All(char.IsAsciiDigit), "an AWS scenario names its 12-digit account.");
+            Require(!string.IsNullOrWhiteSpace(manifest.Region), "an AWS scenario names its region.");
+        }
+        else
+        {
+            Require(manifest.Account is null && manifest.Region is null, "only an AWS scenario names an account and a region.");
+        }
 
         foreach (ScenarioStep step in manifest.Steps)
         {

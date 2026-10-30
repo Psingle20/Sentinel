@@ -3,12 +3,12 @@ using Aspire.Hosting.ApplicationModel;
 
 namespace Sentinel.AppHost;
 
-/// <summary>The reference system's resources that Sentinel's services connect to (ADR-011).</summary>
+/// <summary>The reference system's resources that Sentinel's services connect to (ADR-011); no local queue-consumer in the AWS environment.</summary>
 internal sealed record ReferenceSystemResources(
     IResourceBuilder<ProjectResource> DeployController,
     IResourceBuilder<ProjectResource> ScenarioRunner,
     IResourceBuilder<ProjectResource> ReportingWorker,
-    IResourceBuilder<ProjectResource> QueueConsumer,
+    IResourceBuilder<ProjectResource>? QueueConsumer,
     IResourceBuilder<ContainerResource> Prometheus,
     IResourceBuilder<ContainerResource> Loki,
     IResourceBuilder<ContainerResource> Jaeger,

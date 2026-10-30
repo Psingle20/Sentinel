@@ -39,6 +39,10 @@ public sealed class RunsController(IRequestDispatcher requests) : ApiController
         {
             { Outcome: StartRunOutcome.Started, Run: { } run } => Results.Accepted($"/api/runs/{run.RunId}", run),
             { Outcome: StartRunOutcome.RunActive, Run: var active } => Results.Conflict(active),
+            { Outcome: StartRunOutcome.WrongEnvironment } => Results.Problem(
+                $"{body.ScenarioId} belongs to another reference environment than the one this runner drives.",
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Runs.WrongEnvironment"),
             _ => Results.NotFound()
         };
     }

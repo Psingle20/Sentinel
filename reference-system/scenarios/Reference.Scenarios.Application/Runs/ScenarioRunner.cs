@@ -10,6 +10,8 @@ namespace Reference.Scenarios.Application.Runs;
 /// <summary>
 /// Runs one scenario at a time: reset to baseline, warm up with healthy traffic, then execute
 /// each step at its offset. Resetting is idempotent, so a run always starts from the same state.
+/// The environment the runner drives carries out the reset and the steps, and a scenario runs only
+/// in the environment its manifest names.
 /// </summary>
 public sealed class ScenarioRunner(
     ScenarioCatalog catalog,
@@ -47,6 +49,14 @@ public sealed class ScenarioRunner(
         if (!catalog.Manifests.TryGetValue(scenarioId, out ScenarioManifest? manifest))
         {
             return (StartRunOutcome.UnknownScenario, null);
+        }
+
+        using (IServiceScope scope = scopes.CreateScope())
+        {
+            if (scope.ServiceProvider.GetRequiredService<IReferenceEnvironment>().Name != manifest.Environment)
+            {
+                return (StartRunOutcome.WrongEnvironment, null);
+            }
         }
 
         ScenarioRunView run;
@@ -103,9 +113,9 @@ public sealed class ScenarioRunner(
         try
         {
             await using AsyncServiceScope scope = scopes.CreateAsyncScope();
-            IReferenceControl control = scope.ServiceProvider.GetRequiredService<IReferenceControl>();
+            IReferenceEnvironment environment = scope.ServiceProvider.GetRequiredService<IReferenceEnvironment>();
 
-            await control.ResetAsync(stopping);
+            await environment.ResetAsync(stopping);
             Update(runId, run => run with { Phase = "warmup" });
             logger.LogInformation("Run {RunId}: reset done, warming up for {Seconds}s", runId, manifest.WarmupSeconds);
             await Task.Delay(TimeSpan.FromSeconds(manifest.WarmupSeconds), time, stopping);
@@ -122,7 +132,7 @@ public sealed class ScenarioRunner(
                     await Task.Delay(wait, time, stopping);
                 }
 
-                string? error = await ExecuteStepAsync(control, step, runId, stopping);
+                string? error = await ExecuteStepAsync(environment, step, runId, stopping);
                 int stepIndex = index;
                 DateTimeOffset executedAt = time.GetUtcNow();
                 Update(runId, run => run with
@@ -163,39 +173,15 @@ public sealed class ScenarioRunner(
         }
     }
 
-    private async Task<string?> ExecuteStepAsync(IReferenceControl control, ScenarioStep step, string runId, CancellationToken cancellationToken)
+    private async Task<string?> ExecuteStepAsync(IReferenceEnvironment environment, ScenarioStep step, string runId, CancellationToken cancellationToken)
     {
         logger.LogInformation("Run {RunId}: {Action} {Service} {Version} at +{At}s", runId, step.Action, step.Service, step.Version, step.AtSeconds);
         try
         {
-            switch (step.Action)
-            {
-                case "deploy":
-                case "configChange":
-                    await control.DeployAsync(step, runId, cancellationToken);
-                    break;
-                case "startBatch":
-                    await control.StartBatchAsync(step, cancellationToken);
-                    break;
-                case "stopBatch":
-                    await control.StopBatchAsync(cancellationToken);
-                    break;
-                case "poisonMessage":
-                    await control.InjectPoisonMessageAsync(step, cancellationToken);
-                    break;
-                case "duplicatePublication":
-                    await control.DuplicatePublicationAsync(step, cancellationToken);
-                    break;
-                case "slowConfirmations":
-                    await control.SlowConfirmationsAsync(step, cancellationToken);
-                    break;
-                default:
-                    return $"Unknown action {step.Action}.";
-            }
-
+            await environment.ActivateAsync(step, runId, cancellationToken);
             return null;
         }
-        catch (HttpRequestException exception)
+        catch (Exception exception) when (exception is HttpRequestException or ReferenceEnvironmentException)
         {
             logger.LogError(exception, "Run {RunId}: step {Action} {Service} failed", runId, step.Action, step.Service);
             return exception.Message;

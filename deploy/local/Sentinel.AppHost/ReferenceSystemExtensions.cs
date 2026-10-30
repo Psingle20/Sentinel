@@ -12,9 +12,11 @@ internal static class ReferenceSystemExtensions
     /// ADR-008), the observability stack Sentinel ingests from, the reference services, the queue
     /// consumer with a Redis of its own for its queue (Phase E01), the deploy controller, a Redis
     /// client exporter and the scenario runner. Tokens are generated
-    /// parameters kept in the AppHost's user secrets, never in source.
+    /// parameters kept in the AppHost's user secrets, never in source. With <paramref name="aws"/>
+    /// the queue-consumer runs as an ECS task in the AWS-emulated environment instead, and the
+    /// runner drives that environment (Phase E01).
     /// </summary>
-    public static ReferenceSystemResources AddReferenceSystem(this IDistributedApplicationBuilder builder)
+    public static ReferenceSystemResources AddReferenceSystem(this IDistributedApplicationBuilder builder, bool aws = false)
     {
         string root = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "..", "reference-system"));
         var generated = new GenerateParameterDefault { MinLength = 32, Special = false };
@@ -27,12 +29,6 @@ internal static class ReferenceSystemExtensions
         IResourceBuilder<ContainerResource> redis = builder.AddContainer($"{Prefix}-redis", "redis", "8.6")
             .WithEndpoint(targetPort: 6379, scheme: "tcp", name: "tcp")
             .WithArgs("--maxclients", "200", "--save", "", "--appendonly", "no");
-
-        // The queue-consumer's queue lives apart from the shared Redis, as a managed queue lives apart from a cache, so that
-        // S1's leak and S2's batch exhausting the shared Redis never back the queue up (S6).
-        IResourceBuilder<ContainerResource> queueRedis = builder.AddContainer($"{Prefix}-queue", "redis", "8.6")
-            .WithEndpoint(targetPort: 6379, scheme: "tcp", name: "tcp")
-            .WithArgs("--save", "", "--appendonly", "no");
 
         IResourceBuilder<ContainerResource> prometheus = builder.AddContainer("prometheus", "prom/prometheus", "v3.5.0")
             .WithContainerFiles("/etc/prometheus", Path.Combine(root, "deploy", "prometheus"))
@@ -60,11 +56,7 @@ internal static class ReferenceSystemExtensions
             .WithReference(orders)
             .WaitFor(orders);
         IResourceBuilder<ProjectResource> reporting = AddReferenceService<Projects.Reference_ReportingWorker>("reporting-worker");
-        IResourceBuilder<ProjectResource> queueConsumer = AddReferenceService<Projects.Reference_QueueConsumer>("queue-consumer")
-            .WithEnvironment("Reference__Redis", ReferenceExpression.Create($"{queueRedis.GetEndpoint("tcp").Property(EndpointProperty.HostAndPort)}"))
-            .WithReference(orders)
-            .WaitFor(queueRedis)
-            .WaitFor(orders);
+        IResourceBuilder<ProjectResource>? queueConsumer = aws ? null : AddQueueConsumer();
         AddReferenceService<Projects.Reference_RedisExporter>("redis-exporter");
 
         IResourceBuilder<ProjectResource> deployController = AddReferenceService<Projects.Reference_DeployController_Api>("deploy-controller")
@@ -72,20 +64,29 @@ internal static class ReferenceSystemExtensions
             .WithEnvironment("DeployController__ReadToken", readToken)
             .WithReference(checkout)
             .WithReference(orders)
-            .WithReference(reporting)
-            .WithReference(queueConsumer);
+            .WithReference(reporting);
 
         IResourceBuilder<ProjectResource> scenarioRunner = AddReferenceService<Projects.Reference_Scenarios_Api>("scenario-runner")
             .WithEnvironment("DeployController__DeployToken", deployToken)
             .WithReference(checkout)
             .WithReference(orders)
             .WithReference(reporting)
-            .WithReference(queueConsumer)
             .WithReference(deployController)
             .WaitFor(checkout)
             .WaitFor(deployController);
 
-        foreach (string scenario in new[] { "S0", "S1", "S2", "S3", "S6", "S7", "S8" })
+        if (queueConsumer is not null)
+        {
+            deployController.WithReference(queueConsumer);
+            scenarioRunner.WithReference(queueConsumer);
+        }
+        else
+        {
+            builder.AddAwsReferenceEnvironment(root, scenarioRunner);
+        }
+
+        // A scenario runs only in the environment its manifest names.
+        foreach (string scenario in aws ? ["AWS-S0"] : new[] { "S0", "S1", "S2", "S3", "S6", "S7", "S8" })
         {
             scenarioRunner.WithHttpCommand("/api/runs", $"Run {scenario}", commandName: $"run-{scenario.ToLowerInvariant()}", commandOptions: Command(controlToken, $$"""{"scenarioId":"{{scenario}}"}"""));
         }
@@ -95,6 +96,20 @@ internal static class ReferenceSystemExtensions
             .WithHttpCommand("/api/actions/stop-batch", "Stop reporting batch", commandName: "stop-batch", commandOptions: Command(controlToken, null));
 
         return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"));
+
+        // The queue-consumer's queue lives apart from the shared Redis, as a managed queue lives apart from a cache, so that
+        // S1's leak and S2's batch exhausting the shared Redis never back the queue up (S6).
+        IResourceBuilder<ProjectResource> AddQueueConsumer()
+        {
+            IResourceBuilder<ContainerResource> queueRedis = builder.AddContainer($"{Prefix}-queue", "redis", "8.6")
+                .WithEndpoint(targetPort: 6379, scheme: "tcp", name: "tcp")
+                .WithArgs("--save", "", "--appendonly", "no");
+            return AddReferenceService<Projects.Reference_QueueConsumer>("queue-consumer")
+                .WithEnvironment("Reference__Redis", ReferenceExpression.Create($"{queueRedis.GetEndpoint("tcp").Property(EndpointProperty.HostAndPort)}"))
+                .WithReference(orders)
+                .WaitFor(queueRedis)
+                .WaitFor(orders);
+        }
 
         IResourceBuilder<ProjectResource> AddReferenceService<TProject>(string name)
             where TProject : IProjectMetadata, new() =>

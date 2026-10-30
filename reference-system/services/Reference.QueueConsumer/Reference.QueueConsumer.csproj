@@ -1,8 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <Description>Reference queue-consumer. It processes order messages from a queue in its own Redis and confirms each order with order-service: a poison message keeps returning, receive after receive (S6), slow confirmations are retried at once (S7), and duplicate publications are booked twice (S8).</Description>
+        <Description>Reference queue-consumer. It processes order messages from a queue in its own Redis and confirms each order with order-service: a poison message keeps returning, receive after receive (S6), slow confirmations are retried at once (S7), and duplicate publications are booked twice (S8). In the AWS reference environment it runs as an ECS task on an SQS queue (Phase E01).</Description>
     </PropertyGroup>
+
+    <!--
+        The ECS task's image, published with `dotnet publish -t:PublishContainer` into the local Docker daemon, where the
+        emulator finds it without pulling. The base image is pinned by digest, like the emulator in emulator.json.
+    -->
+    <PropertyGroup>
+        <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee</ContainerBaseImage>
+        <ContainerRepository>reference-queue-consumer</ContainerRepository>
+        <ContainerImageTag>dev</ContainerImageTag>
+        <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.SQS" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Reference.Common\Reference.Common.csproj" />

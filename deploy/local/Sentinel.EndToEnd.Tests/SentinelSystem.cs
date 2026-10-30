@@ -40,19 +40,30 @@ public class SentinelSystem : IAsyncLifetime
     private static readonly string[] SentinelResources = ["ingestion-service", "runtime-service", "agent-worker-service", "executor-service", "gateway-service", "web"];
 
     private readonly bool _referenceOnly;
+    private readonly string _referenceEnvironment;
 
     public SentinelSystem()
         : this(referenceOnly: false)
     {
     }
 
-    protected SentinelSystem(bool referenceOnly) => _referenceOnly = referenceOnly;
+    /// <summary>The system with the reference environment <paramref name="referenceEnvironment"/>, local or the AWS-emulated one (Phase E01).</summary>
+    protected SentinelSystem(bool referenceOnly, string referenceEnvironment = "local")
+    {
+        _referenceOnly = referenceOnly;
+        _referenceEnvironment = referenceEnvironment;
+    }
 
     public DistributedApplication App { get; private set; } = null!;
 
     public ResourceLogs Logs { get; } = new();
 
-    public IReadOnlyList<string> ResourceNames => _referenceOnly ? ReferenceResources : [.. ReferenceResources, .. SentinelResources];
+    // In the AWS environment the queue-consumer runs as an ECS task in the emulator, not as a resource of its own.
+    public IReadOnlyList<string> ResourceNames =>
+        [
+            .. ReferenceResources.Select(resource => _referenceEnvironment == "aws" && resource == "queue-consumer" ? "aws-emulator" : resource),
+            .. _referenceOnly ? [] : SentinelResources
+        ];
 
     public ScenarioCatalog Scenarios { get; } = ScenarioCatalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "manifests"));
 
@@ -88,8 +99,8 @@ public class SentinelSystem : IAsyncLifetime
     {
         IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Sentinel_AppHost>(
             ModelProvider == ConfiguredModels
-                ? ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}"]
-                : ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}", $"Sentinel:ModelProvider={ModelProvider}"]);
+                ? ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}", $"Sentinel:ReferenceEnvironment={_referenceEnvironment}"]
+                : ["Sentinel:EphemeralStorage=true", $"Sentinel:ReferenceOnly={_referenceOnly}", $"Sentinel:ReferenceEnvironment={_referenceEnvironment}", $"Sentinel:ModelProvider={ModelProvider}"]);
         // Resource output goes only to the in-memory capture, printed when a test fails.
         builder.Services.AddLogging(logging => logging
             .ClearProviders()

@@ -15,8 +15,15 @@ bool ephemeral = builder.Configuration.GetValue<bool>("Sentinel:EphemeralStorage
 // never called by the suite, whatever roles it routes. Unset, AgentWorker's own configuration decides (ADR-015).
 string? modelProvider = builder.Configuration["Sentinel:ModelProvider"];
 
-// The system Sentinel observes and remediates (Phase 01, ADR-011).
-ReferenceSystemResources reference = builder.AddReferenceSystem();
+// The system Sentinel observes and remediates (Phase 01, ADR-011). Sentinel:ReferenceEnvironment=aws runs the
+// queue-consumer in the AWS-emulated environment instead of locally (Phase E01, ADR-021).
+string referenceEnvironment = builder.Configuration["Sentinel:ReferenceEnvironment"] ?? "local";
+if (referenceEnvironment is not ("local" or "aws"))
+{
+    throw new InvalidOperationException($"Sentinel:ReferenceEnvironment is '{referenceEnvironment}'; it must be 'local' or 'aws'.");
+}
+
+ReferenceSystemResources reference = builder.AddReferenceSystem(aws: referenceEnvironment == "aws");
 
 // Sentinel:ReferenceOnly=true starts the reference system alone, for its own scenario suite.
 if (!builder.Configuration.GetValue<bool>("Sentinel:ReferenceOnly"))
@@ -97,10 +104,13 @@ void AddSentinel()
         .WithEnvironment("Executor__Adapters__ReportingWorker__ControlToken", reference.ControlToken)
         .WithEnvironment("Executor__Adapters__QueueConsumer__ControlToken", reference.ControlToken)
         .WithReference(reference.ReportingWorker)
-        .WithReference(reference.QueueConsumer)
         .WithReference(reference.DeployController)
         .WithReference(runtime)
         .WithReference(gateway);
+    if (reference.QueueConsumer is { } queueConsumer)
+    {
+        executor.WithReference(queueConsumer);
+    }
 
     // The web app talks only to Sentinel.Gateway. Run `npm ci` in apps/Sentinel.Web once; the AppHost does not install packages.
     // Uses the stable JavaScript API; AddNextJsApp is still experimental (ASPIREJAVASCRIPT001).

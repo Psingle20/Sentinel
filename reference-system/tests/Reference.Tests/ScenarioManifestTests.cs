@@ -20,12 +20,13 @@ public sealed class ScenarioManifestTests
         [QueueRevisions.ServiceName] = QueueRevisions.Baseline
     };
 
-    public static TheoryData<string> ScenarioIds => new() { "S0", "S1", "S2", "S3", "S6", "S7", "S8" };
+    public static TheoryData<string> ScenarioIds => new() { "AWS-S0", "S0", "S1", "S2", "S3", "S6", "S7", "S8" };
 
     [Fact]
-    public void The_suite_contains_the_golden_case_five_confounders_and_a_control()
+    public void The_suite_contains_the_golden_case_five_confounders_and_two_controls()
     {
-        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        Catalog.Manifests["AWS-S0"].Kind.ShouldBe("control");
         Catalog.Manifests["S6"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S7"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S8"].Kind.ShouldBe("confounder");
@@ -33,6 +34,21 @@ public sealed class ScenarioManifestTests
         Catalog.Manifests["S2"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S3"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S0"].Kind.ShouldBe("control");
+    }
+
+    [Fact]
+    public void An_aws_scenario_names_its_account_and_region_and_a_local_one_names_neither()
+    {
+        ScenarioManifest aws = Catalog.Manifests["AWS-S0"];
+        aws.Environment.ShouldBe("aws");
+        aws.Account.ShouldBe("000000000000");
+        aws.Region.ShouldBe("us-east-1");
+        Catalog.Manifests.Values.Where(manifest => manifest.Environment == "local").ShouldAllBe(manifest => manifest.Account == null && manifest.Region == null);
+
+        ScenarioCatalog.Validate(aws with { Account = null }).ShouldContain(error => error.Contains("12-digit account", StringComparison.Ordinal));
+        ScenarioCatalog.Validate(aws with { Account = "1234" }).ShouldContain(error => error.Contains("12-digit account", StringComparison.Ordinal));
+        ScenarioCatalog.Validate(Catalog.Manifests["S6"] with { Region = "us-east-1" }).ShouldContain(error => error.Contains("only an AWS scenario", StringComparison.Ordinal));
+        ScenarioCatalog.Validate(aws with { Environment = "gcp" }).ShouldContain(error => error.Contains("environment 'gcp'", StringComparison.Ordinal));
     }
 
     [Theory]

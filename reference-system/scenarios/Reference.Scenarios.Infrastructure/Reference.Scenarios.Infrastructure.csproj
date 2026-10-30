@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Reference scenario runner infrastructure: the local and the AWS-emulated reference environments behind IReferenceEnvironment, the second driven through the AWS SDK against the pinned emulator (Phase E01).</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.ECS" />
+        <PackageReference Include="AWSSDK.SQS" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Reference.Scenarios.Application\Reference.Scenarios.Application.csproj" />
+    </ItemGroup>
+
+</Project>

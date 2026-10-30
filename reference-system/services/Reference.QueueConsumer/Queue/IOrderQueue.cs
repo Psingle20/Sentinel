@@ -1,8 +1,9 @@
 namespace Reference.QueueConsumer.Queue;
 
 /// <summary>
-/// The orders queue the consumer works from, in a Redis of its own: a received message stays out of sight until it is
-/// completed or returned, every receive is counted, and quarantined messages leave the queue. A queue that cannot be reached throws
+/// The orders queue the consumer works from: in the reference Redis by default, or an SQS queue in the AWS reference
+/// environment (Phase E01). Either way a received message stays out of sight until it is completed or returned, every
+/// receive is counted, and quarantined messages leave the queue. A queue that cannot be reached throws
 /// <see cref="QueueUnavailableException"/>.
 /// </summary>
 public interface IOrderQueue

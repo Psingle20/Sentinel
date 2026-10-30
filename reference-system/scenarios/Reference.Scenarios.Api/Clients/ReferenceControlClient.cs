@@ -18,7 +18,12 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
     {
         await SendControlAsync(HttpMethod.Post, Address("deploy-controller", "/_reference/reset"), cancellationToken);
         await StopBatchAsync(cancellationToken);
-        await SendControlAsync(HttpMethod.Post, Address("queue-consumer", "/_reference/queue/reset"), cancellationToken);
+        // In the AWS environment the queue-consumer runs as an ECS task, and the environment resets its queue itself.
+        if (configuration["services:queue-consumer:http:0"] is not null)
+        {
+            await SendControlAsync(HttpMethod.Post, Address("queue-consumer", "/_reference/queue/reset"), cancellationToken);
+        }
+
         await SendControlAsync(HttpMethod.Post, Address("order-service", "/_reference/orders/reset"), cancellationToken);
     }
 

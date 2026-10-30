@@ -35,10 +35,27 @@ public sealed class ScenarioRunnerEndpointTests
         using HttpResponseMessage unknown = await client.GetAsync(new Uri("/api/scenarios/S9", UriKind.Relative));
 
         JsonElement[] scenarios = [.. (await BodyAsync(list)).EnumerateArray()];
-        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).ShouldBe(["S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
         Names(scenarios[0]).ShouldBe(["id", "slug", "kind", "version", "description"]);
         (await BodyAsync(one)).GetProperty("steps").GetArrayLength().ShouldBeGreaterThan(0);
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task A_runner_refuses_a_scenario_of_another_environment()
+    {
+        await using var host = new ScenarioRunnerHost(Environments.Development);
+        using HttpClient client = host.CreateClient();
+
+        using HttpResponseMessage refused = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "AWS-S0" });
+        using HttpResponseMessage environment = await client.GetAsync(new Uri("/api/environment", UriKind.Relative));
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await BodyAsync(refused)).GetProperty("title").GetString().ShouldBe("Runs.WrongEnvironment");
+        JsonElement state = await BodyAsync(environment);
+        state.GetProperty("environment").GetString().ShouldBe("local");
+        state.GetProperty("ready").GetBoolean().ShouldBeTrue();
+        host.Reference.Calls.ShouldBeEmpty("a refused run resets nothing");
     }
 
     [Fact]

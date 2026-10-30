@@ -13,6 +13,7 @@ namespace Reference.Tests.Aws;
 /// emulator holds none of the first one's queues or clusters, and no task container the first one started outlives it.
 /// </summary>
 [Trait("Category", "Emulator")]
+[Collection(EmulatorCollection.Name)]
 public sealed class FlociResetTests(ITestOutputHelper output)
 {
     [Fact]

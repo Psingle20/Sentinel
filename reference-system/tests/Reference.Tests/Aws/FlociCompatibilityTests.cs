@@ -25,6 +25,7 @@ namespace Reference.Tests.Aws;
 /// these tests' results. The checks assert what the first scenarios need; a failure is an incompatibility to record.
 /// </summary>
 [Trait("Category", "Emulator")]
+[Collection(EmulatorCollection.Name)]
 public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputHelper output) : IClassFixture<FlociEmulator>
 {
     [Fact]
@@ -97,10 +98,25 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
         string second = await EcsWorkload.RegisterAsync(ecs, "2");
         await ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = cluster, Service = EcsWorkload.Service, TaskDefinition = second });
         Service rolled = await EcsWorkload.WaitForAsync(ecs, cluster, service => service.TaskDefinition == second && service.RunningCount == 1 && service.Deployments?.Single().RolloutState == DeploymentRolloutState.COMPLETED);
-        List<string> tasks = (await ecs.ListTasksAsync(new ListTasksRequest { Cluster = cluster, ServiceName = EcsWorkload.Service })).TaskArns ?? [];
-        List<Amazon.ECS.Model.Task> described = (await ecs.DescribeTasksAsync(new DescribeTasksRequest { Cluster = cluster, Tasks = tasks })).Tasks ?? [];
+
+        // Under load the service reports the rollout complete before the task list shows the new task (ADR-021), so the
+        // replacement is awaited on the tasks themselves.
+        var replaced = Stopwatch.StartNew();
+        List<Amazon.ECS.Model.Task> described = [];
+        while (replaced.Elapsed < TimeSpan.FromSeconds(60))
+        {
+            List<string> tasks = (await ecs.ListTasksAsync(new ListTasksRequest { Cluster = cluster, ServiceName = EcsWorkload.Service })).TaskArns ?? [];
+            described = (await ecs.DescribeTasksAsync(new DescribeTasksRequest { Cluster = cluster, Tasks = tasks })).Tasks ?? [];
+            if (described.Count > 0 && described.TrueForAll(task => task.TaskDefinitionArn == second))
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
         described.ShouldAllBe(task => task.TaskDefinitionArn == second, "the rollout replaced the first revision's task");
-        output.WriteLine($"Rolled out {rolled.TaskDefinition}; {described.Count} task(s) on it.");
+        output.WriteLine($"Rolled out {rolled.TaskDefinition}; {described.Count} task(s) on it, {replaced.Elapsed.TotalSeconds:F1} s after the service said so.");
 
         await ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = cluster, Service = EcsWorkload.Service, DesiredCount = 0 });
         await EcsWorkload.WaitForAsync(ecs, cluster, service => service.RunningCount == 0);

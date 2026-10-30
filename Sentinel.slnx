@@ -56,6 +56,7 @@
     <Project Path="reference-system/scenarios/Reference.Scenarios.Api/Reference.Scenarios.Api.csproj" />
     <Project Path="reference-system/scenarios/Reference.Scenarios.Application/Reference.Scenarios.Application.csproj" />
     <Project Path="reference-system/scenarios/Reference.Scenarios.Domain/Reference.Scenarios.Domain.csproj" />
+    <Project Path="reference-system/scenarios/Reference.Scenarios.Infrastructure/Reference.Scenarios.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/reference-system/services/">
     <Project Path="reference-system/services/Reference.Checkout/Reference.Checkout.csproj" />

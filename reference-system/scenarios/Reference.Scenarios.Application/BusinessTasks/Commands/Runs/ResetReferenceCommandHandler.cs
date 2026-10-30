@@ -4,11 +4,11 @@ using Reference.Scenarios.Application.Abstractions;
 
 namespace Reference.Scenarios.Application.BusinessTasks.Commands.Runs;
 
-public sealed class ResetReferenceCommandHandler(IReferenceControl reference) : ICommandHandler<ResetReferenceCommand>
+public sealed class ResetReferenceCommandHandler(IReferenceEnvironment environment) : ICommandHandler<ResetReferenceCommand>
 {
     public async Task<Result> Handle(ResetReferenceCommand command, CancellationToken cancellationToken)
     {
-        await reference.ResetAsync(cancellationToken);
+        await environment.ResetAsync(cancellationToken);
         return Result.Success();
     }
 }

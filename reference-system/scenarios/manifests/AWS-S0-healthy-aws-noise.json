@@ -1,0 +1,57 @@
+{
+  "id": "AWS-S0",
+  "slug": "healthy-aws-noise",
+  "version": 1,
+  "kind": "control",
+  "description": "The AWS-emulated environment at rest: the queue-consumer runs as an ECS service on an SQS queue with a dead-letter queue, processing four orders a second, and a benign queue-consumer v1.4.1 revision rolls out through ECS. No fault is injected.",
+  "environment": "aws",
+  "account": "000000000000",
+  "region": "us-east-1",
+  "affectedService": "queue-consumer",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 180,
+  "steps": [
+    { "atSeconds": 30, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "role": "noise" }
+  ],
+  "cause": null,
+  "confounders": [],
+  "detection": {
+    "expectIncident": false,
+    "service": "queue-consumer",
+    "metric": "queue_oldest_message_age",
+    "threshold": 60,
+    "withinSeconds": 180
+  },
+  "expectedObservations": [
+    {
+      "description": "The queue's oldest message stays younger than 10 s throughout, the new revision's rollout included.",
+      "query": "max(reference_queue_oldest_message_age_seconds)",
+      "expectation": "below",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 180
+    }
+  ],
+  "discriminatingSignals": [],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 2000,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 0,
+    "notes": "An ECS rollout replaces the consumer's task, so the queue briefly holds a few more messages; a detector that opens an incident for it is wrong."
+  },
+  "hypotheses": null,
+  "remediation": {
+    "permitted": [],
+    "falseRemediations": [ { "action": "rollback", "service": "queue-consumer" }, { "action": "quarantine-message", "service": "queue-consumer" } ]
+  },
+  "baseline": {
+    "outcome": "noIncident",
+    "service": null,
+    "fromVersion": null,
+    "toVersion": null,
+    "correct": true
+  },
+  "recovery": null
+}

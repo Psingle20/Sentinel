@@ -26,6 +26,13 @@ public sealed class ApiDependencyModule(IHostEnvironment environment) : IDepende
             throw new InvalidOperationException("DeployController:DeployToken and DeployController:ReadToken must be configured.");
         }
 
+        // The controller deploys the services the AppHost gives it an address for; in the AWS environment the
+        // queue-consumer is an ECS service and deploys through ECS instead (Phase E01).
+        foreach (string service in options.Services.Keys.Where(service => configuration[$"services:{service}:http:0"] is null).ToList())
+        {
+            options.Services.Remove(service);
+        }
+
         services.AddSingleton(options);
         services.TryAddSingleton(TimeProvider.System);
         services.AddFailureControl(configuration, environment);
