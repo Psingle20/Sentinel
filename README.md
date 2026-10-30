@@ -16,7 +16,7 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet; both are deliberate for now.
 
-Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 06 and 07 are complete, Phases 00, 01A, 05, 08 and 09 are in progress, and Phase 10 waits for measured need. All six reference scenarios pass end to end with the deterministic test double, and the golden scenario `S1` also passes with Meta's `muse-spark-1.3` investigating: it blames the faulty deployment, rolls it back after approval and verifies recovery. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
+Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. All six reference scenarios pass end to end with the deterministic test double, and Sentinel diagnoses `S1`, `S2` and `S3` correctly, two of which the deploy-blame baseline gets wrong. The golden scenario `S1` also passes with Meta's `muse-spark-1.3` investigating: it blames the faulty deployment, rolls it back after approval and verifies recovery. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
 
 Models run through Sentinel's own model interface. The default provider is a deterministic test double, so every local run and test is reproducible; the Meta model adapter is used only when it is configured with credentials (see [Getting started](#getting-started)).
 
@@ -475,7 +475,7 @@ Keep this table synchronized with `PROJECT.json` and the scripts.
 - [Phase-wise implementation plan](docs/implementation/README.md) and the [phase status ledger](docs/implementation/phase-status.md); [enhancement phases](docs/implementation/README.md#enhancement-phases) extend the plan, starting with the [AWS-emulated reference environment](docs/implementation/phase-e01-aws-emulated-reference-environment.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [Business and API contracts](docs/business-contracts/README.md)
-- [Runbooks](docs/runbooks/README.md): emergency stop, models and spend, dead letters and projection rebuild; more arrive with the Phase 09 deployment definition.
+- [Runbooks](docs/runbooks/README.md): emergency stop, models and spend, dead letters, projection rebuild, signing key rotation, and backup and restore; their production versions arrive with the Phase 09 deployment definition.
 - Generated diagrams and reports live under `artifacts/` with their sources and provenance, for example the [walking-skeleton comparison report](artifacts/reports/walking-skeleton/comparison.md).
 
 ## Verification

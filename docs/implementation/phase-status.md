@@ -2,7 +2,7 @@
 
 This ledger records what each [implementation phase](README.md) has delivered and which of its exit criteria remain open, with a link to the evidence for every claim. The phase documents define the work; this file is the only place that says how far it has got. A phase is **Complete** only when every exit criterion has evidence here. Update this file in the same change that moves a phase, and date the entry.
 
-- Last reviewed: 2026-10-30, after every test project, the web tests, the evaluation harness and all six end-to-end scenarios passed; see [Recorded runs](#recorded-runs).
+- Last reviewed: 2026-10-30, after every test project, the evaluation harness, all six end-to-end scenarios and the restart test passed, the last in one run that completed Phase 05; see [Recorded runs](#recorded-runs).
 - Evidence links point at code, tests, ADRs and generated reports inside this repository. A claim without a link is not evidence.
 
 ## Status legend
@@ -24,11 +24,11 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | Complete | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging, source health view | None |
 | [03 – Incident runtime](#phase-03--incident-runtime) | Complete | Event-sourced incidents, grains, Temporal workflow with every ADR-005 test, correlation, projections, PostgreSQL store tests | None |
 | [04 – AI investigation](#phase-04--ai-investigation) | Complete | Six specialists, typed tools, Meta adapter, profiles and spend caps, findings validation, blackboard, a live run with findings | None |
-| [05 – Verification and consensus](#phase-05--verification-and-consensus) | In progress | Deterministic adversarial verifier (`falsifiers-v2`), `consensus-v4` with dissent and abstention, replayable decisions | A correct diagnosis on `S3`, recorded end to end |
+| [05 – Verification and consensus](#phase-05--verification-and-consensus) | Complete | Deterministic adversarial verifier (`falsifiers-v2`), `consensus-v4` with dissent and abstention, replayable decisions, calibration and source reliability, correct diagnoses on `S1`–`S3` | None; live runs of `S2` and `S3` are remaining scope |
 | [06 – Safe remediation](#phase-06--safe-remediation) | Complete | Policy as code, autonomy modes, single-use capabilities, signed decisions, operator attestations, revocation, compensation, baseline-aware recovery | None; the managed signing facility is remaining scope |
 | [07 – Memory, replay and evaluation](#phase-07--memory-replay-and-evaluation) | Complete | Incident memory, replay levels 1–3, postmortems, similar incidents, retention, scenario packages, evaluation harness, baseline report | None |
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API and pages, manual overrides, notifications, analytics, responder pages | Real-system journey tests, identity provider |
-| [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, first runbooks, threat model, failure scenarios `S4` and `S5`, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting |
+| [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, local runbooks including key rotation and restore, threat model, failure scenarios `S4` and `S5`, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting, a whole-system restore drill |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
 | [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | Not started | Nothing; the design proposal is written | Stage 0 decision evidence: emulator spike, ADR-011 amendment, ADR-021 |
 
@@ -46,6 +46,8 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | Live `S1` on `muse-spark-1.3` | Passed | Every role on the `meta` profile, after prompt `investigator-v4` and `consensus-v3`: diagnosed, approved, rolled back and recovered, for an estimated $0.24. Two earlier live runs that day escalated and led to those fixes. |
 | 2026-10-30 | End-to-end `GoldenPathTests` and `FailureScenarioTests` | Passed | All six scenarios in one run on the final code, with prompt `investigator-v4` and `consensus-v3`, in 43 minutes. Two runs that day failed before any test, when Temporal never started; see Phase 09. |
 | 2026-10-30 | Evaluation harness | Passed | 30 harness tests; the [baseline report](../../artifacts/reports/evaluation/report.md) passes its gate. |
+| 2026-10-30 | End-to-end `GoldenPathTests`, `FailureScenarioTests` and `ServiceRestartTests` | Passed | All seven tests in one run in 50 minutes, with `consensus-v4`. `S3` was diagnosed correctly as the `order-service` v1.8.0 deployment at confidence 0.60, with a rollback of `order-service` proposed for approval. |
+| 2026-10-30 | Evaluation harness | Passed | 35 harness tests; the regenerated [report](../../artifacts/reports/evaluation/report.md) passes its gate, with the test double right on all five incident scenarios and the baseline on three. |
 
 ## Phase 00 – Foundations
 
@@ -62,12 +64,12 @@ Delivered:
 - ADR-001 to ADR-020, with ADR-020 still Proposed. Templates: [ADR](../decisions/TEMPLATE.md), [schema change](../business-contracts/schema-change-template.md).
 - Design system with tokens, themes, stories, accessibility and screenshot checks: [design-system](../../apps/Sentinel.Web/src/design-system/), [storybook.spec.ts](../../apps/Sentinel.Web/tests/visual/storybook.spec.ts) with baselines in [tests/__screenshots__](../../apps/Sentinel.Web/tests/__screenshots__/), [check-design-system.mjs](../../apps/Sentinel.Web/scripts/check-design-system.mjs).
 - Repeatable tasks: [scripts/check.ps1](../../scripts/check.ps1), [PROJECT.json](../../PROJECT.json).
+- Startup refuses a missing or blank secret, each tested: Executor's deploy token, without which it does not start, and its reporting control token, without which pause-batch has no adapter ([AdapterRegistrationTests](../../services/Sentinel.Executor/tests/Sentinel.Executor.Tests/AdapterRegistrationTests.cs)); Ingestion's deploy controller token ([ProviderRegistrationTests](../../services/Sentinel.Ingestion/tests/Sentinel.Ingestion.Tests/ProviderRegistrationTests.cs)); the deploy controller's own tokens ([DeployControllerConfigurationTests](../../reference-system/tests/Reference.Tests/DeployControllerConfigurationTests.cs)); and, as before, the model credentials and the reference control token.
 - The tenant, environment, service and incident on every consumer span and in the log scope of every message handler, and on incident requests at the Gateway, under the names in [SentinelTags](../../packages/Sentinel.ServiceDefaults/src/Sentinel.ServiceDefaults/SentinelTags.cs): [MessageContextTests](../../packages/CleanArchitecture.BuildingBlocks/tests/CleanArchitecture.BuildingBlocks.Infrastructure.Tests/MessageContextTests.cs), [TenantScopeTests](../../services/Sentinel.Gateway/tests/Sentinel.Gateway.Tests/TenantScopeTests.cs).
 
 Open:
 
 - A CI pipeline. None exists, so the design-system and package rules that require checks in CI are open too.
-- Missing-secret negative tests beyond model credentials and the reference control token.
 
 ## Phase 01 – Reference system
 
@@ -160,13 +162,12 @@ Delivered:
 - Prompt-injection fixtures in a runbook and in a log line, each refused when a model obeys it: [Telemetry.cs](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/Telemetry.cs), [SpecialistTests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/SpecialistTests.cs), [reporting-worker.md](../../reference-system/knowledge/reporting-worker.md).
 - Model telemetry for tokens, latency, cost, refused calls and rejected outputs, each tested: [AgentWorkerTelemetry](../../services/Sentinel.AgentWorker/src/Sentinel.AgentWorker.Application/Diagnostics/AgentWorkerTelemetry.cs), [SpecialistTests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/SpecialistTests.cs).
 
-Open from the test plan, not exit criteria:
-
-- Tests for tenant isolation in tools, and for the Meta adapter's rate limiting.
+- Tenant isolation in tools: every tool queries the investigation's tenant, environment and window, even when the model names another tenant, environment or a wider window in its arguments: [ToolScopeTests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/ToolScopeTests.cs).
+- Rate limiting: the Meta adapter reports a 429 as rate limited without retrying, and the investigation fails after that one call and says why, so a rate limit costs nothing more and Runtime decides with the roles that answered: [MetaModelProviderTests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/MetaModelProviderTests.cs), [InvestigationTests](../../services/Sentinel.AgentWorker/tests/Sentinel.AgentWorker.Tests/InvestigationTests.cs).
 
 ## Phase 05 – Verification and consensus
 
-Status: **In progress**.
+Status: **Complete**. Every exit criterion has evidence, and on 2026-10-30 Sentinel diagnosed `S1`, `S2` and `S3` correctly end to end with no false remediation, where the baseline remediated falsely on `S2` and `S3`.
 
 Delivered:
 
@@ -175,9 +176,11 @@ Delivered:
 - Calibration and source reliability measured by the evaluation harness: per investigator, the Brier score, a reliability table by stated confidence and the expected calibration error over its diagnoses, reported as calibrated only from 30 scored diagnoses with an error of at most 0.1, and per provider the share of evidence that matched the ground truth. With six scenarios Sentinel stays reported as uncalibrated, and the table shows the test double states less confidence than its accuracy earns: [calibration.py](../../scripts/evaluation/sentinel_eval/calibration.py), [test_evaluation.py](../../scripts/evaluation/tests/test_evaluation.py), [report](../../artifacts/reports/evaluation/report.md).
 - Confidence and hypothesis comparison in the web app: [confidence-display](../../apps/Sentinel.Web/src/design-system/domain/confidence-display.tsx), [hypothesis-comparison](../../apps/Sentinel.Web/src/design-system/patterns/hypothesis-comparison.tsx).
 
-Open:
+- Sentinel beats the deploy-blame baseline on `S1`–`S3`. With the test double it blames the faulty deployment on `S1`, the reporting batch on `S2`, where it never proposes a `checkout-service` rollback, and the `order-service` v1.8.0 deployment on `S3`, with zero false remediations; the baseline blames `checkout-service` every time, so it remediates falsely on `S2` and `S3`. The live model also diagnosed `S1` correctly: [report](../../artifacts/reports/evaluation/report.md), [GoldenPathTests](../../deploy/local/Sentinel.EndToEnd.Tests/GoldenPathTests.cs).
 
-- Beating the baseline on `S1`–`S3`. With the test double, Sentinel diagnoses `S1` and `S2` correctly and abstains on `S3`, with no false remediation, while the baseline remediates falsely on `S2` and `S3`; the live model also diagnosed `S1` correctly ([report](../../artifacts/reports/evaluation/report.md)). The criterion also asks for a correct diagnosis on `S3`, which is still open, and live runs of `S2` and `S3`.
+Remaining scope, not exit criteria:
+
+- Live runs of `S2` and `S3`. Only `S1` has run on a Meta model.
 
 ## Phase 06 – Safe remediation
 
@@ -283,7 +286,7 @@ Open:
 - Failure injection beyond `S4`, `S5` and single-service restarts, such as a slow database or a partitioned message broker.
 - A deployment runbook, and production versions of key rotation and restore, which arrive with the deployment definition.
 - A whole-system restore drill: every database restored together with an incident in flight, which then completes. Only Temporal's restore is tested so far, so the [backup and restore](../runbooks/backup-and-restore.md) steps are designed rather than proven.
-- The local stack sometimes fails to start: in two of eleven end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
+- The local stack sometimes fails to start: in two of thirteen end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
 
 ## Phase 10 – Scale and evolution
 

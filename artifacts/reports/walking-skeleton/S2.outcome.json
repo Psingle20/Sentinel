@@ -1,7 +1,7 @@
 {
   "scenarioId": "S2",
   "kind": "confounder",
-  "recordedAt": "2026-10-30T02:55:46.1180013+00:00",
+  "recordedAt": "2026-10-30T04:55:26.440413+00:00",
   "investigator": "sentinel-test-double/deterministic-analyst",
   "expectedCause": "reporting-worker batch saturated Redis connections",
   "expectedRemediation": "pause-batch reporting-worker (suggestion-only)",
