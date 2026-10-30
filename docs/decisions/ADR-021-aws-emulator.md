@@ -47,6 +47,22 @@ Verified on 2026-10-30 on Windows 11 with Docker Desktop by the environment conf
 
 The poison message moved to the dead-letter queue after exactly two receives, as its redrive policy asked, 6.7 seconds after it was sent.
 
+### Stage 1 results, 2026-10-30
+
+Phase E01's Stage 1 ran the same image through the AppHost and closed two of the open checks. Ten environment conformance tests now pass, one class at a time, and leave no container behind.
+
+| Gate check | Result | Evidence |
+| --- | --- | --- |
+| 1. Pin and start | Pass, through Aspire | `aws-emulator` starts from `emulator.json` under `Sentinel:ReferenceEnvironment=aws`, capped at 768 MB and 1.5 CPUs, and `AWS-S0` passed end to end through the AppHost in 4 min 42 s |
+| 4. A real containerized workload | Pass, with the real consumer | The queue-consumer's own image, 233 MB on the pinned ASP.NET base, ran as an ECS task on the emulator's SQS queue, processed its orders and confirmed them with an order-service on the host |
+| 6. Reset without stale resources | Pass, through the environment | The AWS environment's reset scales the consumer to zero, purges both queues, proves them empty and serves the baseline revision again, twice in a row; the AppHost removes the emulator's containers by label when it starts and stops |
+| 9. No external credentials, telemetry upload or paid services | Pass | On an internal Docker network with no default route, the emulator became healthy and created a queue, sent and received a message over the AWS JSON protocol |
+
+Two more facts the AWS environment depends on:
+
+- Under load, ECS reports a rollout `COMPLETED` before `ListTasks` shows the new task; a check of the replacement waits on the tasks themselves.
+- ECS tasks reach the host's endpoints, the OTLP receivers and order-service, through `host.docker.internal`, which Docker Desktop provides. A Linux Docker engine needs a host-gateway entry the task definitions do not yet carry.
+
 ### Known incompatibilities
 
 - An ECS task container outlives the emulator that started it; the environment must remove containers by label when it stops, and the conformance fixture does.
@@ -72,10 +88,11 @@ The poison message moved to the dead-letter queue after exactly two receives, as
 
 ## Follow-up work
 
-- Stage 1: the `aws-emulator` resource in the AppHost, reading `emulator.json`, on its own network with resource caps, enabled by `Sentinel:ReferenceEnvironment=aws`, removing the containers it started when it stops (Phase E01).
 - Gate check 8 with `AWS-S1`, and the local resource and time budget it records (Phase E01, Stage 2).
-- Gate check 9 with outbound network access denied once the image is present (Phase E01, Stage 1).
+- A host-gateway entry in the consumer's task definition for Linux Docker engines, before CI runs the AWS environment.
 - A check of partial ECS rollouts before `AWS-S9` is admitted, and of EventBridge before `AWS-S7` (Phase E01, Stage 4).
+
+Stage 1's `aws-emulator` resource and gate check 9, listed here when the decision was accepted, were done on 2026-10-30; see the Stage 1 results above.
 
 ## Revisit criteria
 

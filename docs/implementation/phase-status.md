@@ -30,8 +30,8 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API and pages, manual overrides, notifications, analytics, responder pages, the responder journeys on the real system | The administrator journey on the real system, identity provider |
 | [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, local runbooks including key rotation and restore, threat model, failure scenarios `S4` and `S5`, a frozen message broker, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting, a whole-system restore drill |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
-| [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | In progress | Stage 0: Floci chosen and pinned (ADR-021), its operation matrix verified by conformance tests, the ADR-011 layout amendment | Stage 0b queue scenarios, the AWS environment in Aspire, `AWS-S0` and `AWS-S1` |
-| [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Not started | Nothing; the gap assessment is written | Tier 1: form and feedback primitives, the full token model, motion tokens and one status vocabulary |
+| [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | In progress | Stage 0: Floci pinned (ADR-021). Stage 0b: the queue scenarios `S6`, `S7` and `S8`, each diagnosed end to end where the baseline rolls back an innocent deployment. Stage 1: the AWS environment in Aspire, with the consumer on ECS and SQS, and `AWS-S0` | Stage 2: `AWS-S1` with the AWS adapters; Stages 3 and 4. Stage 5 is deferred by the owner |
+| [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Not started | Nothing; the gap assessment is written | Tier 1: form and feedback primitives, the full token model, motion tokens and one status vocabulary. Linux screenshot baselines are deferred by the owner |
 
 ## Recorded runs
 
@@ -57,6 +57,13 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | Reference suite, `S1`–`S3` (run 21) | Passed | All three, right after run 20, so `S1` and `S3` ran twice in a row. |
 | 2026-10-30 | Floci conformance tests | Passed | Seven gate checks against the pinned 2.3.0 image in 42 seconds, no container left behind ([ADR-021](../decisions/ADR-021-aws-emulator.md)). |
 | 2026-10-30 | Evaluation harness | Passed | 35 harness tests; the regenerated [report](../../artifacts/reports/evaluation/report.md) passes its gate, with the test double right on all five incident scenarios and the baseline on three. |
+| 2026-10-30 | Full end-to-end regression (run 22) | Invalid, stopped | A configuration edit made during the run reached the running services, which Aspire starts from their project folders: AgentWorker's old binary refused prompt `investigator-v6` and the messaging-outage test timed out. No result of the run counts. |
+| 2026-10-30 | End-to-end `S7` and `S8` | `S8` passed; `S7` failed | `S7` abstained at confidence 0.42: the test double's duplicate rule read `S8`'s duplicates, minutes old but inside the lookback, as a rival cause. The queue rules now count only what is under way at onset. |
+| 2026-10-30 | End-to-end `S6`, `S7` and `S8` | `S7` and `S8` passed; `S6` failed | `S6` was diagnosed and its message quarantined, but a stall that timed out both Redis instances lost a message in flight for good, so the queue never looked recovered. The consumer now reclaims messages its workers abandon, as SQS's visibility timeout would. |
+| 2026-10-30 | Emulator conformance tests | Passed | Ten tests, one class at a time: the seven gate checks, the offline check 9, the AWS environment's lifecycle and the real consumer image on SQS. One rollout check first failed under parallel load and now waits on the tasks themselves. |
+| 2026-10-30 | Every .NET test project except the end-to-end suites, after Stage 0b and Stage 1 | Passed | Reference 75, AgentWorker 104 and Runtime 143 among them. |
+| 2026-10-30 | End-to-end `AWS-S0` through the AppHost | Passed on the second attempt | The first attempt lost its emulator: the AppHost's cleanup removed containers by a label the emulator itself carried. The second passed in 4 min 42 s, and nothing the emulator started outlived the AppHost. |
+| 2026-10-30 | Full end-to-end regression (run 23) | 16 of 17 passed | Every suite in 1 h 47 min: `AWS-S0`, the reference suite, the restart and outage tests, `S1`–`S8`, `S4` and `S5`. `S0` failed on the consumer, not on Sentinel: a receive that failed half-way left its message held with no worker on it, so the reclaim never returned it and the queue aged into an incident. A failed receive now releases its hold. The same review found that `AWS-S0`'s queue-age check had read a series by the wrong name and passed on no data; it now names the series and fails without one. |
 
 ## Phase 00 – Foundations
 
@@ -307,12 +314,18 @@ Delivered:
 
 - Stage 0, decision evidence, on 2026-10-30. The owner chose Floci over LocalStack and MiniStack, and [ADR-021](../decisions/ADR-021-aws-emulator.md) records it, pinned to 2.3.0 by digest in [emulator.json](../../reference-system/deploy/aws/emulator.json), with the verified operation matrix, the known incompatibilities, the resource figures and the Docker-socket constraint. The matrix is the result of seven environment conformance tests that start the pinned image and exercise SQS with a dead-letter queue, an ECS service rolling out a real container, IAM and STS, account and region isolation, CloudWatch Logs and Metrics, and a reset that leaves no container behind; all pass: [Reference.Tests/Aws](../../reference-system/tests/Reference.Tests/Aws/). They carry the `Emulator` trait, which the default `test` task excludes.
 - The [ADR-011 amendment](../decisions/ADR-011-reference-system-location.md#aws-emulated-environment-amendment-2026-10-30) for the layout of the second environment.
+- Stage 0b, the queue track in the existing reference system, on 2026-10-30. A queue-consumer with a queue of its own and three scenarios in which the latest deployment is innocent and the deploy-blame baseline would roll the consumer back:
+  - `S6`, a poison message: Sentinel diagnoses it, proposes the new `quarantine-message` action, which policy `policy-2026.10.3` sends for approval, quarantines it through Executor's queue adapter and verifies that the queue recovers.
+  - `S7`, retry amplification: order-service's confirmations slow down and the consumer's immediate retries amplify it. Sentinel blames order-service, not the consumer, and escalates, because no action it holds contains the retries.
+  - `S8`, duplicate delivery: orders published twice meet a booking that is not idempotent. Sentinel diagnoses `duplicate-delivery:queue-consumer` and escalates without a plan.
+  Prompt `investigator-v7` names the three causes; Ingestion adds the queue series; Runtime detects the queue's age and duplicate rate and plans the quarantine. Each scenario has an evaluation package, a baseline row and an end-to-end test, and the consumer has a runbook in the knowledge base. Two defects surfaced on the way and are fixed: Runtime cleared an incident once any of its service's detection rules had been quiet for two minutes, not only the rule that opened it, and the Redis queue lost a message whose receive reply or settle failed.
+- Stage 1, the healthy AWS environment, on 2026-10-30. `Sentinel:ReferenceEnvironment=aws` starts the pinned emulator as `aws-emulator` and publishes the consumer's image; the scenario runner drives the environment through `IReferenceEnvironment`, with the local and AWS implementations in the new `Reference.Scenarios.Infrastructure`, and provisions the SQS queue, its dead-letter queue and the consumer's ECS service through the public APIs. The consumer runs there on SQS and sends its telemetry to the same Prometheus, Loki and Jaeger; manifests name their environment, account and region, and a runner refuses another environment's scenario. `AWS-S0` passed through the AppHost, and gate check 9 passed with outbound access denied ([ADR-021](../decisions/ADR-021-aws-emulator.md#stage-1-results-2026-10-30)).
 
 Open:
 
-- Stage 0b, which needs no emulator: the queue-track scenarios in the existing reference system and the queue-related product changes in Contracts, Executor, Runtime and AgentWorker. This is where the first scenario evidence will appear.
-- Stage 1: the `aws-emulator` resource in the AppHost behind `Sentinel:ReferenceEnvironment=aws`, the environment abstraction in the scenario runner, and `AWS-S0`; with it, gate check 9 with outbound access denied.
-- Stage 2: `AWS-S1` end to end, which also runs gate check 8 within a recorded budget.
+- Stage 2: `AWS-S1` end to end with the change-and-topology adapter, queue attributes as metrics and the SQS quarantine adapter, which also runs gate check 8 within a recorded budget.
+- Stages 3 and 4: the CloudWatch adapters, provider conformance suites and fidelity labels; then `AWS-S4`, `AWS-S7` and `AWS-S12`.
+- Stage 5, real-cloud validation, is deferred by the owner.
 
 ## Phase E02 – Frontend design-system depth
 
@@ -322,7 +335,7 @@ Open:
 
 - Tier 1: `Label`, `Input`, `Select`, `Checkbox`, `Field` and `ActionResult`, with the feature code migrated onto them; typography, spacing, elevation, z-index and motion tokens with the lint rule extended; `Badge` made non-semantic.
 - Tier 2: theme selection with a light-theme end-to-end run; a tablet viewport and the responsive rules.
-- Tier 3: interaction stories, the `cn` and locale fixes, Linux baselines once CI exists.
+- Tier 3: interaction stories and the `cn` and locale fixes. Linux screenshot baselines are deferred by the owner until CI exists.
 
 ## Decisions this ledger surfaces
 
