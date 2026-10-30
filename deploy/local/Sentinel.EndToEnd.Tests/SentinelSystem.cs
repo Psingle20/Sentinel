@@ -99,7 +99,15 @@ public class SentinelSystem : IAsyncLifetime
         await App.StartAsync(startup.Token);
         foreach (string resource in ResourceNames)
         {
-            await App.ResourceNotifications.WaitForResourceHealthyAsync(resource, startup.Token);
+            try
+            {
+                await App.ResourceNotifications.WaitForResourceHealthyAsync(resource, startup.Token);
+            }
+            catch (Exception exception) when (exception is DistributedApplicationException or OperationCanceledException)
+            {
+                // A fixture's output reaches no test, so the resource's own last lines travel with the exception.
+                throw new InvalidOperationException($"{resource} did not become healthy.{Environment.NewLine}{Logs.Dump([resource, "temporal"], 80)}", exception);
+            }
         }
 
         Prometheus = new PrometheusClient(App.CreateHttpClient("prometheus", "http"));

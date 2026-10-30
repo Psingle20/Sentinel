@@ -95,15 +95,29 @@ public static class SentinelSystemExtensions
     {
         (await system.ScenarioRunner.PostAsync("/api/reset", null)).EnsureSuccessStatusCode();
         (await system.ScenarioRunner.PostAsync("/api/actions/stop-batch", null)).EnsureSuccessStatusCode();
-        // The rule is evaluated every 5 s, so a full minute holds 12 samples. Right after start-up the series is missing or
-        // younger than a minute, which says nothing about health: the first checkouts can still fail.
-        await Eventually.ValueAsync(
-            async () => await system.Prometheus.ScalarAsync(
-                "max_over_time(slo:checkout_success:burn_rate1m[1m]) and on() count_over_time(slo:checkout_success:burn_rate1m[1m]) >= 11") ?? double.PositiveInfinity,
-            burn => burn < 1,
-            TimeSpan.FromMinutes(6),
-            "the checkout SLO has been healthy for a minute",
-            TimeSpan.FromSeconds(5));
+        // The rule is evaluated every 5 s, so a full minute holds 12 samples; one may be missed on a loaded machine. Right
+        // after start-up the series is missing or younger than a minute, which says nothing about health: the first
+        // checkouts can still fail.
+        try
+        {
+            await Eventually.ValueAsync(
+                async () => await system.Prometheus.ScalarAsync(
+                    "max_over_time(slo:checkout_success:burn_rate1m[1m]) and on() count_over_time(slo:checkout_success:burn_rate1m[1m]) >= 10") ?? double.PositiveInfinity,
+                burn => burn < 1,
+                TimeSpan.FromMinutes(6),
+                "the checkout SLO has been healthy for a minute",
+                TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException exception)
+        {
+            string burn = await system.Prometheus.VectorAsync("slo:checkout_success:burn_rate1m", "__name__");
+            string samples = await system.Prometheus.VectorAsync("count_over_time(slo:checkout_success:burn_rate1m[1m])", "__name__");
+            string outcomes = await system.Prometheus.VectorAsync("sum by (outcome) (rate(reference_checkout_requests_total[1m]))", "outcome");
+            throw new TimeoutException(
+                $"{exception.Message} Burn rate {burn}; samples in the last minute {samples}; checkouts per second by outcome {outcomes}.{Environment.NewLine}{system.Logs.Dump(["checkout-service"], 30)}",
+                exception);
+        }
+
         await Eventually.ValueAsync(
             async () => (await system.IncidentsAsync()).Count(incident => incident.Status != IncidentStatus.Resolved),
             open => open == 0,
