@@ -55,7 +55,7 @@ internal static class ProviderRegistration
     }
 
     private static string Required(IConfiguration configuration, string key) =>
-        configuration[key] is { Length: > 0 } value
+        configuration[key] is { } value && !string.IsNullOrWhiteSpace(value)
             ? value
             : throw new InvalidOperationException($"{key} is not configured. Set it through local secret configuration or the orchestrator.");
 

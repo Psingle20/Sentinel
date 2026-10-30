@@ -17,9 +17,11 @@ internal static class AdapterRegistration
     public static IServiceCollection AddRemediationAdapters(this IServiceCollection services, IConfiguration configuration)
     {
         Uri deployController = ConfigurationValues.RequiredUri(configuration, "Executor:Adapters:DeployController:Endpoint");
-        string deployToken = configuration["Executor:Adapters:DeployController:Token"] is { Length: > 0 } token
-            ? token
-            : throw new InvalidOperationException("Executor:Adapters:DeployController:Token is not configured. Supply it through secret configuration or the orchestrator.");
+        string? deployToken = configuration["Executor:Adapters:DeployController:Token"];
+        if (string.IsNullOrWhiteSpace(deployToken))
+        {
+            throw new InvalidOperationException("Executor:Adapters:DeployController:Token is not configured. Supply it through secret configuration or the orchestrator.");
+        }
 
 #pragma warning disable EXTEXP0001
         // Both adapters are typed clients of IRemediationAdapter, and a typed client takes its service type's name unless
@@ -33,7 +35,8 @@ internal static class AdapterRegistration
 
         // The batch adapter is optional: without the worker's endpoint and control token, pause-batch has no adapter and is refused.
         if (configuration["Executor:Adapters:ReportingWorker:Endpoint"] is { Length: > 0 } reporting
-            && configuration["Executor:Adapters:ReportingWorker:ControlToken"] is { Length: > 0 } controlToken)
+            && configuration["Executor:Adapters:ReportingWorker:ControlToken"] is { } controlToken
+            && !string.IsNullOrWhiteSpace(controlToken))
         {
             services.AddHttpClient<IRemediationAdapter, ReportingBatchAdapter>(nameof(ReportingBatchAdapter), client =>
             {
