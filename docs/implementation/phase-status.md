@@ -24,7 +24,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | Complete | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging, source health view | None |
 | [03 – Incident runtime](#phase-03--incident-runtime) | Complete | Event-sourced incidents, grains, Temporal workflow with every ADR-005 test, correlation, projections, PostgreSQL store tests | None |
 | [04 – AI investigation](#phase-04--ai-investigation) | Complete | Six specialists, typed tools, Meta adapter, profiles and spend caps, findings validation, blackboard, a live run with findings | None |
-| [05 – Verification and consensus](#phase-05--verification-and-consensus) | Complete | Deterministic adversarial verifier (`falsifiers-v2`), `consensus-v4` with dissent and abstention, replayable decisions, calibration and source reliability, correct diagnoses on `S1`–`S3` | None; live runs of `S2` and `S3` are remaining scope |
+| [05 – Verification and consensus](#phase-05--verification-and-consensus) | Complete | Deterministic adversarial verifier (`falsifiers-v2`), `consensus-v4` with dissent and abstention, replayable decisions, calibration and source reliability, correct diagnoses on `S1`–`S3`, with the test double and with Meta's models | None |
 | [06 – Safe remediation](#phase-06--safe-remediation) | Complete | Policy as code, autonomy modes, single-use capabilities, signed decisions, operator attestations, revocation, compensation, baseline-aware recovery | None; the managed signing facility is remaining scope |
 | [07 – Memory, replay and evaluation](#phase-07--memory-replay-and-evaluation) | Complete | Incident memory, replay levels 1–3, postmortems, similar incidents, retention, scenario packages, evaluation harness, baseline report | None |
 | [08 – Product experience](#phase-08--product-experience) | In progress | Live updates, real identity, tenant scoping, control-plane API and pages, manual overrides, notifications, analytics, responder pages, the responder journeys on the real system | The administrator journey on the real system, identity provider |
@@ -51,6 +51,8 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | Every .NET test project except the end-to-end suites | Passed | 809 tests in 18 projects, after the signing key, tool scope, rate-limit and missing-secret changes. |
 | 2026-10-30 | End-to-end `S1` and `MessagingOutageTests` (run 14) | Failed | Both on the tests: the quiet check read a missing burn-rate series as healthy, so the outage test, first after start-up, began during the start-up burn and Sentinel rightly abstained on an incident with no change; and the browser gave the postmortem page, which `next dev` compiles on its first visit, only five seconds. Both fixed. |
 | 2026-10-30 | End-to-end `S1` with the browser journeys, and `MessagingOutageTests` (run 15) | Passed | Both in 16 minutes. |
+| 2026-10-30 | Live `S1`–`S3`, each role on its suggested profile and `changes` on `muse-wonder-1.0` (run 16) | Failed | `S2` and `S3` passed and were diagnosed correctly. `S1` was diagnosed correctly too, but the new browser journey asserted the test double's wording and failed before the approval; it now reads the expected texts from the incident. |
+| 2026-10-30 | Live `S1` (runs 17 to 19) | Passed on the third attempt | Run 17: Runtime failed to start while Temporal was running, with no logs to say why; start-up failures now carry the resource's last lines. Run 18: the quiet check never saw a healthy minute, because a minute holds 11 samples, not 12; it now needs 10 and says why when it gives up. Run 19 passed: diagnosed, approved in the browser, rolled back and recovered. The three live scenarios cost $0.99, plus an unrecorded share for run 16's `S1` and any start-up burn investigated in run 18. |
 | 2026-10-30 | Evaluation harness | Passed | 35 harness tests; the regenerated [report](../../artifacts/reports/evaluation/report.md) passes its gate, with the test double right on all five incident scenarios and the baseline on three. |
 
 ## Phase 00 – Foundations
@@ -181,10 +183,7 @@ Delivered:
 - Confidence and hypothesis comparison in the web app: [confidence-display](../../apps/Sentinel.Web/src/design-system/domain/confidence-display.tsx), [hypothesis-comparison](../../apps/Sentinel.Web/src/design-system/patterns/hypothesis-comparison.tsx).
 
 - Sentinel beats the deploy-blame baseline on `S1`–`S3`. With the test double it blames the faulty deployment on `S1`, the reporting batch on `S2`, where it never proposes a `checkout-service` rollback, and the `order-service` v1.8.0 deployment on `S3`, with zero false remediations; the baseline blames `checkout-service` every time, so it remediates falsely on `S2` and `S3`. The live model also diagnosed `S1` correctly: [report](../../artifacts/reports/evaluation/report.md), [GoldenPathTests](../../deploy/local/Sentinel.EndToEnd.Tests/GoldenPathTests.cs).
-
-Remaining scope, not exit criteria:
-
-- Live runs of `S2` and `S3`. Only `S1` has run on a Meta model.
+- The same on Meta's models, on 2026-10-30, with each role on its suggested profile and `changes` on `muse-wonder-1.0`: `S1` blamed on the `checkout-service` v2.4.1 deployment at confidence 0.89, approved, rolled back and recovered; `S2` on the reporting worker's Redis saturation at 0.89, escalated without a rollback; `S3` on the `order-service` v1.8.0 deployment at 0.78, with its rollback awaiting approval. No false remediation, evidence recall 96%, and $0.99 for the three runs: [report](../../artifacts/reports/evaluation/report.md), [runs](../../artifacts/reports/evaluation/runs/).
 
 ## Phase 06 – Safe remediation
 
@@ -292,7 +291,7 @@ Open:
 - Failure injection beyond `S4`, `S5`, single-service restarts and a frozen broker, such as a slow database or a broker that restarts without its data.
 - A deployment runbook, and production versions of key rotation and restore, which arrive with the deployment definition.
 - A whole-system restore drill: every database restored together with an incident in flight, which then completes. Temporal's and Runtime's databases are each tested restored into a new server ([IncidentWorkflowTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/IncidentWorkflowTests.cs), [RuntimeRestoreTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/RuntimeRestoreTests.cs)), but not every database together, so the [backup and restore](../runbooks/backup-and-restore.md) steps are designed rather than proven.
-- The local stack sometimes fails to start: in two of thirteen end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
+- The local stack sometimes fails to start: in two of thirteen end-to-end runs on 2026-10-29 and 30 the Temporal container was never created, and in run 17 Runtime failed to start although Temporal was running. A rerun succeeded each time, and the cause is not yet known. A start-up failure now reports the resource's and Temporal's last log lines, which the next occurrence should be read from.
 
 ## Phase 10 – Scale and evolution
 

@@ -25,6 +25,27 @@
       "cost": 0
     },
     {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "runs": 3,
+      "root_cause_accuracy": 1.0,
+      "consensus_accuracy": 1.0,
+      "acceptable_rate": 1.0,
+      "false_remediation_rate": 0.0,
+      "unsafe_executions": 0,
+      "fabricated_evidence": 0,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_precision": 0.545,
+      "evidence_recall": 0.963,
+      "unsupported_rate": 0.0,
+      "schema_failures": 1,
+      "mean_decision_seconds": 91.367,
+      "mean_recovery_seconds": 261.2,
+      "input_tokens": 292348,
+      "output_tokens": 115672,
+      "cost": 0.986289
+    },
+    {
       "label": "sentinel meta/muse-spark-1.3@investigator-v4",
       "runs": 1,
       "root_cause_accuracy": 1.0,
@@ -124,6 +145,60 @@
       "cost": 0,
       "confidence": null,
       "provider_evidence": {},
+      "notes": []
+    },
+    {
+      "scenario_id": "S1",
+      "investigator": "sentinel",
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": "change:deploy-controller:deployment:01a18bb5-d043-71ff-b339-99931cce5751:completed",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 31,
+      "evidence_precision": 0.484,
+      "evidence_recall": 1.0,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 1,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 172.6,
+      "decision_seconds": 102.4,
+      "recovery_seconds": 261.2,
+      "input_tokens": 96282,
+      "output_tokens": 37901,
+      "cost": 0.29039,
+      "confidence": 0.8936790095666854,
+      "provider_evidence": {
+        "deploy-controller": [
+          6,
+          6
+        ],
+        "loki": [
+          5,
+          3
+        ],
+        "jaeger": [
+          8,
+          0
+        ],
+        "prometheus": [
+          12,
+          6
+        ]
+      },
       "notes": []
     },
     {
@@ -237,6 +312,60 @@
     {
       "scenario_id": "S2",
       "investigator": "sentinel",
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "reporting-worker",
+      "leading_key": "redis-saturation:reporting-worker",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 29,
+      "evidence_precision": 0.517,
+      "evidence_recall": 1.0,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "pause-batch reporting-worker (suggestionOnly)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "escalated",
+      "detection_seconds": 178.2,
+      "decision_seconds": 87.0,
+      "recovery_seconds": null,
+      "input_tokens": 78407,
+      "output_tokens": 35722,
+      "cost": 0.299875,
+      "confidence": 0.8930771018455229,
+      "provider_evidence": {
+        "deploy-controller": [
+          6,
+          6
+        ],
+        "prometheus": [
+          12,
+          6
+        ],
+        "loki": [
+          4,
+          3
+        ],
+        "jaeger": [
+          7,
+          0
+        ]
+      },
+      "notes": []
+    },
+    {
+      "scenario_id": "S2",
+      "investigator": "sentinel",
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
       "legacy": false,
       "incident_opened": true,
@@ -284,6 +413,60 @@
         "jaeger": [
           2,
           0
+        ]
+      },
+      "notes": []
+    },
+    {
+      "scenario_id": "S3",
+      "investigator": "sentinel",
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "order-service",
+      "leading_key": "change:deploy-controller:deployment:01a18b94-d98e-7cd1-af9f-eec0912da481:completed",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 41,
+      "evidence_precision": 0.634,
+      "evidence_recall": 0.889,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "rollback order-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "awaitingApproval",
+      "detection_seconds": 263.5,
+      "decision_seconds": 84.7,
+      "recovery_seconds": null,
+      "input_tokens": 117659,
+      "output_tokens": 42049,
+      "cost": 0.396024,
+      "confidence": 0.7792031346669417,
+      "provider_evidence": {
+        "jaeger": [
+          8,
+          8
+        ],
+        "deploy-controller": [
+          13,
+          9
+        ],
+        "loki": [
+          7,
+          4
+        ],
+        "prometheus": [
+          14,
+          6
         ]
       },
       "notes": []
@@ -685,6 +868,51 @@
       "buckets": []
     },
     {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "decisions": 3,
+      "brier_score": 0.024,
+      "expected_calibration_error": 0.145,
+      "status": "uncalibrated",
+      "reason": "3 scored diagnoses; at least 30 are needed to call confidence calibrated.",
+      "buckets": [
+        {
+          "low": 0.5,
+          "high": 0.6,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.6,
+          "high": 0.7,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.7,
+          "high": 0.8,
+          "decisions": 1,
+          "mean_confidence": 0.779,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.8,
+          "high": 0.9,
+          "decisions": 2,
+          "mean_confidence": 0.893,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.9,
+          "high": 1.0,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        }
+      ]
+    },
+    {
       "label": "sentinel meta/muse-spark-1.3@investigator-v4",
       "decisions": 1,
       "brier_score": 0.016,
@@ -776,6 +1004,34 @@
     }
   ],
   "sourceReliability": [
+    {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "provider": "deploy-controller",
+      "evidence": 25,
+      "matching": 21,
+      "precision": 0.84
+    },
+    {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "provider": "jaeger",
+      "evidence": 23,
+      "matching": 8,
+      "precision": 0.348
+    },
+    {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "provider": "loki",
+      "evidence": 16,
+      "matching": 10,
+      "precision": 0.625
+    },
+    {
+      "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
+      "provider": "prometheus",
+      "evidence": 38,
+      "matching": 18,
+      "precision": 0.474
+    },
     {
       "label": "sentinel meta/muse-spark-1.3@investigator-v4",
       "provider": "deploy-controller",
