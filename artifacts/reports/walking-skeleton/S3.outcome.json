@@ -1,7 +1,7 @@
 {
   "scenarioId": "S3",
   "kind": "confounder",
-  "recordedAt": "2026-10-28T18:24:15.2149471+00:00",
+  "recordedAt": "2026-10-30T03:04:17.7227781+00:00",
   "investigator": "sentinel-test-double/deterministic-analyst",
   "expectedCause": "order-service v1.8.0 latency regression",
   "expectedRemediation": "rollback order-service (approval-required)",

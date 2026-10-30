@@ -1,0 +1,20 @@
+{
+  "scenarioId": "S1",
+  "kind": "golden",
+  "recordedAt": "2026-10-30T03:14:02.3559685+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "checkout-service v2.4.1 introduced a Redis connection leak",
+  "expectedRemediation": "rollback checkout-service (approval-required)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "The checkout-service v2.4.1 deployment caused the symptoms.",
+  "sentinelPlan": "rollback checkout-service v2.4.1 -\u003E v2.4.0",
+  "sentinelIncidentStatus": "Resolved",
+  "sentinelRecovery": "Recovered",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame checkout-service",
+  "baselinePlan": "rollback checkout-service",
+  "baselineCorrect": true,
+  "baselineFalseRemediation": false,
+  "approved": true
+}

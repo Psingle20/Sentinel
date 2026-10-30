@@ -43,6 +43,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | `lint` | Passed | |
 | 2026-10-30 | End-to-end `GoldenPathTests` and `FailureScenarioTests` | Passed | `S0` to `S4` in one run, after the adapter fix (22d5661); `S5` in a rerun after its own setup was fixed (b73d7fa). |
 | 2026-10-30 | Live `S1` on `muse-spark-1.3` | Passed | Every role on the `meta` profile, after prompt `investigator-v4` and `consensus-v3`: diagnosed, approved, rolled back and recovered, for an estimated $0.24. Two earlier live runs that day escalated and led to those fixes. |
+| 2026-10-30 | End-to-end `GoldenPathTests` and `FailureScenarioTests` | Passed | All six scenarios in one run on the final code, with prompt `investigator-v4` and `consensus-v3`, in 43 minutes. Two runs that day failed before any test, when Temporal never started; see Phase 09. |
 | 2026-10-30 | Evaluation harness | Passed | 30 harness tests; the [baseline report](../../artifacts/reports/evaluation/report.md) passes its gate. |
 
 ## Phase 00 – Foundations
@@ -284,6 +285,7 @@ Open:
 - Alerting on the SLOs. They are defined and measured, but nothing pages anyone yet; that arrives with the deployment definition.
 - Failure injection beyond `S4` and `S5`, such as a service restarted between steps or a slow database.
 - Runbooks for deployment, key rotation and restore, which arrive with the deployment definition.
+- The local stack sometimes fails to start: in two of eleven end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
 
 ## Phase 10 – Scale and evolution
 

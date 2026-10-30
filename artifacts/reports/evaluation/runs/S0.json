@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "scenarioId": "S0",
+  "packageVersion": 1,
+  "dataset": "scenarios-v1",
+  "recordedAt": "2026-10-30T03:19:19.4281073\u002B00:00",
+  "scenarioStartedAt": "2026-10-30T03:14:04.1678805\u002B00:00",
+  "approved": false,
+  "runRecord": null,
+  "agentExecutions": []
+}
