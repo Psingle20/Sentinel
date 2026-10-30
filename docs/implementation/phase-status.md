@@ -19,7 +19,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | Phase | Status | Delivered | Open exit criteria |
 | --- | --- | --- | --- |
 | [00 – Foundations](#phase-00--foundations) | In progress | Five layered services and the web app, building blocks, contracts with snapshots, design system, architecture tests, 20 ADRs | CI pipeline |
-| [01 – Reference system](#phase-01--reference-system) | Complete | Reference services, deploy controller, scenario runner, scenarios `S0`–`S3`, baseline, tests | None open; no recorded pass |
+| [01 – Reference system](#phase-01--reference-system) | Complete | Reference services, deploy controller, scenario runner, scenarios `S0`–`S3`, baseline, tests, trace continuity; the reference suite passed on 2026-10-30 | None |
 | [01A – Walking skeleton](#phase-01a--walking-skeleton) | In progress | Golden path across all services, end-to-end suite, `S1`, `S2` and `S3` records, a live `S1` run on Muse Spark | CI check |
 | [02 – Telemetry ingestion](#phase-02--telemetry-ingestion) | Complete | Six adapters with conformance tests, alerts, query contract with trust metadata, bulkhead, dead letters with tested replay, paging, source health view | None |
 | [03 – Incident runtime](#phase-03--incident-runtime) | Complete | Event-sourced incidents, grains, Temporal workflow with every ADR-005 test, correlation, projections, PostgreSQL store tests | None |
@@ -53,6 +53,9 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | End-to-end `S1` with the browser journeys, and `MessagingOutageTests` (run 15) | Passed | Both in 16 minutes. |
 | 2026-10-30 | Live `S1`–`S3`, each role on its suggested profile and `changes` on `muse-wonder-1.0` (run 16) | Failed | `S2` and `S3` passed and were diagnosed correctly. `S1` was diagnosed correctly too, but the new browser journey asserted the test double's wording and failed before the approval; it now reads the expected texts from the incident. |
 | 2026-10-30 | Live `S1` (runs 17 to 19) | Passed on the third attempt | Run 17: Runtime failed to start while Temporal was running, with no logs to say why; start-up failures now carry the resource's last lines. Run 18: the quiet check never saw a healthy minute, because a minute holds 11 samples, not 12; it now needs 10 and says why when it gives up. Run 19 passed: diagnosed, approved in the browser, rolled back and recovered. The three live scenarios cost $0.99, plus an unrecorded share for run 16's `S1` and any start-up burn investigated in run 18. |
+| 2026-10-30 | Reference suite, `ReferenceScenarioTests` (run 20) | Failed | Four of five passed, among them the new trace-continuity test; `S2`'s recovery check regressed inside its observation window. |
+| 2026-10-30 | Reference suite, `S1`–`S3` (run 21) | Passed | All three, right after run 20, so `S1` and `S3` ran twice in a row. |
+| 2026-10-30 | Floci conformance tests | Passed | Seven gate checks against the pinned 2.3.0 image in 42 seconds, no container left behind ([ADR-021](../decisions/ADR-021-aws-emulator.md)). |
 | 2026-10-30 | Evaluation harness | Passed | 35 harness tests; the regenerated [report](../../artifacts/reports/evaluation/report.md) passes its gate, with the test double right on all five incident scenarios and the baseline on three. |
 
 ## Phase 00 – Foundations
@@ -79,7 +82,7 @@ Open:
 
 ## Phase 01 – Reference system
 
-Status: **Complete** by repository evidence; no pass is recorded.
+Status: **Complete**. The reference suite passed on 2026-10-30, `S1`–`S3` in two runs one after the other ([Recorded runs](#recorded-runs)).
 
 Delivered:
 
@@ -87,13 +90,12 @@ Delivered:
 - The deploy controller with its ledger, and the scenario runner with traffic, reset and timeline execution: [DeploymentLedger](../../reference-system/deploy-controller/Reference.DeployController.Domain/Revisions/DeploymentLedger.cs), [ScenarioRunner](../../reference-system/scenarios/Reference.Scenarios.Application/Runs/ScenarioRunner.cs), [DeploymentLedgerTests](../../reference-system/tests/Reference.Tests/DeploymentLedgerTests.cs), [DeployControllerEndpointTests](../../reference-system/tests/Reference.Tests/DeployControllerEndpointTests.cs), [ScenarioRunnerEndpointTests](../../reference-system/tests/Reference.Tests/ScenarioRunnerEndpointTests.cs).
 - Failure controls exposed only when enabled, and guarded by a token: [FailureControl](../../reference-system/services/Reference.Common/Control/FailureControl.cs).
 - Manifests `S0`–`S3` with ground truth, discriminating signals and recovery, and the baseline definition: [manifests](../../reference-system/scenarios/manifests/), [ScenarioManifestTests](../../reference-system/tests/Reference.Tests/ScenarioManifestTests.cs), [deploy-blame.md](../../reference-system/scenarios/baseline/deploy-blame.md).
-- Symptom, signal and recovery checks for `S1`–`S3` across the real stack: [ReferenceScenarioTests](../../deploy/local/Sentinel.EndToEnd.Tests/ReferenceScenarioTests.cs).
+- Symptom, signal and recovery checks for `S1`–`S3` across the real stack, and a checkout traced as one trace across checkout, orders and Redis: [ReferenceScenarioTests](../../deploy/local/Sentinel.EndToEnd.Tests/ReferenceScenarioTests.cs).
 
 Caveats, not exit criteria:
 
-- "Runs repeatedly" rests on reset idempotency rather than on a repeated run.
-- `ReferenceScenarioTests` does not run `S0`.
-- No test checks trace continuity across checkout, orders and Redis.
+- `ReferenceScenarioTests` does not run `S0` as a scenario; its healthy-system test checks the same SLO without the runner.
+- `S2`'s recovery check regressed once inside its observation window, in run 20, and passed in run 21; the check now names the criterion and value that missed, for the next occurrence.
 
 ## Phase 01A – Walking skeleton
 
