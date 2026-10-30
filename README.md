@@ -404,7 +404,7 @@ flowchart TB
 | Event time | Watermarks and a late-data policy per source | [ADR-016](docs/decisions/ADR-016-event-time-and-late-data.md) |
 | Frontend | Next.js, React, TypeScript, Tailwind CSS, shadcn/ui and Radix UI on a governed design system | [ADR-002](docs/decisions/ADR-002-frontend-design-system.md) |
 
-All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still open: the production deployment environment, service-to-service authentication, and real approver identity before Phase 08.
+All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still open: the production deployment environment, service-to-service authentication, and real approver identity before Phase 08; [ADR-022](docs/decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](docs/decisions/ADR-023-approver-identity.md) propose the last two.
 
 ## Repository map
 

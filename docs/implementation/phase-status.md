@@ -264,7 +264,7 @@ Delivered:
 Open:
 
 - Journey tests against the real system. The web tests run against a mock API, and only approval is driven through the UI end to end.
-- A wired identity provider, and an ADR for approver identity.
+- A wired identity provider. [ADR-023](../decisions/ADR-023-approver-identity.md) proposes OpenID Connect sign-in in Sentinel.Web, with the tokens kept on its server and a recent multi-factor sign-in required to approve, and awaits a decision.
 - Structured editors for configuration areas. Each area is edited as its JSON document, which the owning service validates.
 
 ## Phase 09 – Production hardening
