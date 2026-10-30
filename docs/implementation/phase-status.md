@@ -31,6 +31,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, local runbooks including key rotation and restore, threat model, failure scenarios `S4` and `S5`, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting, a whole-system restore drill |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
 | [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | Not started | Nothing; the design proposal is written | Stage 0 decision evidence: emulator spike, ADR-011 amendment, ADR-021 |
+| [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Not started | Nothing; the gap assessment is written | Tier 1: form and feedback primitives, the full token model, motion tokens and one status vocabulary |
 
 ## Recorded runs
 
@@ -300,6 +301,16 @@ Open:
 
 - Stage 0 decision evidence: the one-day emulator spike with its operation matrix, the ADR-011 layout amendment and ADR-021 selecting the emulator.
 - Stage 0b, which needs no emulator: the queue-track scenarios in the existing reference system and the queue-related product changes in Contracts, Executor, Runtime and AgentWorker. This is where the first evidence will appear.
+
+## Phase E02 – Frontend design-system depth
+
+Status: **Not started**. The second enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e02-frontend-design-system-depth.md)). Its design source is the [frontend design-system plan](../architecture/frontend-design-system.md) and the [gap assessment of 2026-10-30](../architecture/frontend-design-system.md#gap-assessment-2026-10-30); the Phase 00 foundation it builds on is recorded under Phase 00 above.
+
+Open:
+
+- Tier 1: `Label`, `Input`, `Select`, `Checkbox`, `Field` and `ActionResult`, with the feature code migrated onto them; typography, spacing, elevation, z-index and motion tokens with the lint rule extended; `Badge` made non-semantic.
+- Tier 2: theme selection with a light-theme end-to-end run; a tablet viewport and the responsive rules.
+- Tier 3: interaction stories, the `cn` and locale fixes, Linux baselines once CI exists.
 
 ## Decisions this ledger surfaces
 

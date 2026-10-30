@@ -149,10 +149,34 @@ Add components only when the golden path needs them. Each new state is added to 
 
 ### Phase 08 product depth
 
+The design-system half of this work is delivered by [Phase E02 – Frontend design-system depth](../implementation/phase-e02-frontend-design-system-depth.md), from the gap assessment below.
+
 - Complete domain components and product patterns for all responder and administrator journeys.
 - Validate responsive layouts, large evidence sets and reconnect/degraded states.
 - Complete accessibility, theme and visual-regression coverage.
 - Use real workflow states and contracts rather than mock-only presentation states.
+
+## Gap assessment (2026-10-30)
+
+A review of the implemented system against this plan, two days after the Phase 00 foundation landed. The stack and the rules are right and unusually well enforced; the gaps are breadth and the second half of the token model, and [Phase E02](../implementation/phase-e02-frontend-design-system-depth.md) closes them.
+
+What works:
+
+- Enforcement is real: Tailwind's default palette is removed, the lint rule rejects arbitrary values and palette classes in feature code, inline styles and competing libraries fail lint, and stylesheets may live only in the design-system folder.
+- The semantic vocabulary matches what a responder must distinguish, every tone has a strong and a subtle step in both themes, and the foundation palette chooses its four steps for contrast.
+- Accessibility is built in: status badges pair icon with label, data states announce as `status` or `alert`, the shell has a skip link, cards are labelled by their titles, the evidence graph lists every relation as text, and all 56 stories pass axe at WCAG 2.2 AA and a screenshot in both themes.
+- `DataState`, `ConfidenceDisplay` and `HypothesisComparison` encode product rules, not only looks.
+
+What is missing:
+
+| Gap | Evidence | Consequence |
+| --- | --- | --- |
+| Breadth | Ten primitives; no input, label, select, checkbox, tabs, alert, dropdown or toast | Feature code writes the label-plus-control block and the server-action result paragraph by hand in five or six places |
+| Token model | Colour, one radius and three durations exist; typography, spacing, elevation and z-index do not; the motion tokens are unused | Headings and labels use raw `text-sm` and `text-xl`; numbers rarely use tabular figures; the lint rule cannot cover tokens that do not exist |
+| Two colour vocabularies | Sentinel semantic tokens beside the shadcn recipe set, with chart and sidebar tokens unused and a destructive `Badge` beside `StatusBadge` | Authors must know which set is meant for them |
+| Theme selection | The root layout hard-codes dark; the light theme is reachable only in Storybook | Styling rule 7 is not true in the app |
+| Responsive and platform coverage | One 1280 px viewport in Playwright; a handful of `lg:` breakpoints; Windows-only screenshot baselines | Narrow screens are untested; the CI acceptance criterion stays open |
+| Small inconsistencies | `cn` from an npm package while the shadcn config aliases a local utility; a hard-coded locale; the graph's pixel constants not declared as the visualization exception | Minor drift from the rules |
 
 ## Acceptance criteria
 

@@ -4,7 +4,7 @@
 - [Editable product architecture source (SVG)](assets/sentinel-product-architecture.svg)
 - [Full Sentinel product architecture](architecture.md)
 - [Concise architecture overview](overview.md)
-- [Frontend design system](frontend-design-system.md)
+- [Frontend design system](frontend-design-system.md): stack, rules, token model and the 2026-10-30 gap assessment; deepened by [Phase E02](../implementation/phase-e02-frontend-design-system-depth.md)
 - [Application composition and CQRS guide](application-composition-and-cqrs.md)
 - [Threat model](threat-model.md): trust boundaries, mitigations with evidence, open risks and the status of the 2026-10-29 review findings
 - [Service-level objectives](service-level-objectives.md): what Sentinel itself promises, the metric behind each promise and what to do when a budget is spent

@@ -47,6 +47,8 @@ The Playwright web servers build the app and serve the built Storybook themselve
 
 ## Design-system rules enforced in code
 
+The system's open gaps and the order they are closed in are [Phase E02](../../docs/implementation/phase-e02-frontend-design-system-depth.md).
+
 - Tailwind's default palette is removed: classes such as `bg-red-500` do not exist. Colors come from semantic tokens such as `bg-surface-panel`, `text-incident-critical` or `bg-evidence-supporting-subtle`.
 - `npm run lint` rejects, in `src/app`, `src/features` and `stories`: arbitrary values such as `w-[37px]`, raw palette classes, and `style` props. Bracketed state variants such as `data-[state=open]:` are allowed.
 - Imports of competing UI, CSS or CSS-in-JS libraries fail lint and the dependency check. Adding one requires an ADR.
