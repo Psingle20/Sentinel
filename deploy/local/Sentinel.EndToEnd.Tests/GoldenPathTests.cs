@@ -176,6 +176,85 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         }
     }
 
+    /// <summary>
+    /// S7 (Phase E01): order-service's confirmations slow down and the queue-consumer's immediate retries amplify it, and a
+    /// benign consumer deployment serves before the incident opens. Sentinel blames order-service, not the consumer, and
+    /// escalates, because no action it holds contains the retries; it neither rolls the consumer back nor quarantines
+    /// its messages.
+    /// </summary>
+    [Fact]
+    public async Task S7_retry_amplification_blames_the_slow_dependency_and_escalates_without_touching_the_consumer()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S7");
+        try
+        {
+            IncidentDetail incident = await system.WaitForIncidentAsync(
+                detail => detail.Summary.AffectedServiceId.Value == "queue-consumer" && detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated or IncidentStatus.Resolved,
+                DetectionTimeout,
+                "S7 is decided");
+            Log(incident);
+
+            incident.Summary.Status.ShouldBe(IncidentStatus.Escalated);
+            incident.Decision!.Outcome.ShouldBe(DecisionOutcome.Diagnosed);
+            incident.Hypotheses.Single(hypothesis => hypothesis.Finding.HypothesisId == incident.Decision.LeadingHypothesisId).Finding.Key.ShouldBe("dependency-regression:order-service");
+            incident.Plan.ShouldBeNull("no action Sentinel holds contains the consumer's retries");
+            incident.Execution.ShouldBeNull();
+            (await system.SentinelRollbacksAsync("queue-consumer")).ShouldBe(0, "the consumer's deployment was innocent");
+
+            await system.RecordOutcomeAsync("S7", incident, approved: false);
+            await EvaluationRun.WriteAsync(system, "S7", incident, approved: false);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
+    /// <summary>
+    /// S8 (Phase E01): duplicate publications meet a booking that is not idempotent, and a benign consumer deployment
+    /// serves before the incident opens. Sentinel diagnoses the duplicates and escalates, because no action it holds
+    /// makes the consumer idempotent; nothing rolls the consumer back, which is what the deploy-blame baseline would do.
+    /// </summary>
+    [Fact]
+    public async Task S8_duplicate_delivery_is_diagnosed_and_escalated_without_a_rollback()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S8");
+        try
+        {
+            IncidentDetail incident = await system.WaitForIncidentAsync(
+                detail => detail.Summary.AffectedServiceId.Value == "queue-consumer" && detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated or IncidentStatus.Resolved,
+                DetectionTimeout,
+                "S8 is decided");
+            Log(incident);
+
+            incident.Summary.Status.ShouldBe(IncidentStatus.Escalated);
+            incident.Decision!.Outcome.ShouldBe(DecisionOutcome.Diagnosed);
+            incident.Hypotheses.Single(hypothesis => hypothesis.Finding.HypothesisId == incident.Decision.LeadingHypothesisId).Finding.Key.ShouldBe("duplicate-delivery:queue-consumer");
+            incident.Plan.ShouldBeNull("no action Sentinel holds makes the consumer idempotent");
+            incident.Execution.ShouldBeNull();
+            (await system.SentinelRollbacksAsync("queue-consumer")).ShouldBe(0, "the consumer's deployment was innocent");
+
+            await system.RecordOutcomeAsync("S8", incident, approved: false);
+            await EvaluationRun.WriteAsync(system, "S8", incident, approved: false);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
     /// <summary>S0, the healthy control: changes and noise without an SLO burn must open no incident.</summary>
     [Fact]
     public async Task S0_the_healthy_control_opens_no_incident()

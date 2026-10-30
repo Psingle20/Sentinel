@@ -125,6 +125,66 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task In_retry_amplification_every_specialist_blames_the_slow_dependency_and_the_retries_support_it()
+    {
+        var telemetry = Telemetry.RetryAmplification();
+        string orders = HypothesisKeys.DependencyRegression(ServiceId.From("order-service"));
+        string deployment = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d12:started"));
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 120);
+        InvestigationRun logs = await Run(telemetry, InvestigationRoles.Logs, 120);
+        InvestigationRun traces = await Run(telemetry, InvestigationRoles.Traces, 120);
+
+        foreach (InvestigationRun run in new[] { metrics, logs, traces })
+        {
+            HypothesisFinding cause = run.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == orders);
+            cause.SuspectedServiceId.ShouldBe(ServiceId.From("order-service"));
+            cause.SupportingEvidenceIds.ShouldNotBeEmpty();
+            run.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == HypothesisKeys.PoisonMessage(ServiceId.From("queue-consumer")));
+        }
+
+        metrics.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == deployment).ContradictingEvidenceIds.ShouldNotBeEmpty();
+        metrics.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("the retries add to order-service's load", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Duplicates_that_ended_before_the_symptoms_began_are_not_a_cause()
+    {
+        Telemetry telemetry = Telemetry.RetryAmplification().WithEarlierDuplicates();
+        string duplicates = HypothesisKeys.DuplicateDelivery(ServiceId.From("queue-consumer"));
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 120);
+        InvestigationRun logs = await Run(telemetry, InvestigationRoles.Logs, 120);
+
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == duplicates);
+        logs.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == duplicates);
+        metrics.Completed.Hypotheses.ShouldContain(hypothesis => hypothesis.Key == HypothesisKeys.DependencyRegression(ServiceId.From("order-service")));
+    }
+
+    [Fact]
+    public async Task In_duplicate_delivery_metrics_and_logs_find_orders_booked_twice_without_redeliveries_and_contradict_the_later_deployment()
+    {
+        var telemetry = Telemetry.DuplicateDelivery();
+        string duplicates = HypothesisKeys.DuplicateDelivery(ServiceId.From("queue-consumer"));
+        string deployment = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d11:started"));
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 70);
+        InvestigationRun logs = await Run(telemetry, InvestigationRoles.Logs, 70);
+
+        foreach (InvestigationRun run in new[] { metrics, logs })
+        {
+            HypothesisFinding cause = run.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == duplicates);
+            cause.SuspectedServiceId.ShouldBe(ServiceId.From("queue-consumer"));
+            cause.SupportingEvidenceIds.ShouldNotBeEmpty();
+            run.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == deployment).ContradictingEvidenceIds.ShouldNotBeEmpty();
+            run.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == HypothesisKeys.PoisonMessage(ServiceId.From("queue-consumer")));
+        }
+
+        metrics.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("not redeliveries", StringComparison.Ordinal));
+        logs.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("orders booked again from a second message", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Runbook_text_is_quoted_as_data_and_never_becomes_evidence()
     {
         Telemetry telemetry = Telemetry.ConnectionLeak().WithPlantedRunbook();

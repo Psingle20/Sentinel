@@ -52,6 +52,8 @@ internal static class Harness
         options.Metrics["request_rate"] = "Requests per second.";
         options.Metrics["queue_max_receive_count"] = "Highest receive count of a message in a queue.";
         options.Metrics["queue_processed_rate"] = "Messages processed per second.";
+        options.Metrics["queue_duplicate_rate"] = "Orders booked again per second.";
+        options.Metrics["queue_retry_rate"] = "Calls retried per second.";
         return options;
     }
 

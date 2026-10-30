@@ -18,6 +18,9 @@ public static class HypothesisKeys
     /// <summary>A message the consumer cannot process, failing on every receive (Phase E01).</summary>
     public static string PoisonMessage(ServiceId consumer) => $"poison-message:{consumer}";
 
+    /// <summary>Messages delivered more than once meeting processing that is not idempotent (Phase E01).</summary>
+    public static string DuplicateDelivery(ServiceId consumer) => $"duplicate-delivery:{consumer}";
+
     public const string ExternalDependency = "external-dependency";
 
     /// <summary>The key this key refines, or null for a top-level key.</summary>

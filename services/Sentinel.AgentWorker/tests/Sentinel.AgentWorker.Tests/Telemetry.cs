@@ -121,6 +121,60 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         return telemetry;
     }
 
+    /// <summary>
+    /// S8: from 0 s every other order is published twice and booked twice, though every message is received once; a
+    /// benign queue-consumer v1.4.1 serves from 50 s; the duplicate rate passed the onset threshold at 5 s.
+    /// </summary>
+    public static Telemetry DuplicateDelivery()
+    {
+        var telemetry = new Telemetry { AffectedService = "queue-consumer", _onset = 5 };
+        telemetry.Deployment("queue-consumer", "v1.4.1", "v1.4.0", "d11", 30, 50);
+        telemetry.Series("queue_duplicate_rate", "queue-consumer", second => second < 1 ? 0 : 2.0);
+        telemetry.Series("queue_max_receive_count", "queue-consumer", _ => 1);
+        telemetry.Series("queue_processed_rate", "queue-consumer", _ => 6.0);
+        telemetry.Signature("queue-consumer", "Order ord-<n> was booked again from message msg-<n>-retry; it had been booked already", 140, 1, 70);
+        return telemetry;
+    }
+
+    /// <summary>
+    /// S7: order-service's confirmations slow from 0 s; from 40 s every queue-consumer attempt gives up after 800 ms and is
+    /// retried at once; a benign queue-consumer v1.4.1 serves from 80 s; the queue's oldest message passed the onset
+    /// threshold at 50 s.
+    /// </summary>
+    public static Telemetry RetryAmplification()
+    {
+        var telemetry = new Telemetry { AffectedService = "queue-consumer", _onset = 50 };
+        telemetry.Deployment("queue-consumer", "v1.4.1", "v1.4.0", "d12", 60, 80);
+        for (int second = -120; second <= 120; second += 5)
+        {
+            telemetry.Metric("latency_p95", "order-service", second, second < 0 ? 0.03 : Math.Min(2, 0.03 + 0.02 * second));
+            telemetry.Metric("queue_retry_rate", "queue-consumer", second, second < 40 ? 0 : 7.5);
+            telemetry.Metric("queue_oldest_message_age", "queue-consumer", second, second < 40 ? 0.2 : second - 40);
+        }
+
+        telemetry.Series("latency_p95", "checkout-service", _ => 0.05);
+        telemetry.Series("queue_max_receive_count", "queue-consumer", _ => 1);
+        telemetry.Signature("queue-consumer", "Attempt <n> to confirm order ord-<n> gave up on order-service after 800 ms; retrying at once", 400, 40, 120);
+        for (int second = 40; second <= 120; second += 10)
+        {
+            telemetry.Span("queue-consumer", "order-service", second, 800);
+        }
+
+        return telemetry;
+    }
+
+    /// <summary>An earlier scenario's duplicate bookings, over a minute before this incident's window starts to burn.</summary>
+    public Telemetry WithEarlierDuplicates()
+    {
+        for (int second = -120; second <= 120; second += 5)
+        {
+            Metric("queue_duplicate_rate", "queue-consumer", second, second < -60 ? 2.0 : 0);
+        }
+
+        Signature("queue-consumer", "Order ord-<n> was booked again from message msg-<n>-retry; it had been booked already", 120, -120, -60);
+        return this;
+    }
+
     /// <summary>A runbook that carries an instruction addressed to AI agents: data, never a command.</summary>
     public Telemetry WithPlantedRunbook()
     {

@@ -31,9 +31,21 @@ public static class InvestigatorPrompt
     /// </summary>
     public const string V5 = "investigator-v5";
 
-    public const string Version = V5;
+    /// <summary>
+    /// Phase E01: v5 with the <c>duplicate-delivery</c> key and the rule that orders processed twice while every message
+    /// is received once are duplicate publications meeting processing that is not idempotent.
+    /// </summary>
+    public const string V6 = "investigator-v6";
 
-    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4, V5];
+    /// <summary>
+    /// Phase E01: v6 with the rule that a consumer retrying at once while a dependency slows is amplifying the
+    /// dependency's slowdown, not causing it.
+    /// </summary>
+    public const string V7 = "investigator-v7";
+
+    public const string Version = V7;
+
+    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4, V5, V6, V7];
 
     public static bool IsKnown(string version) => Versions.Contains(version);
 
@@ -74,8 +86,8 @@ public static class InvestigatorPrompt
             - Record evidence that contradicts a hypothesis as well as evidence that supports it.
             - Give every hypothesis a key from this vocabulary so investigators' explanations merge:
               change:<deployment observation ID> for a change; redis-saturation[:<culprit service>];
-              dependency-regression[:<dependency service>]; load-change:<service>; external-dependency{(KnowsMessages(version) ? "; poison-message:<consumer service> for a message its consumer cannot process" : string.Empty)}.
-            - A deployment can cause a symptom only after its new version starts serving.{(KnowsMessages(version) ? MessageRule : string.Empty)}
+              dependency-regression[:<dependency service>]; load-change:<service>; external-dependency{(KnowsMessages(version) ? "; poison-message:<consumer service> for a message its consumer cannot process" : string.Empty)}{(KnowsDuplicates(version) ? "; duplicate-delivery:<consumer service> for messages delivered twice and processed twice" : string.Empty)}.
+            - A deployment can cause a symptom only after its new version starts serving.{(KnowsMessages(version) ? MessageRule : string.Empty)}{(KnowsDuplicates(version) ? DuplicateRule : string.Empty)}{(KnowsRetries(version) ? RetryRule : string.Empty)}
             - List what you could not determine under "unknowns".
             - If the data cannot support a conclusion, abstain and say what is missing.{(version == V2 ? string.Empty : MemoryRule)}
 
@@ -94,6 +106,14 @@ public static class InvestigatorPrompt
     private static readonly string MessageRule = Environment.NewLine
         + "- A message that fails on every receive while other messages are processed is a cause of its own: its receive" + Environment.NewLine
         + "  count and the queue's oldest-message age rise. A deployment that began serving after its first failure did not cause it.";
+
+    private static readonly string DuplicateRule = Environment.NewLine
+        + "- Orders processed twice while every message is received once are duplicate publications meeting processing that" + Environment.NewLine
+        + "  is not idempotent, not redeliveries. A deployment that began serving after the first duplicate did not cause them.";
+
+    private static readonly string RetryRule = Environment.NewLine
+        + "- A consumer that retries at once while a dependency is already slowing amplifies the dependency's slowdown; the" + Environment.NewLine
+        + "  dependency is the cause. Name it with dependency-regression:<dependency>, not a cause in the consumer.";
 
     /// <summary>The task, given as data: the model cannot mistake incident fields for instructions.</summary>
     public static string Task(InvestigateIncident command) => Task(command, Version);
@@ -155,6 +175,12 @@ public static class InvestigatorPrompt
 
     /// <summary>Whether the version names message-level causes, from v5.</summary>
     public static bool KnowsMessages(string version) => version is not (V2 or V3 or V4);
+
+    /// <summary>Whether the version names duplicate delivery, from v6.</summary>
+    public static bool KnowsDuplicates(string version) => version is not (V2 or V3 or V4 or V5);
+
+    /// <summary>Whether the version names retry amplification, from v7.</summary>
+    public static bool KnowsRetries(string version) => version is not (V2 or V3 or V4 or V5 or V6);
 
     /// <summary>
     /// A tool result as the model reads it. From v4 it opens with the call's ID, so evidence can cite the call; earlier

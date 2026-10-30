@@ -178,6 +178,16 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         // A message received this often is failing on every receive, not on a passing fault.
         private const int PoisonReceives = 3;
 
+        // Orders booked again this often a second are a pattern, not one unlucky redelivery.
+        private const double DuplicateRate = 0.5;
+
+        // Calls retried this often a second are a storm, not an occasional slow attempt.
+        private const double RetryRate = 1.0;
+
+        // An excursion counts when it was under way at onset: from this long before it to half a minute after.
+        private static readonly TimeSpan OngoingBefore = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan OngoingAfter = TimeSpan.FromSeconds(30);
+
         public static string Run(Conversation conversation, bool singleHypothesis, bool fabricate)
         {
             var output = new Findings();
@@ -191,9 +201,11 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             ContradictFlatConnections(output, connections, surges, changes);
             Regression[] regressions = LatencyRegressions(conversation, output, changes, onset);
             ContradictChangesAfterRegression(conversation, output, regressions, changes);
+            RetryAmplification(conversation, output, regressions, changes, onset);
             LoadChange(conversation, output, onset);
             LogSignatures(conversation, output, changes, onset);
-            PoisonMessages(conversation, output, changes);
+            PoisonMessages(conversation, output, changes, onset);
+            DuplicateDeliveries(conversation, output, changes, onset);
             SlowCalls(conversation, output, changes);
             Topology(conversation, output);
 
@@ -405,6 +417,41 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             }
         }
 
+        /// <summary>
+        /// R11 (Phase E01): a consumer retrying at once while a dependency was already slowing. The retries add to the
+        /// dependency's load, so they support the dependency's regression, not a cause in the consumer.
+        /// </summary>
+        private static void RetryAmplification(Conversation conversation, Findings output, Regression[] regressions, Change[] changes, DateTimeOffset onset)
+        {
+            foreach (Series retries in SeriesOf(conversation, "queue_retry_rate"))
+            {
+                if (Ongoing(retries, onset, 0) is not { } samples || samples.MaxBy(sample => sample.Value) is not { Value: >= RetryRate } peak)
+                {
+                    continue;
+                }
+
+                Sample first = samples.First(sample => sample.Value >= RetryRate / 2);
+                foreach (Regression regression in regressions.Where(regression => regression.Start.At <= first.At))
+                {
+                    string dependency = regression.Series.Service;
+                    Change? cause = changes.FirstOrDefault(change => change.Service == dependency && change.Kind is "deploy" or "rollback" && change.ServingFrom is { } serving && serving <= regression.Start.At);
+                    string hypothesis = cause is not null
+                        ? output.Hypothesis(cause.Key, $"The {cause.Service} {cause.Version} deployment slowed {cause.Service}.", [$"deploy {cause.Service} {cause.Version}", $"{cause.Service} latency regression", $"{retries.Service} retries", "symptoms"], cause.Service, cause.StartedId)
+                        : output.Hypothesis($"dependency-regression:{dependency}", $"{dependency} slowed down, and {conversation.AffectedService} timed out waiting for it.", [$"{dependency} latency regression", $"{retries.Service} retries at once", $"{conversation.AffectedService} stops keeping up"], dependency, null);
+                    output.Evidence(
+                        hypothesis,
+                        $"{retries.Service} began retrying calls at once at {first.At:O}, up to {peak.Value:G3} a second by {peak.At:O}, after {dependency} had begun slowing at {regression.Start.At:O}: the retries add to {dependency}'s load rather than cause its slowdown.",
+                        "supports",
+                        0.5,
+                        [first.Id, peak.Id],
+                        first.At,
+                        peak.At,
+                        "call_queue_retry_rate",
+                        $"retries:{retries.Service}");
+                }
+            }
+        }
+
         /// <summary>R6: a change in load is always a plausible alternative; request rate supports or contradicts it.</summary>
         private static void LoadChange(Conversation conversation, Findings output, DateTimeOffset onset)
         {
@@ -473,17 +520,16 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         /// rising and its failures repeat in the logs under one message ID; a change that began serving after the first
         /// failure cannot explain it.
         /// </summary>
-        private static void PoisonMessages(Conversation conversation, Findings output, Change[] changes)
+        private static void PoisonMessages(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
         {
-            foreach (Series receives in SeriesOf(conversation, "queue_max_receive_count").Where(series => series.Samples.Count > 0))
+            foreach (Series receives in SeriesOf(conversation, "queue_max_receive_count"))
             {
-                Sample peak = receives.Samples.MaxBy(sample => sample.Value)!;
-                if (peak.Value < PoisonReceives)
+                if (Ongoing(receives, onset, 1) is not { } samples || samples.MaxBy(sample => sample.Value) is not { Value: >= PoisonReceives } peak)
                 {
                     continue;
                 }
 
-                Sample first = receives.Samples.First(sample => sample.Value > 1);
+                Sample first = samples.First(sample => sample.Value > 1);
                 string hypothesis = PoisonHypothesis(output, receives.Service, conversation.AffectedService);
                 output.Evidence(
                     hypothesis,
@@ -513,7 +559,7 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                         $"queue-processed:{receives.Service}");
                 }
 
-                ContradictChangesAfter(output, changes, receives.Service, first.At, $"{receives.Service}'s receive count was already climbing at {first.At:O}", "call_queue_max_receive_count", first.Id);
+                ContradictChangesAfter(output, changes, receives.Service, first.At, $"{receives.Service}'s receive count was already climbing at {first.At:O}", "call_queue_max_receive_count", first.Id, "poison-before-change");
             }
 
             foreach ((string callId, JsonNode result) in conversation.ToolResults.Where(entry => entry.Value.Tool == "log_signatures" && entry.Value.Result is not null).Select(entry => (entry.Key, entry.Value.Result!)))
@@ -535,12 +581,96 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
 
                     DateTimeOffset from = Time(signature["firstSeen"]) ?? DateTimeOffset.UtcNow;
                     DateTimeOffset to = Time(signature["lastSeen"]) ?? from;
+                    if (to < onset - OngoingAfter)
+                    {
+                        continue;
+                    }
+
                     string hypothesis = PoisonHypothesis(output, service, conversation.AffectedService);
                     output.Evidence(hypothesis, $"{service} logged {count} failures of message {failed.Groups[1].Value} from {from:O} to {to:O}.", "supports", 0.7, [id], from, to, callId, $"logs:{service}:poison-message");
-                    ContradictChangesAfter(output, changes, service, from, $"Message {failed.Groups[1].Value} was already failing at {from:O} and kept failing until {to:O}", callId, id);
+                    ContradictChangesAfter(output, changes, service, from, $"Message {failed.Groups[1].Value} was already failing at {from:O} and kept failing until {to:O}", callId, id, "poison-before-change");
                 }
             }
         }
+
+        /// <summary>
+        /// R10 (Phase E01): orders booked again while no message is received twice. The duplicates are separate
+        /// publications, not redeliveries, meeting processing that is not idempotent; a change that began serving after
+        /// the first duplicate cannot explain them.
+        /// </summary>
+        private static void DuplicateDeliveries(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
+        {
+            foreach (Series duplicates in SeriesOf(conversation, "queue_duplicate_rate"))
+            {
+                if (Ongoing(duplicates, onset, 0) is not { } samples || samples.MaxBy(sample => sample.Value) is not { Value: >= DuplicateRate } peak)
+                {
+                    continue;
+                }
+
+                Sample first = samples.First(sample => sample.Value > 0);
+                string hypothesis = DuplicateHypothesis(output, duplicates.Service, conversation.AffectedService);
+                output.Evidence(
+                    hypothesis,
+                    $"{duplicates.Service} began booking orders it had booked already at {first.At:O}, up to {peak.Value:G3} a second by {peak.At:O}.",
+                    "supports",
+                    0.8,
+                    [first.Id, peak.Id],
+                    first.At,
+                    peak.At,
+                    "call_queue_duplicate_rate",
+                    $"queue-duplicates:{duplicates.Service}");
+
+                if (SeriesOf(conversation, "queue_max_receive_count").FirstOrDefault(series => series.Service == duplicates.Service) is { Samples.Count: > 0 } receives
+                    && receives.Samples.Where(sample => sample.At >= first.At && sample.At <= onset + OngoingAfter).ToArray() is { Length: > 0 } after
+                    && after.Max(sample => sample.Value) <= 1)
+                {
+                    output.Evidence(
+                        hypothesis,
+                        $"No message on {duplicates.Service}'s queue was received more than once while the duplicates were booked, so they are separate publications, not redeliveries.",
+                        "supports",
+                        0.6,
+                        [after[0].Id, after[^1].Id],
+                        after[0].At,
+                        after[^1].At,
+                        "call_queue_max_receive_count",
+                        $"queue-receives:{duplicates.Service}");
+                }
+
+                ContradictChangesAfter(output, changes, duplicates.Service, first.At, $"{duplicates.Service} was already booking orders twice at {first.At:O}", "call_queue_duplicate_rate", first.Id, "duplicates-before-change");
+            }
+
+            foreach ((string callId, JsonNode result) in conversation.ToolResults.Where(entry => entry.Value.Tool == "log_signatures" && entry.Value.Result is not null).Select(entry => (entry.Key, entry.Value.Result!)))
+            {
+                string service = result["service"]?.GetValue<string>() ?? conversation.AffectedService;
+                foreach (JsonNode signature in result["signatures"]?.AsArray().OfType<JsonNode>() ?? [])
+                {
+                    if (!BookedAgain().IsMatch(signature["message"]?.GetValue<string>() ?? string.Empty))
+                    {
+                        continue;
+                    }
+
+                    string id = signature["id"]!.GetValue<string>();
+                    int count = int.TryParse(signature["count"]?.GetValue<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : 1;
+                    DateTimeOffset from = Time(signature["firstSeen"]) ?? DateTimeOffset.UtcNow;
+                    DateTimeOffset to = Time(signature["lastSeen"]) ?? from;
+                    if (to < onset - OngoingAfter)
+                    {
+                        continue;
+                    }
+
+                    string hypothesis = DuplicateHypothesis(output, service, conversation.AffectedService);
+                    output.Evidence(hypothesis, $"{service} logged {count} orders booked again from a second message, from {from:O} to {to:O}.", "supports", 0.7, [id], from, to, callId, $"logs:{service}:duplicate-delivery");
+                    ContradictChangesAfter(output, changes, service, from, $"{service} was already booking orders twice at {from:O}", callId, id, "duplicates-before-change");
+                }
+            }
+        }
+
+        private static string DuplicateHypothesis(Findings output, string service, string affected) => output.Hypothesis(
+            $"duplicate-delivery:{service}",
+            $"Orders reach {service}'s queue twice, in separate messages, and its booking is not idempotent, so they are booked twice.",
+            ["an order published twice", "each copy is received once", "the booking does not check for an earlier one", $"{affected} books the order twice"],
+            service,
+            null);
 
         private static string PoisonHypothesis(Findings output, string service, string affected) => output.Hypothesis(
             $"poison-message:{service}",
@@ -549,12 +679,12 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             service,
             null);
 
-        private static void ContradictChangesAfter(Findings output, Change[] changes, string service, DateTimeOffset began, string fact, string callId, string observationId)
+        private static void ContradictChangesAfter(Findings output, Change[] changes, string service, DateTimeOffset began, string fact, string callId, string observationId, string family)
         {
             foreach (Change change in changes.Where(change => change.Service == service && change.Kind is "deploy" or "rollback" && change.ServingFrom is { } serving && serving > began))
             {
                 string hypothesis = output.Hypothesis(change.Key, $"The {change.Service} {change.Version} deployment caused the symptoms.", [$"deploy {change.Service} {change.Version}", $"regression in {change.Service}", "symptoms"], change.Service, change.StartedId);
-                output.Evidence(hypothesis, $"{fact}, before {change.Service} {change.Version} served from {change.ServingFrom:O}.", "contradicts", 0.8, [observationId, change.StartedId], began, change.ServingFrom!.Value, callId, $"poison-before-change:{change.Service}");
+                output.Evidence(hypothesis, $"{fact}, before {change.Service} {change.Version} served from {change.ServingFrom:O}.", "contradicts", 0.8, [observationId, change.StartedId], began, change.ServingFrom!.Value, callId, $"{family}:{change.Service}");
             }
         }
 
@@ -607,6 +737,17 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             }
         }
 
+        /// <summary>
+        /// The samples around <paramref name="onset"/> of an excursion still under way then, or null when the last of them is
+        /// back at <paramref name="floor"/>: duplicates, retries or redeliveries that ended before the symptoms began, such
+        /// as an earlier scenario's still inside the window, cannot explain them.
+        /// </summary>
+        private static Sample[]? Ongoing(Series series, DateTimeOffset onset, double floor)
+        {
+            Sample[] samples = [.. series.Samples.Where(sample => sample.At >= onset - OngoingBefore && sample.At <= onset + OngoingAfter)];
+            return samples is [.., { } last] && last.Value > floor ? samples : null;
+        }
+
         /// <summary>The start of the last run of burning samples: the current excursion, not an earlier one still inside the window.</summary>
         private static DateTimeOffset? Onset(Series? burn)
         {
@@ -636,6 +777,8 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         }
 
         private static Regex FailedMessage() => new(@"message (\S+) failed on receive", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
+
+        private static Regex BookedAgain() => new(@"was booked again from message", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
         private static Regex GaveUp() => new("gave up on ([a-z0-9-]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
