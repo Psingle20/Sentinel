@@ -95,8 +95,11 @@ public static class SentinelSystemExtensions
     {
         (await system.ScenarioRunner.PostAsync("/api/reset", null)).EnsureSuccessStatusCode();
         (await system.ScenarioRunner.PostAsync("/api/actions/stop-batch", null)).EnsureSuccessStatusCode();
+        // The rule is evaluated every 5 s, so a full minute holds 12 samples. Right after start-up the series is missing or
+        // younger than a minute, which says nothing about health: the first checkouts can still fail.
         await Eventually.ValueAsync(
-            async () => await system.Prometheus.ScalarAsync("max_over_time(slo:checkout_success:burn_rate1m[1m])") ?? 0,
+            async () => await system.Prometheus.ScalarAsync(
+                "max_over_time(slo:checkout_success:burn_rate1m[1m]) and on() count_over_time(slo:checkout_success:burn_rate1m[1m]) >= 11") ?? double.PositiveInfinity,
             burn => burn < 1,
             TimeSpan.FromMinutes(6),
             "the checkout SLO has been healthy for a minute",
