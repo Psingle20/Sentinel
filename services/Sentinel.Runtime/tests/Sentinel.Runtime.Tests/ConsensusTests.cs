@@ -165,9 +165,11 @@ public sealed class ConsensusTests
         Incident incident = WithStrongSaturation(saturation, "redis-saturation:checkout-service");
 
         Decision current = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now);
+        Decision v3 = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now, ConsensusSettings.AlgorithmV3);
         Decision v2 = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now, ConsensusSettings.AlgorithmV2);
 
-        current.AlgorithmVersion.ShouldBe(ConsensusSettings.AlgorithmV3);
+        current.AlgorithmVersion.ShouldBe(ConsensusSettings.AlgorithmVersion);
+        v3.LeadingHypothesisId.ShouldBe(Lead, "v3 introduced the claim");
         current.Result.ShouldBe(DecisionResult.Diagnosed);
         current.LeadingHypothesisId.ShouldBe(Lead);
         current.RejectedHypothesisIds.ShouldNotContain(saturation);
@@ -201,8 +203,67 @@ public sealed class ConsensusTests
         decision.LeadingHypothesisId.ShouldBe(saturation, "which change caused it is not settled, so neither claims it");
     }
 
+    [Fact]
+    public void A_dependency_deployment_claims_the_regression_of_its_own_service_from_v4()
+    {
+        var regression = HypothesisId.New();
+        Incident incident = WithDependencyRegression(regression, "dependency-regression:order-service");
+
+        Decision current = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now);
+        Decision v3 = Consensus.Decide(incident, [], Settings, DecisionId.New(), Now, ConsensusSettings.AlgorithmV3);
+
+        current.AlgorithmVersion.ShouldBe(ConsensusSettings.AlgorithmV4);
+        current.Result.ShouldBe(DecisionResult.Diagnosed);
+        current.LeadingHypothesisId.ShouldBe(OrderChange);
+        current.RejectedHypothesisIds.ShouldNotContain(regression);
+        current.DissentingHypothesisIds.ShouldNotContain(regression);
+        HypothesisAssessment change = current.Assessments.Single(assessment => assessment.HypothesisId == OrderChange);
+        change.IndependentSupport.ShouldBe(4, "the deployment, the regression it caused and the two signals of that regression");
+        change.Reason.ShouldBe("Stands, and explains dependency-regression:order-service.");
+        v3.Result.ShouldBe(DecisionResult.Abstained, "v3 left the regression competing with the deployment that caused it, and replays that way");
+    }
+
+    [Fact]
+    public void A_regression_blamed_on_another_service_is_not_claimed()
+    {
+        var regression = HypothesisId.New();
+
+        Decision decision = Consensus.Decide(WithDependencyRegression(regression, "dependency-regression:payments-service"), [], Settings, DecisionId.New(), Now);
+
+        decision.Result.ShouldBe(DecisionResult.Abstained);
+        decision.Assessments.Single(assessment => assessment.HypothesisId == OrderChange).IndependentSupport.ShouldBe(2);
+    }
+
     private static readonly HypothesisId Lead = HypothesisId.New();
     private static readonly HypothesisId Other = HypothesisId.New();
+    private static readonly HypothesisId OrderChange = HypothesisId.New();
+
+    /// <summary>
+    /// S3 as the test double reports it: order-service v1.8.0 serves from 20 s and slows; investigators also propose that
+    /// order-service regressed and checkout gave up waiting, nearly as strong; a benign checkout deployment serves from
+    /// 140 s; the SLO burns from 160 s.
+    /// </summary>
+    private static Incident WithDependencyRegression(HypothesisId regression, string key)
+    {
+        (Incident incident, InvestigationId investigation) = Detected(
+            160,
+            Deployment("order-service", "v1.8.0", "v1.7.0", 0, 20, "d3"),
+            Deployment("checkout-service", "v2.4.3", "v2.4.0", 120, 140, "d4"));
+        var checkoutChange = HypothesisId.New();
+        Evidence[] evidence =
+        [
+            Supporting(OrderChange, 0.5, 0, 20, "deploy-d3") with { IndependenceGroup = "deployment:d3" },
+            Supporting(OrderChange, 0.6, 20, 160, "order-latency-1") with { IndependenceGroup = "latency:order-service" },
+            Supporting(regression, 0.6, 20, 160, "dependency-wait-1") with { IndependenceGroup = "dependency-wait:checkout-service" },
+            Supporting(regression, 0.4, 60, 160, "retries-1") with { IndependenceGroup = "retries:checkout-service" },
+            Supporting(checkoutChange, 0.5, 120, 140, "deploy-d4") with { IndependenceGroup = "deployment:d4" }
+        ];
+        incident.RecordInvestigation(Report(investigation, evidence,
+            Hypothesis(OrderChange, "The v1.8.0 deployment slowed order-service.", ServiceId.From("order-service"), ObservationId.From("deploy-controller:deployment:d3:started")) with { Key = "change:deploy-controller:deployment:d3:started" },
+            Hypothesis(regression, "order-service regressed, and checkout-service gave up waiting for it.") with { Key = key },
+            Hypothesis(checkoutChange, "The v2.4.3 deployment slowed checkout-service.", Checkout, ObservationId.From("deploy-controller:deployment:d4:started")) with { Key = "change:deploy-controller:deployment:d4:started" }), Start.AddSeconds(200)).IsSuccess.ShouldBeTrue();
+        return incident;
+    }
 
     /// <summary>
     /// The leak as live investigators reported it: the change rests on its deployment alone, while the saturation it caused

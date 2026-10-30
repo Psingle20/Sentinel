@@ -12,15 +12,19 @@ public sealed record ConsensusSettings
     /// The version new decisions are made by. v2 no longer counts a mechanism of a leading change, such as Redis
     /// saturation caused by the changed service, as a competing explanation. v3 also lets a standing change claim the
     /// Redis saturation investigators blamed on its own service, so the saturation's evidence counts for the change even
-    /// when the saturation scored higher alone. Each decision replays by the version it was made with.
+    /// when the saturation scored higher alone. v4 lets it claim the regression of its own service in the same way, so a
+    /// faulty dependency deployment is not held back by the regression it caused. Each decision replays by the version it
+    /// was made with.
     /// </summary>
-    public const string AlgorithmVersion = AlgorithmV3;
+    public const string AlgorithmVersion = AlgorithmV4;
 
     public const string AlgorithmV1 = "consensus-v1";
 
     public const string AlgorithmV2 = "consensus-v2";
 
     public const string AlgorithmV3 = "consensus-v3";
+
+    public const string AlgorithmV4 = "consensus-v4";
 
     /// <summary>Added to the denominator of confidence, so a thinly supported leader is not certain even unopposed.</summary>
     public const double Smoothing = 0.5;

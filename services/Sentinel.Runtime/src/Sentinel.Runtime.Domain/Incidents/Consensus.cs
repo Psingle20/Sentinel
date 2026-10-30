@@ -15,8 +15,9 @@ public static class Consensus
 {
     private const string ChangeKey = "change:";
     private const string RedisSaturationKey = "redis-saturation";
+    private const string DependencyRegressionKey = "dependency-regression";
 
-    private static readonly string[] Versions = [ConsensusSettings.AlgorithmV1, ConsensusSettings.AlgorithmV2, ConsensusSettings.AlgorithmV3];
+    private static readonly string[] Versions = [ConsensusSettings.AlgorithmV1, ConsensusSettings.AlgorithmV2, ConsensusSettings.AlgorithmV3, ConsensusSettings.AlgorithmV4];
 
     /// <summary>Whether <paramref name="algorithm"/> names a consensus version this code can decide and replay by.</summary>
     public static bool IsKnown(string? algorithm) => algorithm is not null && Versions.Contains(algorithm, StringComparer.Ordinal);
@@ -43,9 +44,15 @@ public static class Consensus
 
         HypothesisAssessment[] alone = [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings, []))];
 
-        // v3: a standing change claims the Redis saturation investigators blamed on its own service. The saturation is how
-        // the change caused the symptoms, so its evidence counts for the change and it does not compete on its own.
-        Dictionary<HypothesisId, Hypothesis> claimed = algorithm == ConsensusSettings.AlgorithmV3 ? Claimed(hypotheses, alone) : [];
+        // v3: a standing change claims the Redis saturation investigators blamed on its own service; v4 also claims the
+        // regression of its own service that its callers waited on. Each is how the change caused the symptoms, so its
+        // evidence counts for the change and it does not compete on its own.
+        Dictionary<HypothesisId, Hypothesis> claimed = algorithm switch
+        {
+            ConsensusSettings.AlgorithmV3 => Claimed(hypotheses, alone, [RedisSaturationKey]),
+            ConsensusSettings.AlgorithmV4 => Claimed(hypotheses, alone, [RedisSaturationKey, DependencyRegressionKey]),
+            _ => []
+        };
         HypothesisAssessment[] assessments = claimed.Count == 0
             ? alone
             : [.. hypotheses.Select(hypothesis => Assess(incident, hypothesis, evidence, challenges, settings, [.. hypotheses.Where(other => claimed.TryGetValue(other.HypothesisId, out Hypothesis? change) && change.HypothesisId == hypothesis.HypothesisId)]))];
@@ -119,21 +126,22 @@ public static class Consensus
             || leading.SuspectedServiceId is { } service && mechanism == $"{RedisSaturationKey}:{service}");
 
     /// <summary>
-    /// The saturation hypotheses each standing change claims: Redis saturation blamed on exactly the change's service
-    /// (<c>redis-saturation:&lt;service&gt;</c>), when one standing change, and only one, names that service. Saturation
-    /// with no culprit, or blamed on another service, is not claimed: it may be a different cause.
+    /// The mechanism hypotheses each standing change claims: a mechanism blamed on exactly the change's service, such as
+    /// <c>redis-saturation:&lt;service&gt;</c> or <c>dependency-regression:&lt;service&gt;</c>, when one standing change, and
+    /// only one, names that service. A mechanism with no culprit, or blamed on another service, is not claimed: it may be
+    /// a different cause.
     /// </summary>
-    private static Dictionary<HypothesisId, Hypothesis> Claimed(IReadOnlyList<Hypothesis> hypotheses, IReadOnlyList<HypothesisAssessment> assessments)
+    private static Dictionary<HypothesisId, Hypothesis> Claimed(IReadOnlyList<Hypothesis> hypotheses, IReadOnlyList<HypothesisAssessment> assessments, IReadOnlyList<string> mechanisms)
     {
         bool Stands(Hypothesis hypothesis) => !assessments.First(assessment => assessment.HypothesisId == hypothesis.HypothesisId).Falsified;
         Hypothesis[] changes = [.. hypotheses.Where(hypothesis => hypothesis.Key is { } key && key.StartsWith(ChangeKey, StringComparison.Ordinal) && hypothesis.SuspectedServiceId is not null && Stands(hypothesis))];
         var claimed = new Dictionary<HypothesisId, Hypothesis>();
-        foreach (Hypothesis saturation in hypotheses.Where(hypothesis => hypothesis.Key is { } key && key.StartsWith($"{RedisSaturationKey}:", StringComparison.Ordinal) && Stands(hypothesis)))
+        foreach (Hypothesis mechanism in hypotheses.Where(hypothesis => hypothesis.Key is { } key && mechanisms.Any(prefix => key.StartsWith($"{prefix}:", StringComparison.Ordinal)) && Stands(hypothesis)))
         {
-            Hypothesis[] owners = [.. changes.Where(change => saturation.Key == $"{RedisSaturationKey}:{change.SuspectedServiceId}")];
+            Hypothesis[] owners = [.. changes.Where(change => mechanisms.Any(prefix => mechanism.Key == $"{prefix}:{change.SuspectedServiceId}"))];
             if (owners.Length == 1)
             {
-                claimed[saturation.HypothesisId] = owners[0];
+                claimed[mechanism.HypothesisId] = owners[0];
             }
         }
 
