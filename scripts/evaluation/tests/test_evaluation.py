@@ -67,7 +67,7 @@ def baseline_execution(blamed: str | None) -> dict:
 class PackageTests(unittest.TestCase):
     def test_every_package_in_the_repository_loads(self):
         packages = load_packages(PACKAGES)
-        self.assertEqual(sorted(packages), ["S0", "S1", "S2", "S3", "S4", "S5", "S6"])
+        self.assertEqual(sorted(packages), ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"])
         self.assertEqual(packages["S1"].root_cause.change_version, "v2.4.1")
         self.assertTrue(packages["S3"].is_false_remediation("rollback", "checkout-service"))
         self.assertEqual(packages["S4"].expected_missing, ("logs",))

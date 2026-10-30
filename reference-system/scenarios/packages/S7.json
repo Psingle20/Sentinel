@@ -1,0 +1,39 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S7",
+  "version": 1,
+  "kind": "counterfactual",
+  "manifest": "S7",
+  "title": "Retry amplification with an innocent consumer deployment",
+  "description": "Order-service's confirmations slow down, and the queue-consumer's immediate, unjittered retries add calls to the ones order-service is already struggling with and stop the queue draining; a benign queue-consumer v1.4.1 deployment serves after the queue began to age and before the incident opens. No action Sentinel holds contains the retries or speeds order-service up, so the right outcome is a diagnosis for responders; rolling the consumer back or quarantining its messages are the false remediations.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "escalated",
+    "rootCause": {
+      "service": "order-service",
+      "hypothesisKeys": ["dependency-regression:order-service", "dependency-regression"]
+    },
+    "rejectedCauses": [
+      { "service": "queue-consumer", "description": "queue-consumer v1.4.1 deployment" }
+    ],
+    "abstentionAcceptable": true,
+    "evidence": [
+      { "kind": "metric", "service": "order-service", "metric": "latency_p95", "role": "cause" },
+      { "kind": "trace", "service": "queue-consumer", "role": "cause" },
+      { "kind": "log", "service": "queue-consumer", "role": "cause" },
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_retry_rate", "role": "discriminating" },
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_max_receive_count", "role": "discriminating" },
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_oldest_message_age", "role": "symptom" },
+      { "kind": "deployment", "service": "queue-consumer", "role": "confounder" }
+    ],
+    "permittedActions": [
+      { "action": "escalate", "service": "order-service", "mode": "suggestion-only" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "queue-consumer" },
+      { "action": "quarantine-message", "service": "queue-consumer" }
+    ]
+  }
+}

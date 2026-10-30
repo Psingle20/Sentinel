@@ -19,6 +19,7 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
         await SendControlAsync(HttpMethod.Post, Address("deploy-controller", "/_reference/reset"), cancellationToken);
         await StopBatchAsync(cancellationToken);
         await SendControlAsync(HttpMethod.Post, Address("queue-consumer", "/_reference/queue/reset"), cancellationToken);
+        await SendControlAsync(HttpMethod.Post, Address("order-service", "/_reference/orders/reset"), cancellationToken);
     }
 
     public async Task DeployAsync(ScenarioStep step, string runId, CancellationToken cancellationToken)
@@ -57,6 +58,20 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
         ArgumentNullException.ThrowIfNull(step);
 
         return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/queue/poison"), cancellationToken);
+    }
+
+    public Task DuplicatePublicationAsync(ScenarioStep step, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/queue/duplicate-publication"), cancellationToken, new { seconds = step.DurationSeconds ?? 120 });
+    }
+
+    public Task SlowConfirmationsAsync(ScenarioStep step, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/orders/slow-confirmations"), cancellationToken, new { seconds = step.DurationSeconds ?? 180 });
     }
 
     private Task SendControlAsync(HttpMethod method, Uri uri, CancellationToken cancellationToken, object? body = null)

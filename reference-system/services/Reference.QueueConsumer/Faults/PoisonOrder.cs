@@ -10,5 +10,5 @@ public static class PoisonOrder
 {
     public const string Amount = "NaN";
 
-    public static OrderMessage Create(DateTimeOffset now) => new($"ord-poison-{now.ToUnixTimeMilliseconds()}", Amount, now);
+    public static OrderMessage Create(DateTimeOffset now) => new($"msg-poison-{now.ToUnixTimeMilliseconds()}", $"ord-poison-{now.ToUnixTimeMilliseconds()}", Amount, now);
 }

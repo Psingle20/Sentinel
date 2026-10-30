@@ -183,6 +183,12 @@ public sealed class ScenarioRunner(
                 case "poisonMessage":
                     await control.InjectPoisonMessageAsync(step, cancellationToken);
                     break;
+                case "duplicatePublication":
+                    await control.DuplicatePublicationAsync(step, cancellationToken);
+                    break;
+                case "slowConfirmations":
+                    await control.SlowConfirmationsAsync(step, cancellationToken);
+                    break;
                 default:
                     return $"Unknown action {step.Action}.";
             }

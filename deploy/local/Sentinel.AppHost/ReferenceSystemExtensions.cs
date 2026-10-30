@@ -62,7 +62,9 @@ internal static class ReferenceSystemExtensions
         IResourceBuilder<ProjectResource> reporting = AddReferenceService<Projects.Reference_ReportingWorker>("reporting-worker");
         IResourceBuilder<ProjectResource> queueConsumer = AddReferenceService<Projects.Reference_QueueConsumer>("queue-consumer")
             .WithEnvironment("Reference__Redis", ReferenceExpression.Create($"{queueRedis.GetEndpoint("tcp").Property(EndpointProperty.HostAndPort)}"))
-            .WaitFor(queueRedis);
+            .WithReference(orders)
+            .WaitFor(queueRedis)
+            .WaitFor(orders);
         AddReferenceService<Projects.Reference_RedisExporter>("redis-exporter");
 
         IResourceBuilder<ProjectResource> deployController = AddReferenceService<Projects.Reference_DeployController_Api>("deploy-controller")
@@ -76,13 +78,14 @@ internal static class ReferenceSystemExtensions
         IResourceBuilder<ProjectResource> scenarioRunner = AddReferenceService<Projects.Reference_Scenarios_Api>("scenario-runner")
             .WithEnvironment("DeployController__DeployToken", deployToken)
             .WithReference(checkout)
+            .WithReference(orders)
             .WithReference(reporting)
             .WithReference(queueConsumer)
             .WithReference(deployController)
             .WaitFor(checkout)
             .WaitFor(deployController);
 
-        foreach (string scenario in new[] { "S0", "S1", "S2", "S3", "S6" })
+        foreach (string scenario in new[] { "S0", "S1", "S2", "S3", "S6", "S7", "S8" })
         {
             scenarioRunner.WithHttpCommand("/api/runs", $"Run {scenario}", commandName: $"run-{scenario.ToLowerInvariant()}", commandOptions: Command(controlToken, $$"""{"scenarioId":"{{scenario}}"}"""));
         }

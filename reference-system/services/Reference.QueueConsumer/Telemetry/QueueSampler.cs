@@ -1,10 +1,9 @@
-using Reference.Common.Redis;
 using Reference.QueueConsumer.Queue;
 
 namespace Reference.QueueConsumer.Telemetry;
 
-/// <summary>Reads the queue's status every two seconds for the gauges.</summary>
-public sealed class QueueSampler(OrderQueue queue, QueueTelemetry telemetry, TimeProvider time, ILogger<QueueSampler> logger) : BackgroundService
+/// <summary>Reads the queue's status every two seconds for the gauges, and returns the messages its workers abandoned.</summary>
+public sealed class QueueSampler(IOrderQueue queue, QueueTelemetry telemetry, TimeProvider time, ILogger<QueueSampler> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(2);
 
@@ -15,8 +14,9 @@ public sealed class QueueSampler(OrderQueue queue, QueueTelemetry telemetry, Tim
             try
             {
                 telemetry.Record(await queue.StatusAsync(stoppingToken));
+                await queue.ReclaimAsync(stoppingToken);
             }
-            catch (RedisUnavailableException exception)
+            catch (QueueUnavailableException exception)
             {
                 logger.LogWarning(exception, "Could not sample the orders queue");
             }

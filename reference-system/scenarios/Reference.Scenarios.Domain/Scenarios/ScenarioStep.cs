@@ -7,7 +7,7 @@ public sealed record ScenarioStep
 {
     public required int AtSeconds { get; init; }
 
-    /// <summary><c>deploy</c>, <c>configChange</c>, <c>startBatch</c>, <c>stopBatch</c> or <c>poisonMessage</c>.</summary>
+    /// <summary><c>deploy</c>, <c>configChange</c>, <c>startBatch</c>, <c>stopBatch</c>, <c>poisonMessage</c>, <c>duplicatePublication</c> or <c>slowConfirmations</c>.</summary>
     public required string Action { get; init; }
 
     public required string Service { get; init; }
@@ -21,6 +21,9 @@ public sealed record ScenarioStep
     public double? ConnectionsPerSecond { get; init; }
 
     public string? ConfigurationDiff { get; init; }
+
+    /// <summary>How long a fault that lasts, such as a duplicate publication or slow confirmations, goes on.</summary>
+    public int? DurationSeconds { get; init; }
 
     /// <summary><c>cause</c>, <c>confounder</c> or <c>noise</c>.</summary>
     public required string Role { get; init; }

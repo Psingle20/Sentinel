@@ -15,4 +15,10 @@ public interface IReferenceControl
 
     /// <summary>Publishes one message to the step's service's queue that no revision can process.</summary>
     Task InjectPoisonMessageAsync(ScenarioStep step, CancellationToken cancellationToken);
+
+    /// <summary>Makes the step's service's upstream publish every other order twice for the step's duration.</summary>
+    Task DuplicatePublicationAsync(ScenarioStep step, CancellationToken cancellationToken);
+
+    /// <summary>Makes the step's service slow its order confirmations for the step's duration.</summary>
+    Task SlowConfirmationsAsync(ScenarioStep step, CancellationToken cancellationToken);
 }

@@ -1,0 +1,36 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S8",
+  "version": 1,
+  "kind": "counterfactual",
+  "manifest": "S8",
+  "title": "Duplicate delivery with an innocent consumer deployment",
+  "description": "For two minutes the upstream publishes every other order twice, as at-least-once delivery allows, and the queue-consumer's booking is not idempotent, so those orders are booked twice; a benign queue-consumer v1.4.1 deployment serves before the incident opens. No action Sentinel holds fixes the consumer's code, so the right outcome is a diagnosis for responders; rolling the consumer back is the false remediation.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "escalated",
+    "rootCause": {
+      "service": "queue-consumer",
+      "hypothesisKeys": ["duplicate-delivery:queue-consumer", "duplicate-delivery"]
+    },
+    "rejectedCauses": [
+      { "service": "queue-consumer", "description": "queue-consumer v1.4.1 deployment" }
+    ],
+    "abstentionAcceptable": true,
+    "evidence": [
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_duplicate_rate", "role": "cause" },
+      { "kind": "log", "service": "queue-consumer", "role": "cause" },
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_max_receive_count", "role": "discriminating" },
+      { "kind": "metric", "service": "queue-consumer", "metric": "queue_failure_rate", "role": "discriminating" },
+      { "kind": "deployment", "service": "queue-consumer", "role": "confounder" }
+    ],
+    "permittedActions": [
+      { "action": "escalate", "service": "queue-consumer", "mode": "suggestion-only" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "queue-consumer" }
+    ]
+  }
+}

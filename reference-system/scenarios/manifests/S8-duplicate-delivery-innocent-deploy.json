@@ -1,0 +1,99 @@
+{
+  "id": "S8",
+  "slug": "duplicate-delivery-innocent-deploy",
+  "version": 1,
+  "kind": "confounder",
+  "description": "For two minutes the upstream retries its publishes and every other order reaches the queue-consumer's queue twice, in two messages, as at-least-once delivery allows. The consumer's booking was never idempotent, so those orders are booked twice. Every message is received once, the queue does not back up, and a benign queue-consumer v1.4.1 deployment serves 50 s in, before the incident opens. No action Sentinel holds removes a defect in the consumer's code: the right outcome is a diagnosis for responders.",
+  "affectedService": "queue-consumer",
+  "downstreamServices": [],
+  "warmupSeconds": 75,
+  "durationSeconds": 240,
+  "steps": [
+    { "atSeconds": 0, "action": "duplicatePublication", "service": "queue-consumer", "durationSeconds": 120, "role": "cause" },
+    { "atSeconds": 30, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "rolloutSeconds": 20, "role": "confounder" }
+  ],
+  "cause": {
+    "description": "Duplicate publication meets a booking that is not idempotent.",
+    "service": "queue-consumer",
+    "change": "upstream publishes every other order twice",
+    "activationSeconds": 0
+  },
+  "confounders": [
+    { "description": "Benign queue-consumer v1.4.1 deployment, serving from 50 s.", "service": "queue-consumer", "change": "deploy queue-consumer v1.4.1", "atSeconds": 30, "servingFromSeconds": 50 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "queue-consumer",
+    "metric": "queue_duplicate_rate",
+    "threshold": 0.5,
+    "withinSeconds": 90
+  },
+  "expectedObservations": [
+    {
+      "description": "Orders are booked twice.",
+      "query": "sum(rate(reference_queue_duplicates_total[1m]))",
+      "expectation": "above",
+      "threshold": 0.5,
+      "fromSeconds": 0,
+      "withinSeconds": 90
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Duplicates begin before the v1.4.1 deployment serves at 50 s.",
+      "query": "sum(rate(reference_queue_duplicates_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 45
+    },
+    {
+      "description": "No message is received twice: these are not redeliveries.",
+      "query": "max_over_time(max(reference_queue_max_receive_count)[2m:5s])",
+      "expectation": "below",
+      "threshold": 2,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    },
+    {
+      "description": "Nothing fails, so the duplicates are not retries of failures.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))",
+      "expectation": "below",
+      "threshold": 0.05,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 1008,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The producer publishes four orders a second and, while the fault lasts, every other one twice, so duplicates arrive at about two a second."
+  },
+  "hypotheses": {
+    "leading": { "service": "queue-consumer", "cause": "duplicate publication meets a booking that is not idempotent" },
+    "rejected": [
+      { "service": "queue-consumer", "cause": "queue-consumer v1.4.1 deployment" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "escalate", "service": "queue-consumer", "mode": "suggestion-only" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "queue-consumer" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "queue-consumer",
+    "fromVersion": "v1.4.1",
+    "toVersion": "v1.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "the duplicate publication ends; the duplicate bookings themselves stay for responders to reverse",
+    "criteria": [
+      { "description": "Nothing is booked twice any more.", "query": "sum(rate(reference_queue_duplicates_total[1m]))", "comparison": "lessThan", "threshold": 0.05 }
+    ],
+    "observationWindowSeconds": 60,
+    "evaluationTimeoutSeconds": 240
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "S7",
+  "slug": "retry-amplification-innocent-deploy",
+  "version": 1,
+  "kind": "confounder",
+  "description": "For three minutes order-service's order confirmations slow by 20 ms a second, up to 2 s, and each one runs to the end even after its caller has given up. The queue-consumer confirms every order it books and abandons an attempt after 800 ms, retrying at once with neither backoff nor jitter, so its six workers retry in step, add calls to the ones order-service is already struggling with, and stop draining the queue. A benign queue-consumer v1.4.1 deployment serves 80 s in, after the queue began to age and before the incident opens. The cause is order-service, amplified by the consumer's retries; no action Sentinel holds contains the retries or speeds order-service up, so the right outcome is a diagnosis for responders.",
+  "affectedService": "queue-consumer",
+  "downstreamServices": ["order-service"],
+  "warmupSeconds": 75,
+  "durationSeconds": 300,
+  "steps": [
+    { "atSeconds": 0, "action": "slowConfirmations", "service": "order-service", "durationSeconds": 180, "role": "cause" },
+    { "atSeconds": 60, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "rolloutSeconds": 20, "role": "confounder" }
+  ],
+  "cause": {
+    "description": "Order-service's confirmations slow down, and the queue-consumer's immediate retries amplify the slowdown.",
+    "service": "order-service",
+    "change": "order confirmations slow by 20 ms a second, up to 2 s",
+    "activationSeconds": 0
+  },
+  "confounders": [
+    { "description": "Benign queue-consumer v1.4.1 deployment, serving from 80 s.", "service": "queue-consumer", "change": "deploy queue-consumer v1.4.1", "atSeconds": 60, "servingFromSeconds": 80 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "queue-consumer",
+    "metric": "queue_oldest_message_age",
+    "threshold": 60,
+    "withinSeconds": 150
+  },
+  "expectedObservations": [
+    {
+      "description": "The queue's oldest message ages past a minute.",
+      "query": "max(reference_queue_oldest_message_age_seconds)",
+      "expectation": "above",
+      "threshold": 60,
+      "fromSeconds": 0,
+      "withinSeconds": 150
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Order-service's confirmations pass the consumer's 800 ms attempt timeout before the v1.4.1 deployment serves at 80 s.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_confirmation_duration_seconds_bucket[1m])))",
+      "expectation": "above",
+      "threshold": 0.8,
+      "fromSeconds": 0,
+      "withinSeconds": 75
+    },
+    {
+      "description": "The consumer retries at once, several times a second.",
+      "query": "sum(rate(reference_queue_retries_total[1m]))",
+      "expectation": "above",
+      "threshold": 1,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    },
+    {
+      "description": "No message is received twice: nothing fails back to the queue, so no message is poison.",
+      "query": "max_over_time(max(reference_queue_max_receive_count)[3m:5s])",
+      "expectation": "below",
+      "threshold": 2,
+      "fromSeconds": 0,
+      "withinSeconds": 180
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 1007,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The producer publishes four orders a second. Confirmations pass the 800 ms attempt timeout about 39 s into the fault, after which every attempt gives up and the six workers retry at about 7.5 calls a second."
+  },
+  "hypotheses": {
+    "leading": { "service": "order-service", "cause": "order-service's slow confirmations, amplified by the consumer's immediate retries" },
+    "rejected": [
+      { "service": "queue-consumer", "cause": "queue-consumer v1.4.1 deployment" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "escalate", "service": "order-service", "mode": "suggestion-only" } ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "queue-consumer" },
+      { "action": "quarantine-message", "service": "queue-consumer" }
+    ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "queue-consumer",
+    "fromVersion": "v1.4.1",
+    "toVersion": "v1.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "the slow confirmations end; the consumer's retries then succeed and it drains the backlog",
+    "criteria": [
+      { "description": "The queue's oldest message is younger than 20 s.", "query": "max(reference_queue_oldest_message_age_seconds)", "comparison": "lessThan", "threshold": 20 },
+      { "description": "The consumer has stopped retrying.", "query": "sum(rate(reference_queue_retries_total[1m]))", "comparison": "lessThan", "threshold": 0.05 }
+    ],
+    "observationWindowSeconds": 60,
+    "evaluationTimeoutSeconds": 300
+  }
+}

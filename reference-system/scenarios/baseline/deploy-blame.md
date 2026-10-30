@@ -32,5 +32,7 @@ Each manifest records the baseline's expected outcome in its `baseline` field.
 | `S2` | checkout-service v2.4.2 | Roll back checkout-service v2.4.2 → v2.4.0 | No: false remediation |
 | `S3` | order-service v1.8.0, then checkout-service v2.4.3 | Roll back checkout-service v2.4.3 → v2.4.0 | No: false remediation |
 | `S6` | queue-consumer v1.4.1 | Roll back queue-consumer v1.4.1 → v1.4.0 | No: false remediation, and the poison message would keep failing on the old revision |
+| `S7` | queue-consumer v1.4.1 | Roll back queue-consumer v1.4.1 → v1.4.0 | No: false remediation, and the old revision retries order-service just the same |
+| `S8` | queue-consumer v1.4.1 | Roll back queue-consumer v1.4.1 → v1.4.0 | No: false remediation, and the old revision books duplicates just the same |
 
 A reset between runs restores baselines immediately and is recorded as kind `reset`, which the rule ignores.

@@ -20,13 +20,15 @@ public sealed class ScenarioManifestTests
         [QueueRevisions.ServiceName] = QueueRevisions.Baseline
     };
 
-    public static TheoryData<string> ScenarioIds => new() { "S0", "S1", "S2", "S3", "S6" };
+    public static TheoryData<string> ScenarioIds => new() { "S0", "S1", "S2", "S3", "S6", "S7", "S8" };
 
     [Fact]
-    public void The_suite_contains_the_golden_case_three_confounders_and_a_control()
+    public void The_suite_contains_the_golden_case_five_confounders_and_a_control()
     {
-        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["S0", "S1", "S2", "S3", "S6"]);
+        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
         Catalog.Manifests["S6"].Kind.ShouldBe("confounder");
+        Catalog.Manifests["S7"].Kind.ShouldBe("confounder");
+        Catalog.Manifests["S8"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S1"].Kind.ShouldBe("golden");
         Catalog.Manifests["S2"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S3"].Kind.ShouldBe("confounder");

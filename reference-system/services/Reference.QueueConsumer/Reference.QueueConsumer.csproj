@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <Description>Reference queue-consumer. It processes order messages from a queue in the reference Redis; a poison message that never processes keeps returning, receive after receive (scenario S6).</Description>
+        <Description>Reference queue-consumer. It processes order messages from a queue in its own Redis and confirms each order with order-service: a poison message keeps returning, receive after receive (S6), slow confirmations are retried at once (S7), and duplicate publications are booked twice (S8).</Description>
     </PropertyGroup>
 
     <ItemGroup>
