@@ -28,10 +28,12 @@ export default defineConfig({
       use: { baseURL: appUrl },
     },
     {
-      // The responder surface at the tablet width (Phase E02): the journeys tagged @layout again at 768 px.
+      // The responder surface at the tablet width (Phase E02): the journeys tagged @layout again at 768 px. It runs after
+      // the desktop pass, because both share the one stateful mock API and a reset in either would undo the other's step.
       name: "app-tablet",
       testMatch: "e2e/**/*.spec.ts",
       grep: /@layout/,
+      dependencies: ["app"],
       use: { baseURL: appUrl, viewport: { width: 768, height: 1024 } },
     },
     {

@@ -9,6 +9,7 @@
 //   POST /__advance { summary }       append a timeline entry, as Runtime would, and publish it live
 //   GET  /__analytics                 the analytics events Api accepted, oldest first
 //   POST /__large { timeline, evidence } make the incident that large, for the performance tests
+//   POST /__quarantine                plan a poison message's quarantine instead of the rollback, as in S6 and AWS-S1
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
@@ -106,6 +107,27 @@ function publish(kind, summary) {
   for (const client of liveClients) {
     writeLive(client, live);
   }
+}
+
+// The poison-message plan of S6 and AWS-S1: quarantine the message on the consumer's queue, not a rollback.
+function planQuarantine() {
+  const plan = state.incident.plan.plan;
+  plan.actions = [
+    {
+      kind: "quarantine-message",
+      actionId: "0192f0c4-0000-7000-8000-000000000017",
+      targetServiceId: "queue-consumer",
+      queue: "orders",
+      minimumReceives: 3,
+      maxMessages: 5,
+      reason: "It fails on every receive: a poison message on queue-consumer's queue.",
+    },
+  ];
+  plan.expectedRecovery = [{ serviceId: "queue-consumer", metricName: "queue_oldest_message_age", comparison: "lessThan", threshold: 20 }];
+  plan.preconditions = [];
+  plan.expectedEffect = "The poison message is in orders-dlq, and the queue's oldest message is younger than 20 s within 90 s.";
+  plan.blastRadius = ["queue-consumer"];
+  plan.compensation = "Release the quarantined messages back to orders.";
 }
 
 // A long-running incident: many timeline entries, and many evidence items each in the causal graph and supporting the
@@ -467,6 +489,11 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && url.pathname === "/__large") {
     const body = await readBody(request);
     makeLarge(body.timeline ?? 0, body.evidence ?? 0);
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__quarantine") {
+    planQuarantine();
     return send(response, 204);
   }
 

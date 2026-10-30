@@ -133,6 +133,20 @@ test.describe("incidents", () => {
     await expect(page.getByRole("button", { name: "Approve plan" })).toHaveCount(0);
   });
 
+  test("approves a poison message's quarantine, which names its queue and limits instead of a rollback", async ({ page, request }) => {
+    await request.post(`${mockApi}/__quarantine`);
+    await page.reload();
+    await openIncident(page);
+
+    await expect(page.getByText("Quarantine the messages of queue-consumer's orders queue received at least 3 times").first()).toBeVisible();
+    await expect(page.getByText("Release the quarantined messages back to orders.")).toBeVisible();
+    await page.getByRole("button", { name: "Approve plan" }).click();
+    await page.getByRole("dialog", { name: "Approve plan v1?" }).getByRole("button", { name: "Confirm approval" }).click();
+
+    await expect(page.getByText(/^Approved by responder@example\.test at /)).toBeVisible();
+    await expect(page.getByText("Remediating", { exact: true })).toBeVisible();
+  });
+
   test("revokes an approval before execution starts", async ({ page }) => {
     await openIncident(page);
     await page.getByRole("button", { name: "Approve plan" }).click();
