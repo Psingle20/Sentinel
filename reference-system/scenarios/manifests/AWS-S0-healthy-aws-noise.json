@@ -26,7 +26,7 @@
   "expectedObservations": [
     {
       "description": "The queue's oldest message stays younger than 10 s throughout, the new revision's rollout included.",
-      "query": "max(reference_queue_oldest_message_age_seconds)",
+      "query": "max(last_over_time(reference_queue_oldest_message_age_seconds[30s]))",
       "expectation": "below",
       "threshold": 10,
       "fromSeconds": 0,

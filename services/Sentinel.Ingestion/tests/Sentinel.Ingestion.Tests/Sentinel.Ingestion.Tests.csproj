@@ -21,6 +21,11 @@
         <ProjectReference Include="..\..\src\Sentinel.Ingestion.Infrastructure\Sentinel.Ingestion.Infrastructure.csproj" />
     </ItemGroup>
 
+    <!-- The emulator pin of ADR-021, for the ECS provider's emulator tests; reference-system/deploy/aws is its one home. -->
+    <ItemGroup>
+        <Content Include="../../../../reference-system/deploy/aws/emulator.json" Link="Aws/emulator.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <ItemGroup>
         <Using Include="Xunit" />
     </ItemGroup>

@@ -80,13 +80,11 @@ internal static class ReferenceSystemExtensions
             deployController.WithReference(queueConsumer);
             scenarioRunner.WithReference(queueConsumer);
         }
-        else
-        {
-            builder.AddAwsReferenceEnvironment(root, scenarioRunner);
-        }
+
+        AwsReferenceEnvironmentResources? awsEnvironment = queueConsumer is null ? builder.AddAwsReferenceEnvironment(root, scenarioRunner) : null;
 
         // A scenario runs only in the environment its manifest names.
-        foreach (string scenario in aws ? ["AWS-S0"] : new[] { "S0", "S1", "S2", "S3", "S6", "S7", "S8" })
+        foreach (string scenario in aws ? ["AWS-S0", "AWS-S1"] : new[] { "S0", "S1", "S2", "S3", "S6", "S7", "S8" })
         {
             scenarioRunner.WithHttpCommand("/api/runs", $"Run {scenario}", commandName: $"run-{scenario.ToLowerInvariant()}", commandOptions: Command(controlToken, $$"""{"scenarioId":"{{scenario}}"}"""));
         }
@@ -95,7 +93,7 @@ internal static class ReferenceSystemExtensions
             .WithHttpCommand("/api/reset", "Reset to healthy", commandName: "reset", commandOptions: Command(controlToken, null))
             .WithHttpCommand("/api/actions/stop-batch", "Stop reporting batch", commandName: "stop-batch", commandOptions: Command(controlToken, null));
 
-        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"));
+        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"), awsEnvironment?.Emulator);
 
         // The queue-consumer's queue lives apart from the shared Redis, as a managed queue lives apart from a cache, so that
         // S1's leak and S2's batch exhausting the shared Redis never back the queue up (S6).

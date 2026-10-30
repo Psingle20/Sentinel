@@ -7,7 +7,52 @@ namespace Sentinel.AppHost;
 
 internal static class AwsReferenceEnvironmentExtensions
 {
+    /// <summary>The account the scenarios run in; its 12-digit access key is what selects it in the emulator.</summary>
+    public const string Account = "000000000000";
+
+    /// <summary>Synthetic: the emulator does not check signatures.</summary>
+    public const string SyntheticSecret = "test-not-a-secret";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    /// <summary>
+    /// Sentinel's side of the AWS environment (Phase E01, Stage 2): Ingestion reads the consumer's ECS deployments, the
+    /// topology its task definition declares and the orders queue's depth and dead-letter depth, and Executor quarantines
+    /// through the orders queue's redrive policy, each with credentials of its own role.
+    /// </summary>
+    public static void WireSentinel(IResourceBuilder<ContainerResource> emulator, IResourceBuilder<ProjectResource> ingestion, IResourceBuilder<ProjectResource> executor)
+    {
+        ingestion
+            .WithEnvironment("Ingestion__Providers__Aws__ServiceUrl", emulator.GetEndpoint("http"))
+            .WithEnvironment("Ingestion__Providers__Aws__AccessKey", Account)
+            .WithEnvironment("Ingestion__Providers__Aws__SecretKey", SyntheticSecret)
+            .WithEnvironment("Ingestion__Providers__Aws__Clusters__0", "reference")
+            .WaitFor(emulator);
+        QueueSeries(ingestion, 0, "queue_depth", "orders:ApproximateNumberOfMessages+ApproximateNumberOfMessagesNotVisible");
+        QueueSeries(ingestion, 1, "queue_dead_letter_depth", "orders-dlq:ApproximateNumberOfMessages+ApproximateNumberOfMessagesNotVisible");
+        executor
+            .WithEnvironment("Executor__Adapters__QueueConsumer__Provider", "sqs")
+            .WithEnvironment("Executor__Adapters__Sqs__ServiceUrl", emulator.GetEndpoint("http"))
+            .WithEnvironment("Executor__Adapters__Sqs__AccessKey", Account)
+            .WithEnvironment("Executor__Adapters__Sqs__SecretKey", SyntheticSecret)
+            .WithEnvironment("Executor__Adapters__Sqs__Queues__0", "orders")
+            .WaitFor(emulator);
+    }
+
+    // A series of SQS queue attributes, appended after Ingestion's own series at indexes its configuration leaves unused;
+    // the configuration binder reads a list's entries in order whatever their indexes.
+    private static void QueueSeries(IResourceBuilder<ProjectResource> ingestion, int index, string name, string expression)
+    {
+        string prefix = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Ingestion__MetricSeries__{1000 + index}__");
+        ingestion
+            .WithEnvironment(prefix + "Name", name)
+            .WithEnvironment(prefix + "Expression", expression)
+            .WithEnvironment(prefix + "Service", "queue-consumer")
+            .WithEnvironment(prefix + "Unit", "messages")
+            .WithEnvironment(prefix + "Aggregation", "gauge")
+            .WithEnvironment(prefix + "Priority", "8")
+            .WithEnvironment(prefix + "Provider", "sqs");
+    }
 
     /// <summary>
     /// Adds the AWS-emulated reference environment (Phase E01, ADR-021), enabled by

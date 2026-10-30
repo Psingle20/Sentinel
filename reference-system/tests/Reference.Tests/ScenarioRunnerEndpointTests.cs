@@ -35,7 +35,7 @@ public sealed class ScenarioRunnerEndpointTests
         using HttpResponseMessage unknown = await client.GetAsync(new Uri("/api/scenarios/S9", UriKind.Relative));
 
         JsonElement[] scenarios = [.. (await BodyAsync(list)).EnumerateArray()];
-        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "AWS-S1", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
         Names(scenarios[0]).ShouldBe(["id", "slug", "kind", "version", "description"]);
         (await BodyAsync(one)).GetProperty("steps").GetArrayLength().ShouldBeGreaterThan(0);
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);

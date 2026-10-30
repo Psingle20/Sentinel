@@ -1,0 +1,111 @@
+{
+  "id": "AWS-S1",
+  "slug": "poison-message-innocent-ecs-revision",
+  "version": 1,
+  "kind": "confounder",
+  "description": "S6 in the AWS-emulated environment. One order message whose amount is not a number reaches the queue-consumer's SQS queue. No revision can process it, so it fails on every receive and keeps returning, its approximate receive count rising, while the other orders pass through. A benign queue-consumer v1.4.1 task definition rolls out through ECS 30 s later, before the queue's oldest message crosses the detection threshold. Fidelity: the queue, its dead-letter queue, the ECS service and its rollout are emulated by the pinned emulator; the consumer and its telemetry are real; the poison message is injected through the SQS API.",
+  "environment": "aws",
+  "account": "000000000000",
+  "region": "us-east-1",
+  "affectedService": "queue-consumer",
+  "downstreamServices": [],
+  "warmupSeconds": 75,
+  "durationSeconds": 300,
+  "steps": [
+    { "atSeconds": 0, "action": "poisonMessage", "service": "queue-consumer", "role": "cause" },
+    { "atSeconds": 30, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "role": "confounder" }
+  ],
+  "cause": {
+    "description": "A poison order message fails on every receive.",
+    "service": "queue-consumer",
+    "change": "poison message sent to the SQS queue",
+    "activationSeconds": 0
+  },
+  "confounders": [
+    { "description": "Benign queue-consumer v1.4.1 ECS task definition, rolled out from 30 s.", "service": "queue-consumer", "change": "deploy queue-consumer v1.4.1", "atSeconds": 30, "servingFromSeconds": 45 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "queue-consumer",
+    "metric": "queue_oldest_message_age",
+    "threshold": 60,
+    "withinSeconds": 120
+  },
+  "expectedObservations": [
+    {
+      "description": "Order messages fail.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 30
+    },
+    {
+      "description": "One message's receive count keeps rising.",
+      "query": "max(last_over_time(reference_queue_max_receive_count[30s]))",
+      "expectation": "above",
+      "threshold": 10,
+      "fromSeconds": 0,
+      "withinSeconds": 60
+    },
+    {
+      "description": "The queue's oldest message crosses the detection threshold.",
+      "query": "max(last_over_time(reference_queue_oldest_message_age_seconds[30s]))",
+      "expectation": "above",
+      "threshold": 60,
+      "fromSeconds": 0,
+      "withinSeconds": 120
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Failures begin before the v1.4.1 revision rolls out.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 0,
+      "withinSeconds": 30
+    },
+    {
+      "description": "The other orders are still processed.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m]))",
+      "expectation": "above",
+      "threshold": 2,
+      "fromSeconds": 60,
+      "withinSeconds": 120
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 2001,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The consumer's own producer sends four orders a second to SQS; the poison message returns at once after each failure, held two seconds by the worker that failed on it."
+  },
+  "hypotheses": {
+    "leading": { "service": "queue-consumer", "cause": "a poison order message fails on every receive" },
+    "rejected": [
+      { "service": "queue-consumer", "cause": "queue-consumer v1.4.1 ECS task definition" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "quarantine-message", "service": "queue-consumer", "mode": "approval-required" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "queue-consumer" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "queue-consumer",
+    "fromVersion": "v1.4.1",
+    "toVersion": "v1.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "quarantine the message received again and again, which the SQS redrive window dead-letters",
+    "criteria": [
+      { "description": "The oldest message is young again.", "query": "max(last_over_time(reference_queue_oldest_message_age_seconds[30s]))", "comparison": "lessThan", "threshold": 20 },
+      { "description": "No message fails.", "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m]))", "comparison": "lessThan", "threshold": 0.02 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

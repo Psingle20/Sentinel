@@ -14,6 +14,7 @@ namespace Sentinel.EndToEnd.Tests;
 /// </summary>
 [Collection(AwsReferenceCollection.Name)]
 [Trait("Category", "EndToEnd")]
+[Trait("Suite", "Aws")]
 public sealed class AwsEnvironmentTests(AwsReferenceOnlySystem system, ITestOutputHelper output)
 {
     [Fact]
@@ -40,7 +41,8 @@ public sealed class AwsEnvironmentTests(AwsReferenceOnlySystem system, ITestOutp
             finished.Phase.ShouldBe("completed");
             finished.Steps.ShouldAllBe(step => step.Error == null, "the revision rolled out through ECS");
 
-            double? oldest = await system.Prometheus.ScalarAsync("max_over_time(max(reference_queue_oldest_message_age_seconds)[3m:5s])");
+            // A task the rollout replaced keeps its last pushed value in Prometheus for five minutes; only fresh samples count.
+            double? oldest = await system.Prometheus.ScalarAsync("max_over_time(max(last_over_time(reference_queue_oldest_message_age_seconds[30s]))[3m:5s])");
             output.WriteLine($"The oldest message was at most {oldest:F1} s old during the run.");
             oldest.ShouldNotBeNull("the ECS-hosted consumer reports its queue's oldest message").ShouldBeLessThan(10, "the rollout does not age the queue");
         }

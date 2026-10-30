@@ -8,6 +8,7 @@ using Sentinel.Ingestion.Application.Abstractions.Providers;
 using Sentinel.Ingestion.Application.Options;
 using Sentinel.Ingestion.Application.Services;
 using Sentinel.Ingestion.Infrastructure.Diagnostics;
+using Sentinel.Ingestion.Infrastructure.Providers;
 
 namespace Sentinel.Ingestion.Infrastructure.Workers;
 
@@ -45,13 +46,37 @@ internal sealed class IngestionWorker(
     // Loops end when the generation ends; a pull already started runs to completion under the stopping token.
     private async Task RunAsync(IngestionOptions settings, CancellationToken generation, CancellationToken stoppingToken)
     {
+        // The AWS-emulated environment adds a second source of metrics, deployments and topology (Phase E01).
+        string[] metricSources;
+        string[] deploymentSources;
+        string[] topologySources;
+        await using (AsyncServiceScope scope = scopes.CreateAsyncScope())
+        {
+            metricSources = [.. scope.ServiceProvider.GetServices<IMetricsProvider>().Select(provider => provider.Name)];
+            deploymentSources = [.. scope.ServiceProvider.GetServices<IDeploymentProvider>().Select(provider => provider.Name)];
+            topologySources = [.. scope.ServiceProvider.GetServices<ITopologyProvider>().Select(provider => provider.Name)];
+        }
+
         var pulls = new List<(int Priority, string Name, Func<IngestionCycle, IServiceProvider, Task<int>> Pull)>();
         foreach (MetricSeriesDefinition series in settings.MetricSeries)
         {
-            pulls.Add((series.Priority, $"metrics:{series.Name}", (cycle, provider) => cycle.PullMetricsAsync(provider.GetRequiredService<IMetricsProvider>(), series, stoppingToken)));
+            // Each series is pulled from the provider it names; a provider that is not configured is said so once, not
+            // retried every cycle.
+            string source = series.Provider ?? PrometheusMetricsProvider.ProviderName;
+            if (!metricSources.Contains(source, StringComparer.Ordinal))
+            {
+                logger.LogWarning("Metric series {Series} names provider {Provider}, which is not configured; it is not pulled", series.Name, source);
+                continue;
+            }
+
+            pulls.Add((series.Priority, $"metrics:{series.Name}", (cycle, provider) => cycle.PullMetricsAsync(provider.GetServices<IMetricsProvider>().Single(candidate => candidate.Name == source), series, stoppingToken)));
         }
 
-        pulls.Add((8, "deployments", (cycle, provider) => cycle.PullDeploymentsAsync(provider.GetRequiredService<IDeploymentProvider>(), stoppingToken)));
+        foreach (string source in deploymentSources)
+        {
+            string name = deploymentSources.Length == 1 ? "deployments" : $"deployments:{source}";
+            pulls.Add((8, name, (cycle, provider) => cycle.PullDeploymentsAsync(provider.GetServices<IDeploymentProvider>().Single(candidate => candidate.Name == source), stoppingToken)));
+        }
         foreach (LogSourceDefinition source in settings.LogSources)
         {
             pulls.Add((source.Priority, $"logs:{source.Name}", (cycle, provider) => cycle.PullLogsAsync(provider.GetRequiredService<ILogsProvider>(), source, stoppingToken)));
@@ -64,7 +89,11 @@ internal sealed class IngestionWorker(
 
         if (settings.TopologyEnabled)
         {
-            pulls.Add((-1, "topology", (cycle, provider) => cycle.PullTopologyAsync(provider.GetRequiredService<ITopologyProvider>(), stoppingToken)));
+            foreach (string source in topologySources)
+            {
+                string name = topologySources.Length == 1 ? "topology" : $"topology:{source}";
+                pulls.Add((-1, name, (cycle, provider) => cycle.PullTopologyAsync(provider.GetServices<ITopologyProvider>().Single(candidate => candidate.Name == source), stoppingToken)));
+            }
         }
 
         if (settings.AlertsEnabled)

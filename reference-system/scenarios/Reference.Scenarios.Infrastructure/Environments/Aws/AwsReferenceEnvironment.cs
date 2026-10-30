@@ -16,8 +16,9 @@ namespace Reference.Scenarios.Infrastructure.Environments.Aws;
 /// The AWS-emulated reference environment (Phase E01, Stage 1): the queue-consumer runs as an ECS service on an SQS queue
 /// with a dead-letter queue, in the emulator ADR-021 pins, beside the local workloads, which the local environment still
 /// drives. Provisioning and inspection use the public SQS and ECS APIs Sentinel's adapters will use, never an emulator's
-/// own. A reset scales the consumer to zero, empties both queues, proves them empty and starts the baseline revision
-/// again, so no message or booking of an earlier run survives it. The consumer's fault controls run inside its task,
+/// own. A reset scales the consumer to zero, deletes its service, empties both queues, proves them empty and creates
+/// the service again on the baseline revision, so no message or booking of an earlier run survives it, and Sentinel's
+/// change provider sees a creation, not a deployment it could blame. The consumer's fault controls run inside its task,
 /// which the runner does not reach, so a step for it is one an AWS operator could take: a deployment through ECS, a
 /// message through SQS.
 /// </summary>
@@ -31,10 +32,7 @@ public sealed class AwsReferenceEnvironment(
     ILogger<AwsReferenceEnvironment> logger) : IReferenceEnvironment
 {
     public const string EnvironmentName = "aws";
-    public const string ProvisioningVersion = "1";
-
-    // High enough never to move a message on its own: quarantine is an action, not a side effect of the queue.
-    private const string MaxReceiveCount = "100";
+    public const string ProvisioningVersion = "2";
 
     private static readonly TimeSpan RolloutTimeout = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
@@ -54,18 +52,12 @@ public sealed class AwsReferenceEnvironment(
 
             await CallAsync(async () =>
             {
-                string deadLetters = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = options.DeadLetterQueue }, cancellationToken)).QueueUrl;
-                string deadLetterArn = (await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = deadLetters, AttributeNames = ["QueueArn"] }, cancellationToken)).Attributes["QueueArn"];
+                // The queue has no redrive policy of its own: quarantine is an action, not a side effect of the queue, so a
+                // poison message stays until the quarantine moves it. The emulator would also never apply the quarantine's
+                // lowered policy over one the queue was created with (ADR-021).
+                await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = options.DeadLetterQueue }, cancellationToken);
                 await sqs.CreateQueueAsync(
-                    new CreateQueueRequest
-                    {
-                        QueueName = options.Queue,
-                        Attributes = new Dictionary<string, string>
-                        {
-                            ["VisibilityTimeout"] = "30",
-                            ["RedrivePolicy"] = JsonSerializer.Serialize(new Dictionary<string, string> { ["deadLetterTargetArn"] = deadLetterArn, ["maxReceiveCount"] = MaxReceiveCount })
-                        }
-                    },
+                    new CreateQueueRequest { QueueName = options.Queue, Attributes = new Dictionary<string, string> { ["VisibilityTimeout"] = "30" } },
                     cancellationToken);
 
                 await ecs.CreateClusterAsync(new CreateClusterRequest { ClusterName = options.Cluster }, cancellationToken);
@@ -97,8 +89,13 @@ public sealed class AwsReferenceEnvironment(
         await ProvisionAsync(cancellationToken);
         string baseline = provisioning.TaskDefinitions[options.BaselineRevision];
 
-        await CallAsync(() => ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = options.Cluster, Service = options.Service, TaskDefinition = baseline, DesiredCount = 0 }, cancellationToken));
-        await WaitForAsync(service => service.RunningCount == 0, "stops its tasks", cancellationToken);
+        if (await CallAsync(() => ServiceAsync(cancellationToken)) is { Status: "ACTIVE" })
+        {
+            await CallAsync(() => ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = options.Cluster, Service = options.Service, DesiredCount = 0 }, cancellationToken));
+            await WaitForAsync(service => service.RunningCount == 0, "stops its tasks", cancellationToken);
+            await CallAsync(() => ecs.DeleteServiceAsync(new DeleteServiceRequest { Cluster = options.Cluster, Service = options.Service }, cancellationToken));
+            await WaitUntilGoneAsync(cancellationToken);
+        }
 
         await CallAsync(async () =>
         {
@@ -115,7 +112,7 @@ public sealed class AwsReferenceEnvironment(
             }
         }
 
-        await CallAsync(() => ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = options.Cluster, Service = options.Service, TaskDefinition = baseline, DesiredCount = 1 }, cancellationToken));
+        await CallAsync(() => ecs.CreateServiceAsync(new CreateServiceRequest { Cluster = options.Cluster, ServiceName = options.Service, TaskDefinition = baseline, DesiredCount = 1 }, cancellationToken));
         await WaitForAsync(service => service.RunningCount == 1 && service.TaskDefinition == baseline, $"serves {options.BaselineRevision} again", cancellationToken);
     }
 
@@ -169,7 +166,7 @@ public sealed class AwsReferenceEnvironment(
                     break;
             }
         }
-        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException)
+        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
             problems.Add($"The emulator did not answer: {exception.Message}");
         }
@@ -177,8 +174,25 @@ public sealed class AwsReferenceEnvironment(
         return new EnvironmentState(Name, problems.Count == 0, problems, options.Emulator, options.ImageDigest, ProvisioningVersion);
     }
 
+    // A deleted service lingers as INACTIVE beside the one created after it; the live one is what counts.
     private async Task<Service?> ServiceAsync(CancellationToken cancellationToken) =>
-        (await ecs.DescribeServicesAsync(new DescribeServicesRequest { Cluster = options.Cluster, Services = [options.Service] }, cancellationToken)).Services?.FirstOrDefault();
+        (await ecs.DescribeServicesAsync(new DescribeServicesRequest { Cluster = options.Cluster, Services = [options.Service] }, cancellationToken)).Services?
+            .OrderBy(service => service.Status == "ACTIVE" ? 0 : 1)
+            .FirstOrDefault();
+
+    private async Task WaitUntilGoneAsync(CancellationToken cancellationToken)
+    {
+        DateTimeOffset deadline = time.GetUtcNow() + RolloutTimeout;
+        while (await CallAsync(() => ServiceAsync(cancellationToken)) is { Status: "ACTIVE" or "DRAINING" })
+        {
+            if (time.GetUtcNow() > deadline)
+            {
+                throw new ReferenceEnvironmentException(EnvironmentFailure.Timeout, $"{options.Service} was not deleted within {RolloutTimeout.TotalSeconds:F0} s.");
+            }
+
+            await Task.Delay(PollInterval, time, cancellationToken);
+        }
+    }
 
     private async Task<string> QueueUrlAsync(string queue, CancellationToken cancellationToken) =>
         (await sqs.GetQueueUrlAsync(queue, cancellationToken)).QueueUrl;
@@ -219,7 +233,7 @@ public sealed class AwsReferenceEnvironment(
         {
             await call();
         }
-        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException)
+        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
             throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"The emulator refused or did not answer: {exception.Message}");
         }
@@ -231,7 +245,7 @@ public sealed class AwsReferenceEnvironment(
         {
             return await call();
         }
-        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException)
+        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
             throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"The emulator refused or did not answer: {exception.Message}");
         }

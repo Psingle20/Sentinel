@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Sentinel.Executor.Application.Abstractions.Remediation;
@@ -47,8 +48,16 @@ internal static class AdapterRegistration
         }
 
         // The quarantine adapter is optional too: without the consumer's endpoint and control token, quarantine-message has no
-        // adapter and is refused (Phase E01).
-        if (configuration["Executor:Adapters:QueueConsumer:Endpoint"] is { Length: > 0 } queue
+        // adapter and is refused (Phase E01). In the AWS environment the queue is an SQS queue, and Executor quarantines
+        // through SQS with credentials of its own instead (Phase E01, Stage 2).
+        if (configuration["Executor:Adapters:QueueConsumer:Provider"] == "sqs")
+        {
+            var sqs = SqsQuarantineOptions.From(configuration);
+            services.AddSingleton(sqs);
+            services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(sqs.Credentials(), new AmazonSQSConfig { ServiceURL = sqs.ServiceUrl.ToString(), AuthenticationRegion = sqs.Region }));
+            services.AddTransient<IRemediationAdapter, SqsQuarantineAdapter>();
+        }
+        else if (configuration["Executor:Adapters:QueueConsumer:Endpoint"] is { Length: > 0 } queue
             && configuration["Executor:Adapters:QueueConsumer:ControlToken"] is { } queueToken
             && !string.IsNullOrWhiteSpace(queueToken))
         {

@@ -28,4 +28,10 @@ public sealed record MetricSeriesDefinition
 
     /// <summary>Higher-priority series are pulled first in each cycle (Phase 02 stream prioritization).</summary>
     public int Priority { get; init; }
+
+    /// <summary>
+    /// The metrics provider that serves the series, by name: Prometheus when unset, or <c>sqs</c> for SQS queue attributes in
+    /// the AWS-emulated environment (Phase E01). <see cref="Expression"/> is in that provider's own language.
+    /// </summary>
+    public string? Provider { get; init; }
 }

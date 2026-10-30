@@ -30,7 +30,8 @@ public sealed class AwsEnvironmentOptions
 
     public string DeadLetterQueue { get; init; } = "orders-dlq";
 
-    public string Image { get; init; } = "reference-queue-consumer:dev";
+    /// <summary>The consumer's image; <c>{revision}</c> becomes the task definition's revision, so a version is an image tag.</summary>
+    public string Image { get; init; } = "reference-queue-consumer:{revision}";
 
     public string BaselineRevision { get; init; } = "v1.4.0";
 
@@ -75,7 +76,7 @@ public sealed class AwsEnvironmentOptions
             ServiceUrl = endpoint,
             Region = region,
             Account = account,
-            Image = section["Image"] ?? "reference-queue-consumer:dev",
+            Image = section["Image"] ?? "reference-queue-consumer:{revision}",
             ContainerHost = host,
             Emulator = section["Emulator"],
             ImageDigest = section["ImageDigest"],

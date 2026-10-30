@@ -9,10 +9,10 @@
   "properties": {
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 1 },
-    "id": { "type": "string", "pattern": "^S[0-9]+$" },
+    "id": { "type": "string", "pattern": "^(AWS-)?S[0-9]+$" },
     "version": { "type": "integer", "minimum": 1, "description": "Bumped whenever the ground truth or perturbations change, so results from different versions are never compared." },
     "kind": { "enum": ["control", "golden", "counterfactual", "failure", "regression"] },
-    "manifest": { "type": "string", "pattern": "^S[0-9]+$", "description": "The scenario manifest the run executes." },
+    "manifest": { "type": "string", "pattern": "^(AWS-)?S[0-9]+$", "description": "The scenario manifest the run executes." },
     "title": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
     "perturbations": {

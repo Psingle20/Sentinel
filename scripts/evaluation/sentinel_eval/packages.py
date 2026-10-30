@@ -132,7 +132,7 @@ def load_package(path: Path) -> Package:
 def load_packages(directory: Path) -> dict[str, Package]:
     packages = {}
     # Package files are named by scenario ID; matching is explicit because globbing is case-insensitive on Windows.
-    for path in sorted(path for path in directory.glob("*.json") if re.fullmatch(r"S[0-9]+\.json", path.name)):
+    for path in sorted(path for path in directory.glob("*.json") if re.fullmatch(r"(AWS-)?S[0-9]+\.json", path.name)):
         package = load_package(path)
         _require(package.id == path.stem, path, f"id {package.id!r} does not match the file name")
         packages[package.id] = package

@@ -75,7 +75,7 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         new() { AtSeconds = 0, Action = action, Service = service, Version = version, Role = "noise" };
 
     private static async Task<Service> ServiceAsync(AmazonECSClient ecs, AwsEnvironmentOptions options) =>
-        (await ecs.DescribeServicesAsync(new DescribeServicesRequest { Cluster = options.Cluster, Services = [options.Service] })).Services!.Single();
+        (await ecs.DescribeServicesAsync(new DescribeServicesRequest { Cluster = options.Cluster, Services = [options.Service] })).Services!.First(service => service.Status == "ACTIVE");
 
     private static async Task<int> DepthAsync(AmazonSQSClient sqs, string queue)
     {

@@ -83,6 +83,64 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     }
 
     [Fact]
+    public async Task A_redrive_policy_set_later_applies_only_to_a_queue_created_without_one()
+    {
+        // A known incompatibility (ADR-021). SQS applies a changed redrive policy at the next receive; the emulator applies
+        // one set later only to a queue created without a policy, and otherwise keeps applying the policy the queue was
+        // created with while reporting the new one. The quarantine adapter lowers the policy for a window, so the AWS
+        // environment's queue has none of its own.
+        using AmazonSQSClient sqs = emulator.Sqs();
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+
+        (string bare, string bareDeadLetters, string bareArn) = await QueueAsync(sqs, $"bare-{suffix}", maxReceiveCount: null);
+        (string created, string createdDeadLetters, string createdArn) = await QueueAsync(sqs, $"created-{suffix}", maxReceiveCount: "100");
+        int bareMoved = await LowerAndReceiveAsync(sqs, bare, bareDeadLetters, bareArn);
+        int createdMoved = await LowerAndReceiveAsync(sqs, created, createdDeadLetters, createdArn);
+
+        bareMoved.ShouldBe(1, "a policy set on a queue created without one applies at the next receive");
+        createdMoved.ShouldBe(0, "the policy a queue was created with still applies");
+        JsonDocument.Parse((await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = created, AttributeNames = ["RedrivePolicy"] })).Attributes["RedrivePolicy"])
+            .RootElement.GetProperty("maxReceiveCount").ToString().ShouldBe("2", "the new policy is reported nonetheless");
+    }
+
+    private static async Task<(string Queue, string DeadLetters, string DeadLetterArn)> QueueAsync(AmazonSQSClient sqs, string name, string? maxReceiveCount)
+    {
+        string deadLetters = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = $"{name}-dlq" })).QueueUrl;
+        string arn = (await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = deadLetters, AttributeNames = ["QueueArn"] })).Attributes["QueueArn"];
+        var request = new CreateQueueRequest { QueueName = name };
+        if (maxReceiveCount is not null)
+        {
+            request.Attributes = new Dictionary<string, string> { ["RedrivePolicy"] = JsonSerializer.Serialize(new Dictionary<string, string> { ["deadLetterTargetArn"] = arn, ["maxReceiveCount"] = maxReceiveCount }) };
+        }
+
+        return ((await sqs.CreateQueueAsync(request)).QueueUrl, deadLetters, arn);
+    }
+
+    // Three failed receives, a policy that dead-letters after two, then one more receive: how many messages it moved.
+    private static async Task<int> LowerAndReceiveAsync(AmazonSQSClient sqs, string queue, string deadLetters, string deadLetterArn)
+    {
+        await sqs.SendMessageAsync(new SendMessageRequest { QueueUrl = queue, MessageBody = "{\"orderId\":\"poison\"}" });
+        for (int receive = 0; receive < 4; receive++)
+        {
+            if (receive == 3)
+            {
+                await sqs.SetQueueAttributesAsync(new SetQueueAttributesRequest
+                {
+                    QueueUrl = queue,
+                    Attributes = new Dictionary<string, string> { ["RedrivePolicy"] = JsonSerializer.Serialize(new Dictionary<string, string> { ["deadLetterTargetArn"] = deadLetterArn, ["maxReceiveCount"] = "2" }) }
+                });
+            }
+
+            foreach (Message message in (await sqs.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = queue, WaitTimeSeconds = 1, MaxNumberOfMessages = 1 })).Messages ?? [])
+            {
+                await sqs.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest { QueueUrl = queue, ReceiptHandle = message.ReceiptHandle, VisibilityTimeout = 0 });
+            }
+        }
+
+        return int.Parse((await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = deadLetters, AttributeNames = ["ApproximateNumberOfMessages"] })).Attributes["ApproximateNumberOfMessages"], System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    [Fact]
     public async Task An_ecs_service_runs_its_task_as_a_real_container_and_rolls_out_a_new_revision()
     {
         using AmazonECSClient ecs = emulator.Ecs();

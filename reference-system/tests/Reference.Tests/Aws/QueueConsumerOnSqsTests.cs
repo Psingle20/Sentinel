@@ -26,7 +26,7 @@ namespace Reference.Tests.Aws;
 [Collection(EmulatorCollection.Name)]
 public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputHelper output) : IClassFixture<FlociEmulator>
 {
-    private const string Image = "reference-queue-consumer:conformance";
+    private const string Repository = "reference-queue-consumer-conformance";
 
     [Fact]
     public async Task The_consumer_image_processes_orders_from_sqs_and_confirms_them_with_order_service()
@@ -41,7 +41,7 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
         {
             ServiceUrl = emulator.Endpoint,
             Cluster = $"reference-{suffix}",
-            Image = Image,
+            Image = $"{Repository}:{{revision}}",
             TaskEnvironment = new Dictionary<string, string>
             {
                 ["Reference__Queue__Provider"] = "sqs",
@@ -71,7 +71,7 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
     {
         string project = Path.Combine(RepositoryRoot(), "reference-system", "services", "Reference.QueueConsumer", "Reference.QueueConsumer.csproj");
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (string argument in new[] { "publish", project, "-t:PublishContainer", "-c", "Release", "-p:ContainerImageTag=conformance", "--nologo", "-v", "quiet" })
+        foreach (string argument in new[] { "publish", project, "-t:PublishContainer", "-c", "Release", $"-p:ContainerRepository={Repository}", "--nologo", "-v", "quiet" })
         {
             start.ArgumentList.Add(argument);
         }
@@ -81,7 +81,7 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
         Task<string> error = publish.StandardError.ReadToEndAsync();
         string log = await publish.StandardOutput.ReadToEndAsync();
         await publish.WaitForExitAsync();
-        output.WriteLine($"Published {Image} in {published.Elapsed.TotalSeconds:F0} s.");
+        output.WriteLine($"Published {Repository} in {published.Elapsed.TotalSeconds:F0} s.");
         publish.ExitCode.ShouldBe(0, log + await error);
     }
 

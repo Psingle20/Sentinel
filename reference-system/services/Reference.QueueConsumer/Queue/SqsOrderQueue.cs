@@ -198,7 +198,7 @@ public sealed class SqsOrderQueue(IAmazonSQS sqs, SqsQueueOptions options, TimeP
         {
             await call();
         }
-        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException)
+        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
             throw new QueueUnavailableException("The orders queue in SQS is unavailable.", exception);
         }
@@ -210,7 +210,7 @@ public sealed class SqsOrderQueue(IAmazonSQS sqs, SqsQueueOptions options, TimeP
         {
             return await call();
         }
-        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException)
+        catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
             throw new QueueUnavailableException("The orders queue in SQS is unavailable.", exception);
         }

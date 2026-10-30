@@ -41,7 +41,7 @@ Verified on 2026-10-30 on Windows 11 with Docker Desktop by the environment conf
 | 5. The SDK clients Sentinel's adapters will use | Pass | SQS, ECS, IAM, STS, CloudWatch and CloudWatch Logs clients from the AWS SDK for .NET 4 |
 | 6. Reset without stale resources | Pass, with the label cleanup | A restarted emulator in memory mode holds no queue or cluster; the task container that outlived the first emulator was removed by its label, and none remained |
 | 7. Account and region isolation | Pass, as namespacing | Queues of accounts 111111111111 and 222222222222, and of `us-east-1` and `eu-west-1`, are invisible to each other; STS resolves the account from a 12-digit access key and an assumed role acts as that role |
-| 8. First scenario within budget | Not yet run | `AWS-S1` does not exist yet; measured so far, start-up 5.0 s and 33 MiB of memory at rest |
+| 8. First scenario within budget | Pass, Stage 2 | `AWS-S1` end to end in 7 min 15 s, 10.9 min with the system's start; the emulator at most 78 MiB of its 768 MiB cap and the consumer's task 63 MiB of 256 MiB, sampled during the run (below) |
 | 9. No external credentials, telemetry upload or paid services | Pass for credentials and services; upload not verified | Synthetic credentials only; outbound traffic was not blocked, so whether the emulator sends anything out was not observed |
 | 10. Known incompatibilities and tested digest | Recorded | Below, and the digest above |
 
@@ -63,6 +63,30 @@ Two more facts the AWS environment depends on:
 - Under load, ECS reports a rollout `COMPLETED` before `ListTasks` shows the new task; a check of the replacement waits on the tasks themselves.
 - ECS tasks reach the host's endpoints, the OTLP receivers and order-service, through `host.docker.internal`, which Docker Desktop provides. A Linux Docker engine needs a host-gateway entry the task definitions do not yet carry.
 
+Stage 2 added what Sentinel's own AWS adapters rely on, each checked by their emulator tests in Ingestion and Executor, and one incompatibility it found on the way:
+
+- ECS keeps one `PRIMARY` deployment per service and drops the previous one as soon as a rollout starts; its `updatedAt` never moves, and only `rolloutState` turns from `IN_PROGRESS` to `COMPLETED`, about six seconds later. Ingestion's ECS provider therefore remembers what each service served, and times a completion when it first sees it.
+- A service's first deployment carries the service's own `createdAt`, so a service deleted and created again by a reset is a creation, not a deployment. A deleted service lingers as `INACTIVE` beside the one that replaces it.
+- A redrive policy set on a queue that was created without one applies at the next receive, so a message already past its limit is dead-lettered then; clearing the policy removes it, and setting it again applies again. Executor's SQS quarantine relies on this, so the AWS environment's queue has no redrive policy of its own.
+- `ListQueues` lists every queue of the account, and a task definition's environment comes back as registered, so Ingestion reads the topology a consumer's task declares: the services it calls through service discovery and the queues it names.
+- The SDK reports a client timeout as a plain `TimeoutException`, not an `AmazonClientException`.
+- A rollout replaces the consumer's task, and the replaced task's last pushed gauge stays in Prometheus for its five-minute lookback, since pushed OTLP series get no staleness markers. Read through `max(...)`, the old task's queue age outlived the poison message: `AWS-S1`'s first verified quarantine was judged unrecovered at a frozen 37.66 s. Queue gauges are therefore read over their last 30 seconds, `last_over_time(...[30s])`, which a live task refreshes every five. This is not the emulator's doing; any replaced task that pushes its metrics behaves so.
+
+### Stage 2 budget, 2026-10-30
+
+Gate check 8 ran with `AWS-S1` through the AppHost, on the developer machine that ran every earlier check, with Docker Desktop's 8 GB.
+
+| Measure | Budget, set with this check | Measured |
+| --- | --- | --- |
+| `AWS-S1`, from its quiet check to verified recovery | 14 min, the test's detection and recovery timeouts | 7 min 15 s |
+| The AWS suite, `AWS-S0` and `AWS-S1`, with the system's start | 20 min | 15.1 min for both; 10.9 min for `AWS-S1` alone |
+| Emulator memory | its 768 MiB cap | 29 MiB at the start of a run, 78 MiB at its peak |
+| Emulator CPU | its 1.5-CPU cap | under 12% while sampled |
+| The consumer's ECS task | its 256 MiB task memory | 56 to 63 MiB |
+| Containers left after the AppHost stops | none | none |
+
+The figures are samples of `docker stats` during the runs, not a profile, and a slower machine needs more time.
+
 ### Known incompatibilities
 
 - An ECS task container outlives the emulator that started it; the environment must remove containers by label when it stops, and the conformance fixture does.
@@ -71,6 +95,7 @@ Two more facts the AWS environment depends on:
 - There is no reset endpoint. A scenario's reset is a restart in memory mode; snapshots exist only through Floci's separate CLI and are not used.
 - ECS reports one `PRIMARY` deployment at a time and `pendingCount` is always 0, so a partial rollout (`AWS-S9`) needs its own check before it is admitted.
 - `QueueUrl` values carry the emulator's network hostname, `aws-emulator`; SDK clients reach it through their configured endpoint instead.
+- A redrive policy a queue was created with never changes. `SetQueueAttributes` stores a new one and `GetQueueAttributes` reports it, but receives keep applying the original, so a quarantine that lowers it moves nothing. On SQS the new policy applies at the next receive. Found in Stage 2, when `AWS-S1`'s quarantine timed out on a message received 86 times under a lowered limit of 3, and pinned by a conformance test that fails once a newer image fixes it.
 
 ## Consequences
 
@@ -88,7 +113,6 @@ Two more facts the AWS environment depends on:
 
 ## Follow-up work
 
-- Gate check 8 with `AWS-S1`, and the local resource and time budget it records (Phase E01, Stage 2).
 - A host-gateway entry in the consumer's task definition for Linux Docker engines, before CI runs the AWS environment.
 - A check of partial ECS rollouts before `AWS-S9` is admitted, and of EventBridge before `AWS-S7` (Phase E01, Stage 4).
 

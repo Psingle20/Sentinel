@@ -13,7 +13,7 @@ namespace Sentinel.EndToEnd.Tests;
 /// </summary>
 public static class EvaluationRun
 {
-    public const string Dataset = "scenarios-v1";
+    public const string Dataset = "scenarios-v2";
 
     private static readonly JsonSerializerOptions Indented = new(SentinelJson.Options) { WriteIndented = true };
 
