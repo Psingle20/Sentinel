@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from sentinel_eval.packages import load_packages  # noqa: E402
+from sentinel_eval.calibration import calibrate, reliability  # noqa: E402
 from sentinel_eval.records import latest_per_scenario, latest_runs, load_runs  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render, to_json  # noqa: E402
 from sentinel_eval.scoring import BASELINE, score_baseline, score_sentinel, sentinel_label  # noqa: E402
@@ -56,11 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     baseline = aggregate(BASELINE, [score for score in scores if score.investigator == BASELINE])
     groups = [*candidates, baseline]
     gates = [gate(candidate, baseline) for candidate in candidates]
+    calibrations = [calibrate(label, [score for score in scores if score.label == label]) for label in labels]
+    reliabilities = [item for label in labels for item in reliability(label, [score for score in scores if score.label == label])]
     missing = sorted(set(packages) - {scenario_id for scenario_id, _ in runs})
 
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "report.md").write_text(render(dataset, packages, scores, groups, gates, missing), encoding="utf-8")
-    (args.out / "report.json").write_text(to_json(dataset, scores, groups, gates, missing), encoding="utf-8")
+    (args.out / "report.md").write_text(render(dataset, packages, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities), encoding="utf-8")
+    (args.out / "report.json").write_text(to_json(dataset, scores, groups, gates, missing, calibrations=calibrations, reliabilities=reliabilities), encoding="utf-8")
     passed = all(result.passed for result in gates)
     print(f"Scored {len(runs)} run(s) against {len(packages)} package(s); gate {'passed' if passed else 'failed'}. Report: {args.out / 'report.md'}")
     return 1 if args.check and not passed else 0

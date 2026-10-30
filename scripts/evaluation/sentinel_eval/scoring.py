@@ -57,6 +57,9 @@ class Score:
     input_tokens: int = 0
     output_tokens: int = 0
     cost: float = 0.0
+    confidence: float | None = None
+    # Per provider: accepted evidence citing it, and how much of that matched the ground truth.
+    provider_evidence: dict[str, tuple[int, int]] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
 
@@ -166,9 +169,17 @@ def score_sentinel(run: Run, package: Package, pricing: dict) -> Score:
     score.hallucination_rate = round(len(invented) / len(accepted), 3) if accepted else None
 
     cited = [[classify_observation(observation, deployments) for observation in item["finding"].get("sourceObservationIds", [])] for item in accepted]
+    precise_items = [any(matches(spec, observation) for spec in package.evidence for observation in observations) for observations in cited]
+    counts: dict[str, list[int]] = {}
+    for item, precise_item in zip(accepted, precise_items):
+        for provider in {observation.split(":", 1)[0] for observation in item["finding"].get("sourceObservationIds", [])}:
+            count = counts.setdefault(provider, [0, 0])
+            count[0] += 1
+            count[1] += int(precise_item)
+    score.provider_evidence = {provider: (count[0], count[1]) for provider, count in counts.items()}
     if accepted:
         if package.evidence:
-            precise = sum(1 for observations in cited if any(matches(spec, observation) for spec in package.evidence for observation in observations))
+            precise = sum(precise_items)
             score.evidence_precision = round(precise / len(accepted), 3)
         else:
             score.evidence_precision = 0.0
@@ -181,6 +192,7 @@ def score_sentinel(run: Run, package: Package, pricing: dict) -> Score:
     score.detection_seconds = _seconds(run.scenario_started_at, opened)
     if decision:
         score.decision = decision.get("outcome", "none")
+        score.confidence = decision.get("confidence")
         score.decision_seconds = _seconds(opened, parse_time(decision.get("decidedAt")))
         if package.expected_missing:
             missing = " ".join(decision.get("missingEvidence", [])).lower()

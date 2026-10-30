@@ -37,6 +37,8 @@ python -m unittest discover -s scripts/evaluation/tests
 | Unsupported evidence | The share of proposed evidence that Runtime rejected. |
 | Hallucinated evidence | The share of accepted evidence citing an observation that no tool call of its own investigation returned. Only investigations with a recorded agent execution can be checked, so schema-1 runs report none. |
 | Missing evidence | For perturbed packages, whether the decision reported the signal the perturbation removed. |
+| Calibration | Over each investigator's diagnoses, the Brier score, a reliability table by stated confidence and the expected calibration error. Abstentions make no claim and are not counted. Confidence is reported as calibrated only with at least 30 scored diagnoses and an expected calibration error of at most 0.1; until then the report says why not. |
+| Source reliability | Per provider, the share of an investigator's accepted evidence whose observations match the scenario's ground-truth evidence: the observed counterpart of the reliability consensus gives each source. It depends on which evidence each package lists. |
 | Time, tokens and cost | Detection, decision and recovery times, and tokens and estimated cost of the primary (non-shadow) executions. |
 
 Observations are attributed from Ingestion's deterministic identities, so the harness needs no access to any service: `prometheus:{series}:{service}:{time}`, `{provider}:deployment:{id}:{state}`, `loki:{source}:{service}:...` and `jaeger:...`.

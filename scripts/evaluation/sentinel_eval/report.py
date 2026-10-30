@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from statistics import mean
 
+from .calibration import Calibration, SourceReliability
 from .scoring import Score
 
 
@@ -98,7 +99,18 @@ def _fmt(value, kind: str = "") -> str:
     return str(value)
 
 
-def render(dataset: dict, packages: dict, scores: list[Score], groups: list[Aggregate], gates: list[Gate], missing: list[str], generated: datetime | None = None) -> str:
+def render(
+    dataset: dict,
+    packages: dict,
+    scores: list[Score],
+    groups: list[Aggregate],
+    gates: list[Gate],
+    missing: list[str],
+    generated: datetime | None = None,
+    *,
+    calibrations: list[Calibration] | None = None,
+    reliabilities: list[SourceReliability] | None = None,
+) -> str:
     generated = generated or datetime.now(timezone.utc)
     lines = [
         "# Sentinel baseline evaluation",
@@ -124,6 +136,7 @@ def render(dataset: dict, packages: dict, scores: list[Score], groups: list[Aggr
         "Consensus accuracy counts only runs where some investigator proposed the true cause, so a miss there is the decision's, not the investigation's. "
         "Hallucinated evidence is accepted evidence citing an observation no tool returned to its investigation; unsupported evidence is evidence Runtime rejected.",
     ]
+    lines += _calibration(calibrations or [], reliabilities or [])
     lines += ["", "## Scenarios", "", "| Scenario | Kind | Investigator | Decision | Leading cause | Root cause correct | Plan | False remediation | Acceptable | Evidence precision | Final status | Notes |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for score in sorted(scores, key=lambda item: (item.scenario_id, item.investigator != "sentinel")):
         package = packages[score.scenario_id]
@@ -141,7 +154,47 @@ def render(dataset: dict, packages: dict, scores: list[Score], groups: list[Aggr
     return "\n".join(lines)
 
 
-def to_json(dataset: dict, scores: list[Score], groups: list[Aggregate], gates: list[Gate], missing: list[str]) -> str:
+def _calibration(calibrations: list[Calibration], reliabilities: list[SourceReliability]) -> list[str]:
+    if not calibrations:
+        return []
+    lines = [
+        "",
+        "## Calibration",
+        "",
+        "Confidence is calibrated when diagnoses are right about as often as they claim. Only diagnoses count, since an abstention makes no claim.",
+        "",
+        "| Investigator | Diagnoses | Brier score | Calibration error | Status |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    lines += [f"| {item.label} | {item.decisions} | {_fmt(item.brier_score)} | {_fmt(item.expected_calibration_error)} | {item.status}: {item.reason} |" for item in calibrations]
+    rows = [(item.label, bucket) for item in calibrations for bucket in item.buckets if bucket.decisions > 0]
+    if rows:
+        lines += ["", "| Investigator | Stated confidence | Diagnoses | Mean confidence | Accuracy |", "| --- | --- | --- | --- | --- |"]
+        lines += [f"| {label} | {bucket.low:.1f} to {bucket.high:.1f} | {bucket.decisions} | {_fmt(bucket.mean_confidence, 'pct')} | {_fmt(bucket.accuracy, 'pct')} |" for label, bucket in rows]
+    if reliabilities:
+        lines += [
+            "",
+            "## Source reliability",
+            "",
+            "The share of each provider's accepted evidence that matched the scenario's ground truth, the observed counterpart of the reliability consensus gives each source (0.8 unless configured).",
+            "",
+            "| Investigator | Provider | Evidence | Matching | Precision |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+        lines += [f"| {item.label} | {item.provider} | {item.evidence} | {item.matching} | {_fmt(item.precision, 'pct')} |" for item in reliabilities]
+    return lines
+
+
+def to_json(
+    dataset: dict,
+    scores: list[Score],
+    groups: list[Aggregate],
+    gates: list[Gate],
+    missing: list[str],
+    *,
+    calibrations: list[Calibration] | None = None,
+    reliabilities: list[SourceReliability] | None = None,
+) -> str:
     return json.dumps(
         {
             "dataset": dataset["version"],
@@ -150,6 +203,8 @@ def to_json(dataset: dict, scores: list[Score], groups: list[Aggregate], gates: 
             "groups": [asdict(group) for group in groups],
             "scores": [asdict(score) for score in scores],
             "missingRuns": missing,
+            "calibration": [asdict(item) for item in calibrations or []],
+            "sourceReliability": [asdict(item) for item in reliabilities or []],
         },
         indent=2,
     ) + "\n"

@@ -15,10 +15,11 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 import evaluate  # noqa: E402
+from sentinel_eval.calibration import MINIMUM_DECISIONS, calibrate, reliability  # noqa: E402
 from sentinel_eval.packages import PackageError, load_package, load_packages  # noqa: E402
 from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, parse_time  # noqa: E402
 from sentinel_eval.report import aggregate, gate  # noqa: E402
-from sentinel_eval.scoring import classify_observation, score_baseline, score_sentinel, sentinel_label  # noqa: E402
+from sentinel_eval.scoring import Score, classify_observation, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
 PACKAGES = HERE.parents[2] / "reference-system" / "scenarios" / "packages"
 PRICING = {"models": {"meta/muse-spark": {"inputPerMillion": 1.0, "outputPerMillion": 4.0}}, "default": {"inputPerMillion": 0, "outputPerMillion": 0}}
@@ -258,6 +259,56 @@ class RecordTests(unittest.TestCase):
         current = run("S2", None, recorded="2026-10-28T09:00:00+00:00")
         labels = {id(legacy): "legacy-double", id(current): "live"}
         self.assertEqual(list(latest_runs([legacy, current], lambda item: labels[id(item)]).values()), [current])
+
+
+def diagnosis(confidence: float, correct: bool, decision: str = "diagnosed") -> Score:
+    return Score("S1", "sentinel", "model", False, True, decision, confidence=confidence, root_cause_correct=correct)
+
+
+def stated(confidence: float, count: int, correct: int) -> list[Score]:
+    return [diagnosis(confidence, index < correct) for index in range(count)]
+
+
+class CalibrationTests(unittest.TestCase):
+    def test_diagnoses_right_as_often_as_they_claim_are_calibrated_once_there_are_enough(self):
+        scores = stated(0.65, 20, 13) + stated(0.85, 20, 17)
+
+        calibration = calibrate("model", scores)
+
+        self.assertEqual(calibration.status, "calibrated")
+        self.assertEqual(calibration.decisions, 40)
+        self.assertEqual(calibration.expected_calibration_error, 0.0)
+        self.assertEqual([(bucket.decisions, bucket.accuracy) for bucket in calibration.buckets if bucket.decisions], [(20, 0.65), (20, 0.85)])
+
+    def test_an_overconfident_investigator_is_uncalibrated_and_says_by_how_much(self):
+        calibration = calibrate("model", stated(0.9, 40, 20))
+
+        self.assertEqual(calibration.status, "uncalibrated")
+        self.assertEqual(calibration.expected_calibration_error, 0.4)
+        self.assertIn("exceeds", calibration.reason)
+        self.assertEqual(calibration.brier_score, 0.41)
+
+    def test_too_few_diagnoses_are_uncalibrated_however_accurate(self):
+        calibration = calibrate("model", stated(0.9, 5, 5))
+
+        self.assertEqual(calibration.status, "uncalibrated")
+        self.assertIn(str(MINIMUM_DECISIONS), calibration.reason)
+
+    def test_an_abstention_makes_no_claim_and_is_not_counted(self):
+        calibration = calibrate("model", [diagnosis(0.45, False, decision="abstained"), diagnosis(1.0, True)])
+
+        self.assertEqual(calibration.decisions, 1)
+        self.assertEqual(calibration.buckets[-1].decisions, 1, "a confidence of 1.0 falls in the top bucket")
+
+    def test_source_reliability_sums_each_providers_evidence_across_scenarios(self):
+        first = diagnosis(0.8, True)
+        first.provider_evidence = {"prometheus": (4, 3), "loki": (2, 0)}
+        second = diagnosis(0.7, False)
+        second.provider_evidence = {"prometheus": (2, 1)}
+
+        sources = reliability("model", [first, second])
+
+        self.assertEqual([(item.provider, item.evidence, item.matching, item.precision) for item in sources], [("loki", 2, 0, 0.0), ("prometheus", 6, 4, 0.667)])
 
 
 class GateTests(unittest.TestCase):

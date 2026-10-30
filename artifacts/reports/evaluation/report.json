@@ -122,6 +122,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -157,6 +159,25 @@
       "input_tokens": 81640,
       "output_tokens": 35046,
       "cost": 0.24374,
+      "confidence": 0.8720418532085198,
+      "provider_evidence": {
+        "deploy-controller": [
+          4,
+          4
+        ],
+        "loki": [
+          5,
+          3
+        ],
+        "prometheus": [
+          13,
+          6
+        ],
+        "jaeger": [
+          9,
+          0
+        ]
+      },
       "notes": []
     },
     {
@@ -192,6 +213,25 @@
       "input_tokens": 35179,
       "output_tokens": 4800,
       "cost": 0.0,
+      "confidence": 0.6777936962750716,
+      "provider_evidence": {
+        "jaeger": [
+          2,
+          0
+        ],
+        "deploy-controller": [
+          5,
+          3
+        ],
+        "prometheus": [
+          6,
+          2
+        ],
+        "loki": [
+          3,
+          2
+        ]
+      },
       "notes": []
     },
     {
@@ -227,6 +267,25 @@
       "input_tokens": 29264,
       "output_tokens": 4800,
       "cost": 0.0,
+      "confidence": 0.5624402460456942,
+      "provider_evidence": {
+        "jaeger": [
+          3,
+          0
+        ],
+        "deploy-controller": [
+          2,
+          2
+        ],
+        "loki": [
+          3,
+          2
+        ],
+        "prometheus": [
+          5,
+          3
+        ]
+      },
       "notes": []
     },
     {
@@ -262,6 +321,25 @@
       "input_tokens": 33949,
       "output_tokens": 4800,
       "cost": 0.0,
+      "confidence": 0.4775,
+      "provider_evidence": {
+        "jaeger": [
+          2,
+          2
+        ],
+        "deploy-controller": [
+          4,
+          2
+        ],
+        "prometheus": [
+          9,
+          5
+        ],
+        "loki": [
+          3,
+          2
+        ]
+      },
       "notes": []
     },
     {
@@ -297,6 +375,25 @@
       "input_tokens": 36576,
       "output_tokens": 4800,
       "cost": 0.0,
+      "confidence": 0.6500398280802293,
+      "provider_evidence": {
+        "deploy-controller": [
+          7,
+          2
+        ],
+        "loki": [
+          3,
+          0
+        ],
+        "prometheus": [
+          6,
+          2
+        ],
+        "jaeger": [
+          2,
+          0
+        ]
+      },
       "notes": []
     },
     {
@@ -332,6 +429,25 @@
       "input_tokens": 36744,
       "output_tokens": 4800,
       "cost": 0.0,
+      "confidence": 0.6768311288483467,
+      "provider_evidence": {
+        "deploy-controller": [
+          5,
+          1
+        ],
+        "loki": [
+          3,
+          2
+        ],
+        "prometheus": [
+          5,
+          2
+        ],
+        "jaeger": [
+          2,
+          0
+        ]
+      },
       "notes": []
     },
     {
@@ -367,6 +483,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -402,6 +520,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -437,6 +557,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -472,6 +594,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -507,6 +631,8 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     },
     {
@@ -542,8 +668,169 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
       "notes": []
     }
   ],
-  "missingRuns": []
+  "missingRuns": [],
+  "calibration": [
+    {
+      "label": "sentinel (unknown model)",
+      "decisions": 0,
+      "brier_score": null,
+      "expected_calibration_error": null,
+      "status": "uncalibrated",
+      "reason": "No diagnosis with a stated confidence was scored.",
+      "buckets": []
+    },
+    {
+      "label": "sentinel meta/muse-spark-1.3@investigator-v4",
+      "decisions": 1,
+      "brier_score": 0.016,
+      "expected_calibration_error": 0.128,
+      "status": "uncalibrated",
+      "reason": "1 scored diagnosis; at least 30 are needed to call confidence calibrated.",
+      "buckets": [
+        {
+          "low": 0.5,
+          "high": 0.6,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.6,
+          "high": 0.7,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.7,
+          "high": 0.8,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.8,
+          "high": 0.9,
+          "decisions": 1,
+          "mean_confidence": 0.872,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.9,
+          "high": 1.0,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        }
+      ]
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "decisions": 4,
+      "brier_score": 0.131,
+      "expected_calibration_error": 0.358,
+      "status": "uncalibrated",
+      "reason": "4 scored diagnoses; at least 30 are needed to call confidence calibrated.",
+      "buckets": [
+        {
+          "low": 0.5,
+          "high": 0.6,
+          "decisions": 1,
+          "mean_confidence": 0.562,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.6,
+          "high": 0.7,
+          "decisions": 3,
+          "mean_confidence": 0.668,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.7,
+          "high": 0.8,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.8,
+          "high": 0.9,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.9,
+          "high": 1.0,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        }
+      ]
+    }
+  ],
+  "sourceReliability": [
+    {
+      "label": "sentinel meta/muse-spark-1.3@investigator-v4",
+      "provider": "deploy-controller",
+      "evidence": 4,
+      "matching": 4,
+      "precision": 1.0
+    },
+    {
+      "label": "sentinel meta/muse-spark-1.3@investigator-v4",
+      "provider": "jaeger",
+      "evidence": 9,
+      "matching": 0,
+      "precision": 0.0
+    },
+    {
+      "label": "sentinel meta/muse-spark-1.3@investigator-v4",
+      "provider": "loki",
+      "evidence": 5,
+      "matching": 3,
+      "precision": 0.6
+    },
+    {
+      "label": "sentinel meta/muse-spark-1.3@investigator-v4",
+      "provider": "prometheus",
+      "evidence": 13,
+      "matching": 6,
+      "precision": 0.462
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "provider": "deploy-controller",
+      "evidence": 23,
+      "matching": 10,
+      "precision": 0.435
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "provider": "jaeger",
+      "evidence": 11,
+      "matching": 2,
+      "precision": 0.182
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "provider": "loki",
+      "evidence": 15,
+      "matching": 8,
+      "precision": 0.533
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "provider": "prometheus",
+      "evidence": 31,
+      "matching": 14,
+      "precision": 0.452
+    }
+  ]
 }
