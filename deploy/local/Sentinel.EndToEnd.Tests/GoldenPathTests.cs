@@ -18,8 +18,10 @@ namespace Sentinel.EndToEnd.Tests;
 /// <summary>
 /// The Phase 01A walking skeleton, end to end across real process boundaries: the reference
 /// system breaks, Ingestion observes it, Runtime correlates and decides, AgentWorker investigates
-/// with the model test double, a responder approves in Sentinel.Web, Executor rolls back through
-/// the deploy controller, and Runtime verifies recovery from telemetry.
+/// with the model test double, a responder reviews the diagnosis and approves in Sentinel.Web,
+/// Executor rolls back through the deploy controller, and Runtime verifies recovery from telemetry.
+/// The responder then reviews the recovery, the postmortem and a replay in Sentinel.Web, so the
+/// responder journeys of Phase 08, one to six, run against the real system.
 /// </summary>
 [Collection(SystemCollection.Name)]
 [Trait("Category", "EndToEnd")]
@@ -71,6 +73,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
             await system.RecordOutcomeAsync("S1", resolved, approved: true);
             await EvaluationRun.WriteAsync(system, "S1", resolved, approved: true);
 
+            await ReviewInBrowserAsync(resolved);
             await ShouldReplayWithoutProvidersOrActionsAsync(resolved);
         }
         catch
@@ -203,10 +206,20 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
     {
         using IPlaywright playwright = await Playwright.CreateAsync();
         await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
-        IPage page = await browser.NewPageAsync();
-        page.SetDefaultTimeout(60_000);
+        IPage page = await NewPageAsync(browser);
 
         await page.GotoAsync($"{system.WebUrl}/incidents/{incident.Summary.IncidentId}");
+
+        // Phase 08 journeys 1 to 3 before the approval: the impact and its correlated change, the evidence, the competing
+        // hypotheses, and the checks the leading explanation survived.
+        await Assertions.Expect(page.GetByLabel("Correlated changes")).ToContainTextAsync("checkout-service deploy v2.4.1");
+        await Assertions.Expect(page.GetByRole(AriaRole.Table, new PageGetByRoleOptions { Name = "Evidence" })).ToContainTextAsync("checkout-service Redis connections rose from");
+        ILocator comparison = page.GetByRole(AriaRole.Table, new PageGetByRoleOptions { Name = "Hypothesis comparison" });
+        await Assertions.Expect(comparison).ToContainTextAsync("The checkout-service v2.4.1 deployment caused the symptoms.");
+        await Assertions.Expect(comparison).ToContainTextAsync("A change in load on checkout-service");
+        await Assertions.Expect(page.GetByText("Diagnosed", new PageGetByTextOptions { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByLabel("Decision checks")).ToContainTextAsync("Passed: ");
+
         await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Approve plan" }).ClickAsync();
         ILocator dialog = page.GetByRole(AriaRole.Dialog, new PageGetByRoleOptions { Name = $"Approve plan v{incident.Plan!.Plan.PlanVersion}?" });
         await Assertions.Expect(dialog).ToContainTextAsync(incident.Plan.Plan.PlanHash[..20]);
@@ -216,6 +229,39 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         // timeline and the policy line also mention the approver; only the plan's confirmation starts with these words.
         await Assertions.Expect(page.GetByText(new Regex("^Approved by responder@example\\.test at "))).ToBeVisibleAsync(new LocatorAssertionsToBeVisibleOptions { Timeout = 60_000 });
         output.WriteLine("Approved in Sentinel.Web.");
+    }
+
+    private async Task ReviewInBrowserAsync(IncidentDetail resolved)
+    {
+        using IPlaywright playwright = await Playwright.CreateAsync();
+        await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        IPage page = await NewPageAsync(browser);
+
+        await page.GotoAsync($"{system.WebUrl}/incidents/{resolved.Summary.IncidentId}");
+        await Assertions.Expect(page.GetByRole(AriaRole.Group, new PageGetByRoleOptions { Name = "Execution" })).ToContainTextAsync("Action verified at the target");
+        await Assertions.Expect(page.GetByRole(AriaRole.Group, new PageGetByRoleOptions { Name = "Recovery" })).ToContainTextAsync("Recovered");
+
+        await page.GetByRole(AriaRole.Link, new PageGetByRoleOptions { Name = "Postmortem and replay" }).ClickAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.Heading, new PageGetByRoleOptions { Level = 1, Name = $"Postmortem: {resolved.Summary.Title}" })).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByRole(AriaRole.List, new PageGetByRoleOptions { Name = "Decision" })).ToContainTextAsync("Diagnosed by consensus-v4");
+
+        await page.GetByRole(AriaRole.Textbox, new PageGetByRoleOptions { Name = "Narrative" }).FillAsync("checkout-service v2.4.1 leaked Redis connections; rolling back to v2.4.0 restored the SLO.");
+        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Save narrative" }).ClickAsync();
+        await Assertions.Expect(page.GetByText("Saved as version 1.")).ToBeVisibleAsync();
+
+        await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Replay from the event stream" }).ClickAsync();
+        await Assertions.Expect(page.GetByText(new Regex(@"Replayed \d+ events: the incident reproduced exactly\."))).ToBeVisibleAsync();
+        output.WriteLine("Reviewed the recovery, the postmortem and a replay in Sentinel.Web.");
+    }
+
+    // Sentinel.Web runs under next dev, which compiles a route on its first visit, so assertions get the actions' budget
+    // instead of Playwright's five seconds.
+    private static async Task<IPage> NewPageAsync(IBrowser browser)
+    {
+        IPage page = await browser.NewPageAsync();
+        page.SetDefaultTimeout(60_000);
+        Assertions.SetDefaultExpectTimeout(60_000);
+        return page;
     }
 
     private void Log(IncidentDetail incident)
