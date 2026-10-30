@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Aspire.Hosting;
@@ -256,6 +257,14 @@ public class SentinelSystem : IAsyncLifetime
         await App.ResourceNotifications.WaitForResourceHealthyAsync(resource, healthy.Token);
     }
 
+    /// <summary>
+    /// Freezes a container resource, as a network partition would: it keeps its data and its connections stay open, but it
+    /// answers nothing until <see cref="UnpauseAsync"/>.
+    /// </summary>
+    public Task PauseAsync(string resource) => DockerAsync("pause", ContainerId(resource));
+
+    public Task UnpauseAsync(string resource) => DockerAsync("unpause", ContainerId(resource));
+
     public async Task<string> ParameterAsync(string name)
     {
         ParameterResource parameter = App.Services.GetRequiredService<DistributedApplicationModel>()
@@ -294,4 +303,26 @@ public class SentinelSystem : IAsyncLifetime
             current => current?.CompletedAt is not null,
             timeout,
             $"run {runId} completes") ?? throw new InvalidOperationException("The run disappeared.");
+
+    // The resource property that holds a container's Docker ID; Aspire's own constant for it is not public.
+    private const string ContainerIdProperty = "container.id";
+
+    // The container Aspire started for this run, never one of the same name from another AppHost.
+    private string ContainerId(string resource) =>
+        App.ResourceNotifications.TryGetCurrentState(resource, out ResourceEvent? current)
+        && current.Snapshot.Properties.FirstOrDefault(property => property.Name == ContainerIdProperty)?.Value is string id
+            ? id
+            : throw new InvalidOperationException($"{resource} has no running container.");
+
+    private static async Task DockerAsync(string command, string container)
+    {
+        using Process docker = Process.Start(new ProcessStartInfo("docker", [command, container]) { RedirectStandardOutput = true, RedirectStandardError = true })
+            ?? throw new InvalidOperationException("docker could not be started.");
+        string error = await docker.StandardError.ReadToEndAsync();
+        await docker.WaitForExitAsync();
+        if (docker.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"docker {command} {container} failed: {error}");
+        }
+    }
 }
