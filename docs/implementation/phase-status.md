@@ -31,7 +31,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [09 – Production hardening](#phase-09--production-hardening) | In progress | Resilience and health, local runbooks including key rotation and restore, threat model, failure scenarios `S4` and `S5`, a frozen message broker, Sentinel SLOs | Deployment definition, service-to-service authentication, SLO alerting, a whole-system restore drill |
 | [10 – Scale and evolution](#phase-10--scale-and-evolution) | Not started | Nothing; requires measured need | Not applicable yet |
 | [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | In progress | Stage 0: Floci pinned (ADR-021). Stage 0b: the queue scenarios `S6`, `S7` and `S8`, each diagnosed end to end where the baseline rolls back an innocent deployment. Stage 1: the AWS environment in Aspire, with the consumer on ECS and SQS, and `AWS-S0` | Stage 2: `AWS-S1` with the AWS adapters; Stages 3 and 4. Stage 5 is deferred by the owner |
-| [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Not started | Nothing; the gap assessment is written | Tier 1: form and feedback primitives, the full token model, motion tokens and one status vocabulary. Linux screenshot baselines are deferred by the owner |
+| [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Complete | Form and feedback primitives with the feature code on them, the full token model under the lint rule, motion tokens, one status vocabulary, theme selection, the tablet width, interaction stories | None; Linux screenshot baselines are deferred by the owner until CI exists |
 
 ## Recorded runs
 
@@ -64,6 +64,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | 2026-10-30 | Every .NET test project except the end-to-end suites, after Stage 0b and Stage 1 | Passed | Reference 75, AgentWorker 104 and Runtime 143 among them. |
 | 2026-10-30 | End-to-end `AWS-S0` through the AppHost | Passed on the second attempt | The first attempt lost its emulator: the AppHost's cleanup removed containers by a label the emulator itself carried. The second passed in 4 min 42 s, and nothing the emulator started outlived the AppHost. |
 | 2026-10-30 | Full end-to-end regression (run 23) | 16 of 17 passed | Every suite in 1 h 47 min: `AWS-S0`, the reference suite, the restart and outage tests, `S1`–`S8`, `S4` and `S5`. `S0` failed on the consumer, not on Sentinel: a receive that failed half-way left its message held with no worker on it, so the reclaim never returned it and the queue aged into an incident. A failed receive now releases its hold. The same review found that `AWS-S0`'s queue-age check had read a series by the wrong name and passed on no data; it now names the series and fails without one. |
+| 2026-10-30 | Web `lint`, `typecheck`, Storybook and Playwright after Phase E02 | Passed | 162 Storybook tests with the new baselines; 55 app tests at 1280 px and 768 px, three runs in a row, the hydration fix included. One run of four failed once after taking 21 minutes, which points at a second run reusing the first one's server while it shut down. |
 
 ## Phase 00 – Foundations
 
@@ -329,13 +330,16 @@ Open:
 
 ## Phase E02 – Frontend design-system depth
 
-Status: **Not started**. The second enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e02-frontend-design-system-depth.md)). Its design source is the [frontend design-system plan](../architecture/frontend-design-system.md) and the [gap assessment of 2026-10-30](../architecture/frontend-design-system.md#gap-assessment-2026-10-30); the Phase 00 foundation it builds on is recorded under Phase 00 above.
+Status: **Complete** on 2026-10-30, apart from the second platform's screenshot baselines, which the owner deferred until CI exists. The second enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e02-frontend-design-system-depth.md)). Its design source is the [frontend design-system plan](../architecture/frontend-design-system.md) and the [gap assessment of 2026-10-30](../architecture/frontend-design-system.md#gap-assessment-2026-10-30); the Phase 00 foundation it builds on is recorded under Phase 00 above.
 
-Open:
+Delivered:
 
-- Tier 1: `Label`, `Input`, `Select`, `Checkbox`, `Field` and `ActionResult`, with the feature code migrated onto them; typography, spacing, elevation, z-index and motion tokens with the lint rule extended; `Badge` made non-semantic.
-- Tier 2: theme selection with a light-theme end-to-end run; a tablet viewport and the responsive rules.
-- Tier 3: interaction stories and the `cn` and locale fixes. Linux screenshot baselines are deferred by the owner until CI exists.
+- Tier 1. `Label`, `Input`, `Select` and `Checkbox` primitives and the `Field` and `ActionResult` patterns; the plan decision, narrative, replay, timeline and control-plane editors compose them, and no file under `src/features` or `src/app` writes a label or a result message by hand. Typography roles, an explicit spacing scale, elevation and stacking tokens, tabular figures on tables, confidence and activity, and the lint rule extended to Tailwind's own type sizes, z-index values and shadows in feature code, with fixture tests that run with the lint. The motion tokens drive the dialog and tooltip, the skeleton pulses only when motion is allowed, `Badge` lost its destructive variant, and the plan lists the recipe tokens and marks the chart and sidebar ones reserved ([tokens as implemented](../architecture/frontend-design-system.md#tokens-as-implemented)).
+- Tier 2. Theme selection in the shell, dark by default, kept per browser and applied before the first paint, with the incident journey and a theme switch tested in light. A tablet project at 768 px runs the incident page, the light-theme journey and the control-plane navigation again, with screenshots and axe checks of the incident page and the control plane at both widths; below 768 px the navigation folds into a menu, and tables scroll.
+- Tier 3. Interaction stories with `play` functions for the approval, rejection and revocation dialogs and an editor, keyboard only where it matters; the visual suite fails a story whose `play` function fails. `cn` comes from the local utility the shadcn config names, the display locale lives in one place, and the evidence graph is recorded as the visualization exception.
+- The intermittent `publishes a new policy version` failure was a test filling a form before hydration; the suite now waits for the document to be hydrated.
+
+Evidence: lint with the rule's fixtures, typecheck, 162 Storybook accessibility, screenshot and interaction tests, and 55 app tests at both widths, on 2026-10-30.
 
 ## Decisions this ledger surfaces
 

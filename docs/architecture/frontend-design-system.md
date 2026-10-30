@@ -75,11 +75,36 @@ recovery-failed
 
 Components consume semantic tokens. Application screens do not depend directly on palette values.
 
+### Tokens as implemented
+
+Phase E02 completed the model in [`theme.css`](../../apps/Sentinel.Web/src/design-system/tokens/theme.css) and [`foundation.css`](../../apps/Sentinel.Web/src/design-system/tokens/foundation.css). Feature code, under `src/app` and `src/features`, and stories use these; the lint rule rejects Tailwind's own type sizes, z-index values and shadows there, as it rejects arbitrary values and palette colours. The design system itself may still use Tailwind's scales inside its primitives.
+
+| Kind | Tokens | Use |
+| --- | --- | --- |
+| Typography | `text-display`, `text-title`, `text-body`, `text-label`, `text-caption`, `text-code` | A role each, with its line height and, for display, title and label, its weight; `text-code` goes with `font-mono` |
+| Figures | `tabular-nums` | Every number that is compared or aligned: table cells, confidence, versions, durations, token counts |
+| Spacing | Tailwind's scale on `--spacing: 0.25rem` | Every gap, padding and margin is a multiple of 4 px |
+| Elevation | `shadow-raised`, `shadow-overlay` | A raised surface on its canvas; an overlay such as a dialog or menu |
+| Stacking | `z-overlay`, `z-popover`, `z-toast` | Owned by the overlays; feature code never sets a z-index |
+| Motion | `--duration-fast`, `--duration-normal`, `--duration-slow`, `ease-standard` | Every animation; the durations become zero under a reduced-motion preference, and the skeleton pulses only when motion is allowed |
+
+The shadcn recipe colours, `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input` and `ring`, belong to the primitives. Feature code reaches them only through a primitive's variants, never as utilities of its own. The `chart-*` and `sidebar-*` tokens are reserved: nothing uses them, and nothing should until a component needs them. `StatusBadge` is the only status vocabulary; `Badge` names things and has no destructive variant.
+
+### Themes and widths
+
+Dark is the default and the primary operational theme. A responder can choose dark, light or the system's preference from the shell's header; the choice is kept per browser, and a script in the document head applies it before the first paint, so the page never flashes the other theme.
+
+The responder surface supports desktop and tablet widths, from 768 px. Below 768 px the shell's primary navigation folds into a menu so the header never wraps. Tables never stack: a wide table scrolls horizontally inside its own container. Side-by-side layouts use the `lg` breakpoint and fall back to one column. Phone layouts are out of scope until a journey needs them.
+
+### Visualization exception
+
+The evidence graph is the one visualization canvas (styling rule 5): it positions nodes in SVG units, so its geometry constants live in its own file and are not tokens. Its colours still come from the semantic tokens, and every relation it draws is also listed as text.
+
 ## Component layers
 
 ```text
 Primitives
-  Button, Input, Dialog, Tabs, Tooltip, Table, Badge
+  Button, Input, Textarea, Select, Checkbox, Label, Dialog, Tooltip, Table, Badge
 
 Domain components
   IncidentStatusBadge, SeverityIndicator, ConfidenceDisplay,
@@ -87,7 +112,8 @@ Domain components
 
 Product patterns
   IncidentTimeline, EvidenceGraph, HypothesisComparison,
-  RemediationReview, AgentActivity, RecoveryPanel
+  RemediationReview, AgentActivity, RecoveryPanel,
+  Field (label, control, description, error), ActionResult, ThemeSelect
 
 Screens
   Compose product patterns; do not restyle primitives independently
@@ -177,6 +203,8 @@ What is missing:
 | Theme selection | The root layout hard-codes dark; the light theme is reachable only in Storybook | Styling rule 7 is not true in the app |
 | Responsive and platform coverage | One 1280 px viewport in Playwright; a handful of `lg:` breakpoints; Windows-only screenshot baselines | Narrow screens are untested; the CI acceptance criterion stays open |
 | Small inconsistencies | `cn` from an npm package while the shadcn config aliases a local utility; a hard-coded locale; the graph's pixel constants not declared as the visualization exception | Minor drift from the rules |
+
+Phase E02 closed these gaps on 2026-10-30, apart from the second platform's screenshot baselines, which the owner deferred until CI exists: feature code composes `Field` and `ActionResult` and writes no label, input, select or result message by hand; the token model above exists and the lint rule covers it, with fixture tests; the motion tokens drive every animation; one status vocabulary; theme selection in the app, with an incident journey in light; the tablet width in Playwright; interaction stories for the decision dialogs and the editors; `cn` from the local utility; and one display locale.
 
 ## Acceptance criteria
 

@@ -21,7 +21,7 @@ function keysOf<T extends string>(record: Record<T, unknown>) {
 function StateRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-xs font-semibold tracking-wide text-text-muted uppercase">{label}</h2>
+      <h2 className="text-caption font-semibold tracking-wide text-text-muted uppercase">{label}</h2>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   );

@@ -50,11 +50,11 @@ async function Policy() {
           <CardTitle id="history-title">Policy versions</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="flex flex-col gap-2 text-sm" aria-label="Policy versions">
+          <ul className="flex flex-col gap-2 text-body" aria-label="Policy versions">
             {history.map((entry) => (
               <li key={`${entry.version}-${entry.source}`} className="flex flex-col gap-0.5">
                 <span className="text-text-primary">{entry.version}</span>
-                <span className="text-xs text-text-muted">
+                <span className="text-caption text-text-muted">
                   {entry.source === "file" ? "Repository seed" : `${entry.author}, ${formatDateTime(entry.publishedAt)}`}
                 </span>
               </li>

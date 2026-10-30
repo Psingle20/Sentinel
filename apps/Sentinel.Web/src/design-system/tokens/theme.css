@@ -58,6 +58,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* Reserved: no component uses the chart and sidebar tokens yet; feature code must not reach for them. */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -85,4 +86,58 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /*
+   * Typography roles. Feature code uses these, never Tailwind's own sizes (the lint rule enforces it):
+   *   text-display  a page's one headline figure or name
+   *   text-title    a section or card title
+   *   text-body     running text, table cells and messages
+   *   text-label    a control's name
+   *   text-caption  secondary text: times, versions, hints
+   *   text-code     identifiers and documents, with font-mono
+   */
+  --text-display: 1.5rem;
+  --text-display--line-height: 2rem;
+  --text-display--font-weight: 600;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 600;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
+  --text-label--font-weight: 500;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-code: 0.75rem;
+  --text-code--line-height: 1.125rem;
+
+  /* The spacing scale: every gap, padding and margin is a multiple of 4 px. */
+  --spacing: 0.25rem;
+
+  /* Elevation: a raised surface on its canvas, and an overlay above everything else. */
+  --shadow-raised: 0 1px 2px 0 oklch(0 0 0 / 0.06), 0 1px 3px 0 oklch(0 0 0 / 0.08);
+  --shadow-overlay: 0 12px 32px -12px oklch(0 0 0 / 0.35), 0 2px 6px 0 oklch(0 0 0 / 0.08);
+}
+
+/*
+ * Stacking order, owned by the design system's overlays; feature code never sets a z-index. A tooltip shows above the
+ * dialog it belongs to, and a toast above both.
+ */
+:root {
+  --z-overlay: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+}
+
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+
+@utility z-popover {
+  z-index: var(--z-popover);
+}
+
+@utility z-toast {
+  z-index: var(--z-toast);
 }

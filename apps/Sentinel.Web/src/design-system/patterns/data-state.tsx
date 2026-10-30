@@ -1,6 +1,6 @@
 import * as React from "react"
 import { cva } from "class-variance-authority"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { CircleAlert, Clock, Inbox, Lock, type LucideIcon, TriangleAlert } from "lucide-react"
 
 import { Skeleton } from "../primitives/skeleton"

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 // Navigation between the pages of one section, such as the control plane (Phase 08). The current
 // page is marked with aria-current; links are passed in so the pattern stays router-neutral.

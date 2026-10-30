@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <AppShell
       navigation={
-        <Link href="/" className="text-sm text-text-muted hover:text-text-primary focus-visible:text-text-primary">
+        <Link href="/" className="text-body text-text-muted hover:text-text-primary focus-visible:text-text-primary">
           Incidents
         </Link>
       }

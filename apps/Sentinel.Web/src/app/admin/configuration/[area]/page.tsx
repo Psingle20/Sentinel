@@ -5,7 +5,7 @@ import { PageHeader } from "@/design-system/patterns/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/design-system/primitives/card";
 import { areaDescriptions, areaTitles, isConfigurationArea } from "@/features/admin/areas";
 import { ControlPlaneUnavailable } from "@/features/admin/control-plane-unavailable";
-import { ConfigurationEditor } from "@/features/admin/controls";
+import { ConfigurationEditor, ConfigurationFields } from "@/features/admin/controls";
 import { TrackView } from "@/features/analytics/track-view";
 import { formatDateTime } from "@/features/incidents/presentation";
 import { type ConfigurationArea, configurationAreas, type DocumentState, seedAuthor } from "@/lib/api/contracts";
@@ -59,27 +59,38 @@ async function Area({ area }: { area: ConfigurationArea }) {
   const [state, history] = data;
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <Card aria-labelledby="document-title" className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle id="document-title">Version {state.version.version}</CardTitle>
-          <CardDescription>{provenance(state)}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ConfigurationEditor area={area} document={JSON.stringify(state.document, null, 2)} version={state.version.version} />
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-6 lg:col-span-2">
+        <Card aria-labelledby="settings-title">
+          <CardHeader>
+            <CardTitle id="settings-title">Settings</CardTitle>
+            <CardDescription>The area&apos;s single values, by section. Lists, such as detection rules, are edited in the document below.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConfigurationFields area={area} document={state.document} version={state.version.version} />
+          </CardContent>
+        </Card>
+        <Card aria-labelledby="document-title">
+          <CardHeader>
+            <CardTitle id="document-title">Version {state.version.version}</CardTitle>
+            <CardDescription>{provenance(state)}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConfigurationEditor area={area} document={JSON.stringify(state.document, null, 2)} version={state.version.version} />
+          </CardContent>
+        </Card>
+      </div>
       <div className="flex flex-col gap-6">
         <Card aria-labelledby="summary-title">
           <CardHeader>
             <CardTitle id="summary-title">What it holds</CardTitle>
           </CardHeader>
           <CardContent>
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-body">
               {Object.entries(state.document)
                 .filter(([key]) => key !== "version")
                 .map(([key, value]) => (
                   <div key={key} className="contents">
-                    <dt className="font-mono text-xs text-text-muted">{key}</dt>
+                    <dt className="font-mono text-caption text-text-muted">{key}</dt>
                     <dd className="text-text-primary">{summarize(value)}</dd>
                   </div>
                 ))}
@@ -91,11 +102,11 @@ async function Area({ area }: { area: ConfigurationArea }) {
             <CardTitle id="versions-title">Versions</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="flex flex-col gap-2 text-sm" aria-label="Configuration versions">
+            <ul className="flex flex-col gap-2 text-body" aria-label="Configuration versions">
               {history.map((entry) => (
                 <li key={entry.version} className="flex flex-col gap-0.5">
                   <span className="text-text-primary">{entry.version}</span>
-                  <span className="text-xs text-text-muted">
+                  <span className="text-caption text-text-muted">
                     {entry.author === seedAuthor
                       ? "Deployment defaults"
                       : `${entry.author}, ${formatDateTime(entry.publishedAt)}${entry.basedOn ? `, based on ${entry.basedOn}` : ""}`}

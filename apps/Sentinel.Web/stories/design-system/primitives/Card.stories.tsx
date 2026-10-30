@@ -31,7 +31,7 @@ export const WithAllSlots: Story = {
         </CardAction>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-text-muted">
+        <p className="text-body text-text-muted">
           Expected effect: Redis client connections return below the scenario threshold within 90 seconds.
         </p>
       </CardContent>
@@ -47,7 +47,7 @@ export const ContentOnly: Story = {
   render: () => (
     <Card className="max-w-md">
       <CardContent>
-        <p className="text-sm">A card without header or footer.</p>
+        <p className="text-body">A card without header or footer.</p>
       </CardContent>
     </Card>
   ),

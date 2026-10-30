@@ -1,5 +1,19 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
+
+// Every page this suite opens is used only once React has hydrated it: a form filled before hydration races the wiring of
+// its server action.
+const test = base.extend({
+  page: async ({ page }, provide) => {
+    const goto = page.goto.bind(page);
+    page.goto = async (url, options) => {
+      const response = await goto(url, options);
+      await page.locator("html[data-hydrated='true']").waitFor({ state: "attached" });
+      return response;
+    };
+    await provide(page);
+  },
+});
 
 const wcagTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const mockApi = "http://127.0.0.1:3199";
@@ -35,7 +49,7 @@ test.describe("incidents", () => {
     await expect(page).toHaveURL(/#main$/);
   });
 
-  test("shows the decision, evidence and plan for an incident", async ({ page }) => {
+  test("shows the decision, evidence and plan for an incident", { tag: "@layout" }, async ({ page }) => {
     await openIncident(page);
 
     await expect(page.getByText("Diagnosed", { exact: true })).toBeVisible();
@@ -44,6 +58,35 @@ test.describe("incidents", () => {
     await expect(page.getByText("Roll back checkout-service from v2.4.1 to v2.4.0").first()).toBeVisible();
     await expect(page.getByText("Approval required").first()).toBeVisible();
     await expect(page.getByLabel("Incident timeline")).toContainText("Plan v1 proposed");
+  });
+
+  test("shows the incident in the light theme, the responder's stored choice", { tag: "@layout" }, async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("sentinel-theme", "light"));
+    await page.goto("/");
+    await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+
+    await openIncident(page);
+
+    await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+    await expect(page.getByRole("combobox", { name: "Theme" })).toHaveValue("light");
+    await expect(page.getByText("Diagnosed", { exact: true })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Evidence" })).toContainText("Redis connections rose from 4 to 186");
+    const results = await new AxeBuilder({ page }).withTags(wcagTags).analyze();
+    expect(results.violations).toEqual([]);
+  });
+
+  test("switches the theme from the header and keeps the choice", async ({ page }) => {
+    const theme = page.getByRole("combobox", { name: "Theme" });
+    await expect(theme).toHaveValue("dark");
+
+    await theme.selectOption("light");
+    await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+    await page.reload();
+    await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+    await expect(page.getByRole("combobox", { name: "Theme" })).toHaveValue("light");
+
+    await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   });
 
   test("compares the competing hypotheses and draws the evidence graph", async ({ page }) => {
@@ -236,7 +279,7 @@ test.describe("control plane", () => {
     await request.post(`${mockApi}/__reset`);
   });
 
-  test("is reachable from the incident list", async ({ page }) => {
+  test("is reachable from the incident list", { tag: "@layout" }, async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Control plane" }).click();
 
@@ -250,7 +293,7 @@ test.describe("control plane", () => {
     await expect(sources.getByRole("row").nth(1)).toContainText("90 s behind its last pull");
   });
 
-  test("moves between its pages and marks the current one", async ({ page }) => {
+  test("moves between its pages and marks the current one", { tag: "@layout" }, async ({ page }) => {
     await page.goto("/admin");
     const navigation = page.getByRole("navigation", { name: "Control plane" });
     await expect(navigation.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
@@ -313,6 +356,36 @@ test.describe("control plane", () => {
     await page.getByRole("button", { name: "Publish policy" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "A published policy needs a new version." })).toBeVisible();
+  });
+
+  test("publishes a configuration area's settings, each value keeping its type", async ({ page }) => {
+    await page.goto("/admin/configuration/models");
+    const general = page.getByRole("group", { name: "General" });
+    await expect(general.getByLabel("Max model turns")).toHaveValue("6");
+
+    await page.getByLabel("New version", { exact: true }).fill("models-2026.10.2");
+    await general.getByLabel("Max model turns").fill("8");
+    await general.getByLabel("Shadow baseline").uncheck();
+    await page.getByRole("button", { name: "Publish settings" }).click();
+
+    await expect(page.getByText("Published version models-2026.10.2.")).toBeVisible();
+    const document = page.getByRole("textbox", { name: "Configuration document (give it a new version)" });
+    await expect(document).toHaveValue(/"maxModelTurns": 8,/);
+    await expect(document).toHaveValue(/"shadowBaseline": false,/);
+    await expect(page.getByLabel("New version", { exact: true })).toHaveValue("");
+  });
+
+  test("publishes a setting from its section and leaves the lists alone", async ({ page }) => {
+    await page.goto("/admin/configuration/runtime");
+    await page.getByLabel("New version", { exact: true }).fill("runtime-2026.10.2");
+    await page.getByRole("group", { name: "Workflow" }).getByLabel("Approval timeout").fill("00:20:00");
+    await page.getByRole("button", { name: "Publish settings" }).click();
+
+    await expect(page.getByText("Published version runtime-2026.10.2.")).toBeVisible();
+    const document = page.getByRole("textbox", { name: "Configuration document (give it a new version)" });
+    await expect(document).toHaveValue(/"approvalTimeout": "00:20:00"/);
+    await expect(document).toHaveValue(/"metric": "slo_burn_rate"/);
+    await expect(page.getByRole("list", { name: "Configuration versions" })).toContainText("runtime-2026.10.2");
   });
 
   test("publishes a configuration area over the version it was read at", async ({ page }) => {
@@ -417,4 +490,18 @@ for (const path of ["/", `/incidents/${incidentId}`, `/incidents/${incidentId}/p
       expect(results.violations).toEqual([]);
     });
   }
+}
+
+// The incident page and the control plane at the width the project runs at (Phase E02): 1280 px in the app project and
+// 768 px in app-tablet. The live indicator's state depends on timing, so it is masked.
+for (const [name, path] of [["incident", `/incidents/${incidentId}`], ["control-plane", "/admin"]] as const) {
+  test(`lays out the ${name} page without accessibility violations`, { tag: "@layout" }, async ({ page, request }, testInfo) => {
+    await request.post(`${mockApi}/__reset`);
+    await page.goto(path);
+    await page.evaluate(() => document.fonts.ready);
+
+    const results = await new AxeBuilder({ page }).withTags(wcagTags).analyze();
+    expect(results.violations).toEqual([]);
+    await expect(page).toHaveScreenshot(`${testInfo.project.name}-${name}.png`, { fullPage: true, mask: [page.getByRole("status")] });
+  });
 }

@@ -52,14 +52,14 @@ export function EvidenceTable({ evidence }: { evidence: EvidenceView[] }) {
               </TableCell>
               <TableCell className="whitespace-normal">
                 <span className="text-text-primary">{item.finding.statement}</span>
-                {item.status === "rejected" ? <span className="block text-xs text-incident-critical">Rejected: {item.rejectionReason}</span> : null}
-                {item.finding.partial ? <span className="block text-xs text-incident-warning">Based on partial data</span> : null}
+                {item.status === "rejected" ? <span className="block text-caption text-incident-critical">Rejected: {item.rejectionReason}</span> : null}
+                {item.finding.partial ? <span className="block text-caption text-incident-warning">Based on partial data</span> : null}
               </TableCell>
               <TableCell>{percent(item.finding.strength)}</TableCell>
               <TableCell className="text-text-muted">
                 <details>
                   <summary className="cursor-pointer">{item.finding.sourceObservationIds.length} observation(s)</summary>
-                  <ul className="mt-1 flex flex-col gap-0.5 font-mono text-xs break-all">
+                  <ul className="mt-1 flex flex-col gap-0.5 font-mono text-caption break-all">
                     {item.finding.sourceObservationIds.map((id) => (
                       <li key={id}>{id}</li>
                     ))}

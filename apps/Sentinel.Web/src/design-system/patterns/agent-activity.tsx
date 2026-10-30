@@ -1,5 +1,7 @@
 import { Bot, CircleCheck, CircleSlash, CircleX, FlaskConical } from "lucide-react"
 
+import { formatInteger } from "@/lib/locale"
+
 import { StatusBadge, type StatusPresentation } from "../domain/status-badge"
 
 // What each investigator did (Phase 08 agent activity): model and prompt version, tools, tokens,
@@ -46,7 +48,7 @@ function AgentActivity({ runs }: { runs: AgentRun[] }) {
             <span className="font-mono text-xs break-all text-text-muted">
               {run.model} · {run.promptVersion}
             </span>
-            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
               <div className="flex gap-1">
                 <dt className="text-text-muted">Tools</dt>
                 <dd className="text-text-primary">
@@ -56,7 +58,7 @@ function AgentActivity({ runs }: { runs: AgentRun[] }) {
               </div>
               <div className="flex gap-1">
                 <dt className="text-text-muted">Tokens</dt>
-                <dd className="text-text-primary">{run.tokens.toLocaleString("en-GB")}</dd>
+                <dd className="text-text-primary">{formatInteger(run.tokens)}</dd>
               </div>
               <div className="flex gap-1">
                 <dt className="text-text-muted">Duration</dt>

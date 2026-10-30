@@ -67,7 +67,7 @@ async function ControlPlane() {
                       <TableCell>{formatDateTime(entry.occurredAt)}</TableCell>
                       <TableCell>{entry.actor}</TableCell>
                       <TableCell>{entry.action}</TableCell>
-                      <TableCell className="font-mono text-xs">{entry.target}</TableCell>
+                      <TableCell className="font-mono text-caption">{entry.target}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -106,8 +106,8 @@ async function ControlPlane() {
                 <TableBody>
                   {usage.map((row) => (
                     <TableRow key={`${row.event}|${row.dimensions}`}>
-                      <TableCell className="font-mono text-xs">{row.event}</TableCell>
-                      <TableCell className="font-mono text-xs">{row.dimensions.replaceAll(";", ", ") || "None"}</TableCell>
+                      <TableCell className="font-mono text-caption">{row.event}</TableCell>
+                      <TableCell className="font-mono text-caption">{row.dimensions.replaceAll(";", ", ") || "None"}</TableCell>
                       <TableCell className="text-right tabular-nums">{row.count}</TableCell>
                     </TableRow>
                   ))}
@@ -145,7 +145,7 @@ async function ControlPlane() {
             <CardDescription>In force for the next evaluation.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/admin/policy" className="text-sm text-text-primary underline underline-offset-4">
+            <Link href="/admin/policy" className="text-body text-text-primary underline underline-offset-4">
               Review or publish the policy
             </Link>
           </CardContent>

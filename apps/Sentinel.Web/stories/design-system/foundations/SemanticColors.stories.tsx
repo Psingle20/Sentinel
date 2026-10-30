@@ -27,18 +27,18 @@ function SemanticColors() {
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-text-primary">Surfaces and text</h2>
+        <h2 className="text-title text-text-primary">Surfaces and text</h2>
         <ul className="grid grid-cols-5 gap-3">
           {surfaceTokens.map((token) => (
             <li key={token.name} className="flex flex-col gap-2">
               <span className={`h-12 rounded-md border border-border-subtle ${token.swatch}`} />
-              <code className="font-mono text-xs text-text-muted">{token.name}</code>
+              <code className="font-mono text-code text-text-muted">{token.name}</code>
             </li>
           ))}
         </ul>
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-text-primary">Operational states</h2>
+        <h2 className="text-title text-text-primary">Operational states</h2>
         <ul className="grid grid-cols-4 gap-3">
           {statusTokens.map((token) => (
             <li key={token.name} className="flex flex-col gap-2">
@@ -46,7 +46,7 @@ function SemanticColors() {
                 <span className={`flex-1 ${token.strong}`} />
                 <span className={`flex-1 ${token.subtle}`} />
               </span>
-              <code className="font-mono text-xs text-text-muted">{token.name} / -subtle</code>
+              <code className="font-mono text-code text-text-muted">{token.name} / -subtle</code>
             </li>
           ))}
         </ul>

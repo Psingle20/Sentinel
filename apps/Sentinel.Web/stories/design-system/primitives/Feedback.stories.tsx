@@ -35,7 +35,7 @@ export const SkeletonLines: Story = {
 
 export const Separators: Story = {
   render: () => (
-    <div className="flex max-w-sm flex-col gap-3 text-sm">
+    <div className="flex max-w-sm flex-col gap-3 text-body">
       <span>Observations</span>
       <Separator />
       <div className="flex h-5 items-center gap-3">

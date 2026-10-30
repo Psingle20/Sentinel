@@ -1,4 +1,4 @@
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 import { Progress } from "../primitives/progress"
 
@@ -23,7 +23,7 @@ function ConfidenceDisplay({
   return (
     <div data-slot="confidence-display" className={cn("flex min-w-48 flex-col gap-1.5", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium text-text-primary">{confidencePercent}% confidence</span>
+        <span className="text-sm font-medium text-text-primary tabular-nums">{confidencePercent}% confidence</span>
         <span className="text-xs text-text-muted">
           {calibration === "calibrated" ? "Calibrated" : "Uncalibrated"}
         </span>

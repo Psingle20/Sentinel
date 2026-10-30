@@ -13,7 +13,7 @@ export default function IncidentsPage() {
   return (
     <AppShell
       navigation={
-        <Link href="/admin" className="text-sm text-text-muted hover:text-text-primary focus-visible:text-text-primary">
+        <Link href="/admin" className="text-body text-text-muted hover:text-text-primary focus-visible:text-text-primary">
           Control plane
         </Link>
       }

@@ -25,13 +25,13 @@ export function IncidentHeaderBadges({ incident }: { incident: IncidentDetail })
     <div className="flex flex-wrap items-center gap-2">
       <SeverityIndicator severity={incident.summary.severity} />
       <IncidentStatusBadge status={incidentStatus(incident.summary.status)} />
-      <span className="text-sm text-text-muted">
+      <span className="text-body text-text-muted">
         {incident.summary.affectedServiceId} · opened {formatDateTime(incident.summary.openedAt)}
         {incident.cycle ? ` · cycle ${incident.cycle + 1}` : ""}
       </span>
       <Link
         href={`/incidents/${encodeURIComponent(incident.summary.incidentId)}/postmortem`}
-        className="text-sm text-text-muted underline-offset-4 hover:text-text-primary hover:underline focus-visible:text-text-primary"
+        className="text-body text-text-muted underline-offset-4 hover:text-text-primary hover:underline focus-visible:text-text-primary"
       >
         Postmortem and replay
       </Link>
@@ -93,11 +93,11 @@ function DecisionSection({ incident }: { incident: IncidentDetail }) {
                 calibration={decision.calibration}
               />
             </div>
-            {leading ? <p className="text-sm font-medium text-text-primary">{leading.finding.statement}</p> : null}
-            <p className="text-sm text-text-primary">{decision.rationale}</p>
+            {leading ? <p className="text-label text-text-primary">{leading.finding.statement}</p> : null}
+            <p className="text-body text-text-primary">{decision.rationale}</p>
             <ul className="flex flex-col gap-2" aria-label="Decision checks">
               {(decision.checks ?? []).map((check) => (
-                <li key={check.name} className="flex items-start gap-2 text-sm">
+                <li key={check.name} className="flex items-start gap-2 text-body">
                   {check.passed ? (
                     <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-incident-stable" />
                   ) : (
@@ -111,7 +111,7 @@ function DecisionSection({ incident }: { incident: IncidentDetail }) {
               ))}
             </ul>
             {(decision.missingEvidence ?? []).length > 0 ? (
-              <div className="flex flex-col gap-1 text-sm">
+              <div className="flex flex-col gap-1 text-body">
                 <span className="font-medium text-text-primary">What the investigation could not determine</span>
                 <ul className="flex flex-col gap-0.5 text-text-muted" aria-label="Missing evidence">
                   {(decision.missingEvidence ?? []).map((missing) => (
@@ -120,7 +120,7 @@ function DecisionSection({ incident }: { incident: IncidentDetail }) {
                 </ul>
               </div>
             ) : null}
-            <p className="text-xs text-text-muted">
+            <p className="text-caption text-text-muted">
               {decision.algorithmVersion ?? "falsification-v1"} · decided {formatTime(decision.decidedAt)}
               {decision.inputsHash ? ` · inputs ${decision.inputsHash.slice(0, 16)}` : ""}
             </p>
@@ -160,7 +160,7 @@ function PlanSection({ incident }: { incident: IncidentDetail }) {
           {awaiting ? <PlanDecision plan={identity} /> : null}
           {revocable ? <RevokeApproval plan={identity} /> : null}
           {view.approvedBy ? (
-            <p className="text-sm text-text-muted">
+            <p className="text-body text-text-muted">
               Approved by {view.approvedBy} at {view.approvedAt ? formatTime(view.approvedAt) : "an unknown time"}
             </p>
           ) : null}
@@ -263,7 +263,7 @@ function ImpactSection({ incident }: { incident: IncidentDetail }) {
           Symptoms from {incident.summary.symptomOnset ? formatTime(incident.summary.symptomOnset) : "an unknown time"}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm">
+      <CardContent className="flex flex-col gap-3 text-body">
         <div className="flex flex-col gap-1">
           <span className="font-medium text-text-primary">Affected services</span>
           <span className="text-text-muted">{services.join(", ")}</span>
@@ -351,7 +351,7 @@ function SimilarSection({ similar }: { similar: SimilarIncident[] | null }) {
         ) : similar.length === 0 ? (
           <DataState kind="empty" title="Nothing similar is remembered" />
         ) : (
-          <ul className="flex flex-col gap-3 text-sm" aria-label="Similar incidents">
+          <ul className="flex flex-col gap-3 text-body" aria-label="Similar incidents">
             {similar.map((match) => (
               <li key={match.incidentId} className="flex flex-col gap-0.5">
                 <Link
@@ -360,7 +360,7 @@ function SimilarSection({ similar }: { similar: SimilarIncident[] | null }) {
                 >
                   {match.causeStatement ?? "No cause was established"}
                 </Link>
-                <span className="text-xs text-text-muted">
+                <span className="text-caption text-text-muted">
                   {percent(match.similarity)} similar · {match.outcome} · shares {match.sharedFeatures.join(", ")}
                 </span>
               </li>

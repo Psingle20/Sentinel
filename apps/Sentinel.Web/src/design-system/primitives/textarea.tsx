@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 // Multi-line text entry, for example a rejection reason. Invalid state is announced through aria-invalid.
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {

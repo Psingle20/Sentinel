@@ -44,6 +44,10 @@ for (const story of stories) {
       expect(results.violations, "accessibility violations").toEqual([]);
 
       await expect(page).toHaveScreenshot(`${story.id}--${theme}.png`, { fullPage: true });
+
+      // An interaction story's play function has finished once the screenshot is stable; one that failed shows
+      // Storybook's error display instead of the story.
+      await expect(page.locator("body"), "the story rendered and its play function passed").not.toHaveClass(/sb-show-errordisplay/);
     });
   }
 }

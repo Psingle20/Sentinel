@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 
+import { ActionResult } from "@/design-system/patterns/action-result";
 import { Button } from "@/design-system/primitives/button";
 import type { TimelineEntry } from "@/lib/api/contracts";
 
@@ -51,22 +52,18 @@ export function TimelineList({ incidentId, latest, total, next }: { incidentId: 
           {loading ? "Loading earlier entries…" : `Show earlier entries (${remaining} more)`}
         </Button>
       ) : null}
-      {error ? (
-        <p role="alert" className="text-sm text-text-primary">
-          {error}
-        </p>
-      ) : null}
+      <ActionResult state={error ? { status: "error", message: error } : { status: "idle" }} />
       <ol className="flex flex-col gap-3" aria-label="Incident timeline">
         {entries.map((entry) => (
           <li key={entry.streamVersion} className="flex flex-col gap-0.5 border-l border-border-subtle pl-3">
-            <span className="text-xs text-text-muted">
+            <span className="text-caption text-text-muted">
               {formatTime(entry.occurredAt)} · v{entry.streamVersion}
             </span>
-            <span className="text-sm text-text-primary">{entry.summary}</span>
+            <span className="text-body text-text-primary">{entry.summary}</span>
           </li>
         ))}
       </ol>
-      {total > entries.length ? <p className="text-xs text-text-muted">Showing the latest {entries.length} of {total} entries.</p> : null}
+      {total > entries.length ? <p className="text-caption text-text-muted">Showing the latest {entries.length} of {total} entries.</p> : null}
     </div>
   );
 }

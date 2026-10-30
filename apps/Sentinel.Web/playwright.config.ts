@@ -28,6 +28,13 @@ export default defineConfig({
       use: { baseURL: appUrl },
     },
     {
+      // The responder surface at the tablet width (Phase E02): the journeys tagged @layout again at 768 px.
+      name: "app-tablet",
+      testMatch: "e2e/**/*.spec.ts",
+      grep: /@layout/,
+      use: { baseURL: appUrl, viewport: { width: 768, height: 1024 } },
+    },
+    {
       name: "storybook",
       testMatch: "visual/**/*.spec.ts",
       use: { baseURL: storybookUrl },

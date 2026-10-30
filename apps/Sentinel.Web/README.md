@@ -43,18 +43,20 @@ Run from this directory with Node.js 24 LTS (`.nvmrc`). Install dependencies onc
 | Accessibility and visual tests | `npm run test:visual` |
 | Update visual baselines | `npm run test:visual:update` |
 
-The Playwright web servers build the app and serve the built Storybook themselves.
+The Playwright web servers build the app and serve the built Storybook themselves. The end-to-end tests run at 1280 px and again, for the journeys tagged `@layout`, at the 768 px tablet width; the incident journey runs once in the light theme.
 
 ## Design-system rules enforced in code
 
 The system's open gaps and the order they are closed in are [Phase E02](../../docs/implementation/phase-e02-frontend-design-system-depth.md).
 
 - Tailwind's default palette is removed: classes such as `bg-red-500` do not exist. Colors come from semantic tokens such as `bg-surface-panel`, `text-incident-critical` or `bg-evidence-supporting-subtle`.
-- `npm run lint` rejects, in `src/app`, `src/features` and `stories`: arbitrary values such as `w-[37px]`, raw palette classes, and `style` props. Bracketed state variants such as `data-[state=open]:` are allowed.
+- `npm run lint` rejects, in `src/app`, `src/features` and `stories`: arbitrary values such as `w-[37px]`, raw palette classes, Tailwind's own type sizes, z-index values and shadows, and `style` props. Type, elevation and stacking come from the tokens: `text-body`, `text-label`, `text-caption`, `shadow-raised`, `z-overlay` and the rest ([the token table](../../docs/architecture/frontend-design-system.md#tokens-as-implemented)). Bracketed state variants such as `data-[state=open]:` are allowed. The rule's own fixtures run with the lint.
+- Forms compose `Field` for every label and control and `ActionResult` for every server action's outcome; no feature file writes a `<label>` or a result paragraph by hand.
 - Imports of competing UI, CSS or CSS-in-JS libraries fail lint and the dependency check. Adding one requires an ADR.
 - Stylesheets may live only in `src/design-system/` and `src/app/globals.css`; anything else must be listed with a reason in `design-system-exceptions.json`.
 - Every lint suppression needs a written reason (`-- why`).
-- Every story is checked with axe (WCAG 2.2 AA) and a screenshot in both themes, so a new story is covered automatically.
+- Every story is checked with axe (WCAG 2.2 AA) and a screenshot in both themes, so a new story is covered automatically. An interaction story's `play` function must pass too.
+- The theme is the responder's choice, dark by default; the document head applies it before the first paint.
 
 ## Adding a component
 

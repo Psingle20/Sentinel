@@ -18,7 +18,7 @@ export function SourceHealth({ sources }: { sources: SourceState[] }) {
   const counts = (Object.keys(health) as SourceState["health"][]).map((name) => `${sources.filter((source) => source.health === name).length} ${name.toLowerCase()}`);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-text-muted">{counts.join(", ")}.</p>
+      <p className="text-body text-text-muted">{counts.join(", ")}.</p>
       <Table aria-label="Source health">
         <TableHeader>
           <TableRow>
@@ -33,17 +33,17 @@ export function SourceHealth({ sources }: { sources: SourceState[] }) {
             const shown = health[source.health];
             return (
               <TableRow key={source.sourceId}>
-                <TableCell className="font-mono text-xs">{source.sourceId}</TableCell>
+                <TableCell className="font-mono text-caption">{source.sourceId}</TableCell>
                 <TableCell>
                   <StatusBadge tone={shown.tone} icon={shown.icon}>
                     {shown.label}
                   </StatusBadge>
                 </TableCell>
-                <TableCell className="text-xs">
+                <TableCell className="text-caption">
                   {formatDateTime(source.watermark)}
                   <span className="block text-text-muted">{trailing(source)} behind its last pull at {formatDateTime(source.lastPulledAt)}</span>
                 </TableCell>
-                <TableCell className="text-xs whitespace-normal">
+                <TableCell className="text-caption whitespace-normal">
                   {source.consecutiveFailures === 0 ? (
                     <span className="text-text-muted">None</span>
                   ) : (

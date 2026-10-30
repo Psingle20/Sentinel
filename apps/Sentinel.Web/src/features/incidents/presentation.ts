@@ -10,6 +10,7 @@ import type {
   RecoveryOutcome,
   RemediationAction,
 } from "@/lib/api/contracts";
+import { displayLocale } from "@/lib/locale";
 
 // Maps Api's contract values onto the design system's presentation vocabulary.
 
@@ -86,7 +87,7 @@ export function describeCriterion(criterion: RecoveryCriterion): string {
   return `${criterion.serviceId} ${criterion.metricName} ${comparisons[criterion.comparison]} ${criterion.threshold}`;
 }
 
-const timeFormat = new Intl.DateTimeFormat("en-GB", {
+const timeFormat = new Intl.DateTimeFormat(displayLocale, {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
@@ -94,7 +95,7 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
+const dateTimeFormat = new Intl.DateTimeFormat(displayLocale, {
   day: "2-digit",
   month: "short",
   hour: "2-digit",

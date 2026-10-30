@@ -18,7 +18,7 @@ export default function PostmortemPage({ params }: PageProps<"/incidents/[incide
   return (
     <AppShell
       navigation={
-        <Link href="/" className="text-sm text-text-muted hover:text-text-primary focus-visible:text-text-primary">
+        <Link href="/" className="text-body text-text-muted hover:text-text-primary focus-visible:text-text-primary">
           Incidents
         </Link>
       }
@@ -111,19 +111,19 @@ async function Postmortem({ params }: { params: Promise<{ incidentId: string }> 
               <CardTitle id="versions-title">Versions</CardTitle>
             </CardHeader>
             <CardContent>
-              <dl className="flex flex-col gap-2 text-sm">
+              <dl className="flex flex-col gap-2 text-body">
                 <div>
-                  <dt className="text-xs text-text-muted">Decision algorithm</dt>
+                  <dt className="text-caption text-text-muted">Decision algorithm</dt>
                   <dd className="text-text-primary">{postmortem.versions.decisionAlgorithm ?? "none"}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-text-muted">Models and prompts</dt>
+                  <dt className="text-caption text-text-muted">Models and prompts</dt>
                   <dd className="text-text-primary">
                     {(postmortem.versions.models ?? []).map((model) => `${model.provider}/${model.model} (${model.promptVersion})`).join(", ") || "none"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-text-muted">Policy</dt>
+                  <dt className="text-caption text-text-muted">Policy</dt>
                   <dd className="text-text-primary">{postmortem.versions.policyVersion ?? "no plan"}</dd>
                 </div>
               </dl>

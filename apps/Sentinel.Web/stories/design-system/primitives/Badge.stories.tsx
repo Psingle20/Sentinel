@@ -20,7 +20,6 @@ export const Variants: Story = {
       <Badge {...args} variant="default">default</Badge>
       <Badge {...args} variant="secondary">secondary</Badge>
       <Badge {...args} variant="outline">outline</Badge>
-      <Badge {...args} variant="destructive">destructive</Badge>
     </div>
   ),
 };

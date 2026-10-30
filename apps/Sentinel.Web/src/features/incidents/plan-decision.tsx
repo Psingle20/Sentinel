@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState } from "react";
 
+import { ActionResult } from "@/design-system/patterns/action-result";
+import { Field } from "@/design-system/patterns/field";
 import { Button } from "@/design-system/primitives/button";
 import {
   Dialog,
@@ -33,7 +35,6 @@ type PlanIdentity = {
 export function PlanDecision({ plan }: { plan: PlanIdentity }) {
   const [approval, approveAction, approving] = useActionState(approve, idle);
   const [rejection, rejectAction, rejecting] = useActionState(reject, idle);
-  const reasonId = useId();
   const result = approval.status !== "idle" ? approval : rejection;
 
   const fields = (
@@ -61,7 +62,7 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
                   {plan.summary}. Your approval is signed for this exact plan content and can be used once.
                 </DialogDescription>
               </DialogHeader>
-              <p className="font-mono text-xs break-all text-text-muted">{plan.planHash}</p>
+              <p className="font-mono text-code break-all text-text-muted">{plan.planHash}</p>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">
@@ -89,10 +90,7 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
                 <DialogTitle>Reject plan v{plan.planVersion}?</DialogTitle>
                 <DialogDescription>The incident is escalated to responders with your reason.</DialogDescription>
               </DialogHeader>
-              <label htmlFor={reasonId} className="text-sm font-medium text-text-primary">
-                Reason
-              </label>
-              <Textarea id={reasonId} name="reason" required />
+              <Field label="Reason">{(control) => <Textarea {...control} name="reason" required />}</Field>
               <DialogFooter>
                 <DialogClose asChild>
                   <Button type="button" variant="outline">
@@ -108,11 +106,7 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
         </Dialog>
       </div>
 
-      {result.status !== "idle" ? (
-        <p role={result.status === "error" ? "alert" : "status"} className="text-sm text-text-primary">
-          {result.message}
-        </p>
-      ) : null}
+      <ActionResult state={result} />
     </div>
   );
 }
@@ -121,7 +115,6 @@ export function PlanDecision({ plan }: { plan: PlanIdentity }) {
 // start, the point of no return, Api refuses and the action runs to its verified outcome.
 export function RevokeApproval({ plan }: { plan: PlanIdentity }) {
   const [result, revokeAction, revoking] = useActionState(revoke, idle);
-  const reasonId = useId();
 
   return (
     <div className="flex flex-col gap-3">
@@ -140,10 +133,7 @@ export function RevokeApproval({ plan }: { plan: PlanIdentity }) {
               <DialogTitle>Revoke the approval of plan v{plan.planVersion}?</DialogTitle>
               <DialogDescription>Nothing runs, and the incident is escalated to responders with your reason.</DialogDescription>
             </DialogHeader>
-            <label htmlFor={reasonId} className="text-sm font-medium text-text-primary">
-              Reason
-            </label>
-            <Textarea id={reasonId} name="reason" required />
+            <Field label="Reason">{(control) => <Textarea {...control} name="reason" required />}</Field>
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline">
@@ -157,11 +147,7 @@ export function RevokeApproval({ plan }: { plan: PlanIdentity }) {
           </form>
         </DialogContent>
       </Dialog>
-      {result.status !== "idle" ? (
-        <p role={result.status === "error" ? "alert" : "status"} className="text-sm text-text-primary">
-          {result.message}
-        </p>
-      ) : null}
+      <ActionResult state={result} />
     </div>
   );
 }
