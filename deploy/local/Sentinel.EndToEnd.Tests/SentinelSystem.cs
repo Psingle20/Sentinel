@@ -297,9 +297,14 @@ public class SentinelSystem : IAsyncLifetime
     }
 
     /// <summary>Starts a scenario run and waits until its first step executes.</summary>
+    // Right after the quiet check has seen a healthy minute, the manifest's warm-up repeats it; the local scenarios start
+    // after a short one instead. A freshly created ECS consumer, and the reference suite, which runs no quiet check, keep theirs.
+    private const int QuietWarmupSeconds = 20;
+
     public async Task<ScenarioRunView> StartScenarioAsync(string scenarioId)
     {
-        using HttpResponseMessage response = await ScenarioRunner.PostAsJsonAsync("/api/runs", new StartRunBody(scenarioId));
+        bool justQuiet = DateTimeOffset.UtcNow - ScenarioStartedAt < TimeSpan.FromMinutes(1) && Scenarios.Manifests[scenarioId].Environment == "local";
+        using HttpResponseMessage response = await ScenarioRunner.PostAsJsonAsync("/api/runs", new StartRunBody(scenarioId, justQuiet ? QuietWarmupSeconds : null));
         response.EnsureSuccessStatusCode();
         ScenarioRunView run = (await response.Content.ReadFromJsonAsync<ScenarioRunView>())!;
 

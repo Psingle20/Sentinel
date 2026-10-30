@@ -11,7 +11,7 @@ public sealed class StartRunCommandHandler(ScenarioRunner runner) : ICommandHand
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        (StartRunOutcome outcome, ScenarioRunView? run) = runner.Start(command.ScenarioId);
+        (StartRunOutcome outcome, ScenarioRunView? run) = runner.Start(command.ScenarioId, command.WarmupSeconds);
         return Task.FromResult(Result.Success(new StartRunResult(outcome, run)));
     }
 }

@@ -32,6 +32,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
     private static readonly TimeSpan RecoveryTimeout = TimeSpan.FromMinutes(7);
 
     [Fact]
+    [Trait("Tier", "Smoke")]
     public async Task S1_runs_from_break_to_approved_rollback_and_verified_recovery()
     {
         await system.WaitUntilQuietAsync(output);
@@ -125,6 +126,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
     /// that the queue recovers; nothing rolls the consumer back, which is what the deploy-blame baseline would do.
     /// </summary>
     [Fact]
+    [Trait("Tier", "Smoke")]
     public async Task S6_a_poison_message_is_quarantined_not_rolled_back_and_the_queue_recovers()
     {
         await system.WaitUntilQuietAsync(output);
@@ -257,6 +259,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
 
     /// <summary>S0, the healthy control: changes and noise without an SLO burn must open no incident.</summary>
     [Fact]
+    [Trait("Tier", "Smoke")]
     public async Task S0_the_healthy_control_opens_no_incident()
     {
         await system.WaitUntilQuietAsync(output);

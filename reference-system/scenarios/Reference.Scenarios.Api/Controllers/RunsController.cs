@@ -29,7 +29,7 @@ public sealed class RunsController(IRequestDispatcher requests) : ApiController
     {
         ArgumentNullException.ThrowIfNull(body);
 
-        Result<StartRunResult> started = await requests.HandleRequestAsync(new StartRunRequest(body.ScenarioId), cancellationToken);
+        Result<StartRunResult> started = await requests.HandleRequestAsync(new StartRunRequest(body.ScenarioId, body.WarmupSeconds), cancellationToken);
         if (started.IsFailure)
         {
             return Results.Problem(started.Error.Description, title: started.Error.Code);

@@ -10,6 +10,6 @@ public sealed class StartRunProcessor(ICommandDispatcher commands) : IProcessor<
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return commands.Dispatch(new StartRunCommand(request.ScenarioId), cancellationToken);
+        return commands.Dispatch(new StartRunCommand(request.ScenarioId, request.WarmupSeconds), cancellationToken);
     }
 }

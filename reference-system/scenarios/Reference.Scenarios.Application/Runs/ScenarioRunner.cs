@@ -44,7 +44,8 @@ public sealed class ScenarioRunner(
         }
     }
 
-    public (StartRunOutcome Outcome, ScenarioRunView? Run) Start(string scenarioId)
+    /// <summary>Starts <paramref name="scenarioId"/>, with a warm-up no longer than its manifest's.</summary>
+    public (StartRunOutcome Outcome, ScenarioRunView? Run) Start(string scenarioId, int? warmupSeconds = null)
     {
         if (!catalog.Manifests.TryGetValue(scenarioId, out ScenarioManifest? manifest))
         {
@@ -83,7 +84,8 @@ public sealed class ScenarioRunner(
             _cancellations[runId] = CancellationTokenSource.CreateLinkedTokenSource(lifetime.ApplicationStopping);
         }
 
-        _ = Task.Run(() => ExecuteAsync(manifest, run.RunId), CancellationToken.None);
+        int warmup = Math.Clamp(warmupSeconds ?? manifest.WarmupSeconds, 0, manifest.WarmupSeconds);
+        _ = Task.Run(() => ExecuteAsync(manifest, run.RunId, warmup), CancellationToken.None);
         return (StartRunOutcome.Started, run);
     }
 
@@ -102,7 +104,7 @@ public sealed class ScenarioRunner(
         }
     }
 
-    private async Task ExecuteAsync(ScenarioManifest manifest, string runId)
+    private async Task ExecuteAsync(ScenarioManifest manifest, string runId, int warmupSeconds)
     {
         CancellationToken stopping;
         lock (_gate)
@@ -117,8 +119,8 @@ public sealed class ScenarioRunner(
 
             await environment.ResetAsync(stopping);
             Update(runId, run => run with { Phase = "warmup" });
-            logger.LogInformation("Run {RunId}: reset done, warming up for {Seconds}s", runId, manifest.WarmupSeconds);
-            await Task.Delay(TimeSpan.FromSeconds(manifest.WarmupSeconds), time, stopping);
+            logger.LogInformation("Run {RunId}: reset done, warming up for {Seconds}s", runId, warmupSeconds);
+            await Task.Delay(TimeSpan.FromSeconds(warmupSeconds), time, stopping);
 
             DateTimeOffset activatedAt = time.GetUtcNow();
             Update(runId, run => run with { Phase = "running", ActivatedAt = activatedAt });

@@ -458,13 +458,22 @@ Findings are requested with the findings JSON Schema alongside the tools, so the
 
 Each task covers the .NET solution and `Sentinel.Web` and stops at the first failure; on Linux or macOS run the same script with `pwsh`. `build`, `test` and `lint` need no containers, except for the integration tests that start their own with Testcontainers. `test` leaves out the AWS emulator's conformance tests ([ADR-021](docs/decisions/ADR-021-aws-emulator.md)), which need its pinned image and the Docker socket; run them with `dotnet test reference-system/tests/Reference.Tests --filter Category=Emulator`. The .NET build treats analyzer and code-style warnings as errors, so `build` also enforces C# style. `lint` checks C# whitespace, runs ESLint with the design-system rules and typechecks the web app. [Sentinel.Web's README](apps/Sentinel.Web/README.md) lists its own commands.
 
-The end-to-end suites start the whole system and drive real scenarios, so they take around half an hour:
+The end-to-end suites start the whole system and drive real scenarios, so they are slow. They run in tiers, each a filter on the same project; run the smallest tier that covers a change, and everything before a phase is closed:
+
+| Tier | Filter | What it runs |
+| --- | --- | --- |
+| Smoke | `Tier=Smoke` | The healthy control `S0`, the golden `S1` through approved rollback and verified recovery, and the poison message `S6` through its quarantine |
+| Reference | `Suite=Reference` | The reference system on its own, without Sentinel, for changes under `reference-system/` |
+| AWS | `Suite=Aws` | `AWS-S0` and `AWS-S1` in the AWS-emulated environment, for changes to its adapters or the environment; it needs the emulator's pinned image |
+| Everything | none | Every suite, the restart, outage and failure scenarios included |
 
 ```text
-dotnet test deploy/local/Sentinel.EndToEnd.Tests --filter "FullyQualifiedName~GoldenPathTests"
+dotnet test deploy/local/Sentinel.EndToEnd.Tests --filter "Tier=Smoke"
 ```
 
-They always investigate with the deterministic test double, even when Meta models are configured and routed in user secrets, so their results are reproducible and cost nothing. To run them live, set `SENTINEL_E2E_MODEL_PROVIDER=configured` to use AgentWorker's own configuration with its routing, or name one profile such as `meta` for every role. Live runs are slower, cost real money, and their assertions on the diagnosis depend on the model.
+A scenario started right after the suites' quiet check has seen a healthy minute warms up for 20 seconds rather than its manifest's full warm-up, which repeats what the check has just seen.
+
+The suites always investigate with the deterministic test double, even when Meta models are configured and routed in user secrets, so their results are reproducible and cost nothing. To run them live, set `SENTINEL_E2E_MODEL_PROVIDER=configured` to use AgentWorker's own configuration with its routing, or name one profile such as `meta` for every role. Live runs are slower, cost real money, and their assertions on the diagnosis depend on the model.
 
 Keep this table synchronized with `PROJECT.json` and the scripts.
 

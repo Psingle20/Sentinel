@@ -59,6 +59,26 @@ public sealed class ScenarioRunnerEndpointTests
     }
 
     [Fact]
+    public async Task A_run_may_warm_up_for_less_than_its_manifest()
+    {
+        await using var host = new ScenarioRunnerHost(Environments.Development);
+        using HttpClient client = host.CreateClient();
+
+        using HttpResponseMessage started = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S0", warmupSeconds = 0 });
+        string runId = (await BodyAsync(started)).GetProperty("runId").GetString()!;
+        string phase = "resetting";
+        for (int attempt = 0; attempt < 50 && phase is "resetting" or "warmup"; attempt++)
+        {
+            await Task.Delay(100);
+            using HttpResponseMessage read = await client.GetAsync(new Uri($"/api/runs/{runId}", UriKind.Relative));
+            phase = (await BodyAsync(read)).GetProperty("phase").GetString()!;
+        }
+
+        phase.ShouldBe("running", "S0's 75 s warm-up was waived");
+        using HttpResponseMessage stopped = await CallAsync(client, HttpMethod.Post, $"/api/runs/{runId}/stop", null);
+    }
+
+    [Fact]
     public async Task A_run_starts_once_at_a_time_and_stops_between_steps()
     {
         await using var host = new ScenarioRunnerHost(Environments.Development);

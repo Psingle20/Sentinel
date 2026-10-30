@@ -18,6 +18,7 @@ namespace Sentinel.EndToEnd.Tests;
 /// </summary>
 [Collection(ReferenceCollection.Name)]
 [Trait("Category", "EndToEnd")]
+[Trait("Suite", "Reference")]
 public sealed class ReferenceScenarioTests(ReferenceOnlySystem system, ITestOutputHelper output)
 {
     [Fact]
