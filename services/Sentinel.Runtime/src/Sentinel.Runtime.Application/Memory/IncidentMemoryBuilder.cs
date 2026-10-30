@@ -119,6 +119,7 @@ public static class IncidentMemoryBuilder
         {
             RollbackAction => "rollback",
             PauseBatchAction => "pause-batch",
+            QuarantineMessageAction => "quarantine-message",
             _ => action.GetType().Name
         };
         return new MemoryAction(

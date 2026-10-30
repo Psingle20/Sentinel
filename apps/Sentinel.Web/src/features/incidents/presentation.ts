@@ -65,9 +65,14 @@ export function executionLabel(outcome: ExecutionOutcome | undefined): string {
 }
 
 export function describeAction(action: RemediationAction): string {
-  return action.kind === "pause-batch"
-    ? `Pause the ${action.targetServiceId} batch`
-    : `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
+  switch (action.kind) {
+    case "pause-batch":
+      return `Pause the ${action.targetServiceId} batch`;
+    case "quarantine-message":
+      return `Quarantine the messages of ${action.targetServiceId}'s ${action.queue} queue received at least ${action.minimumReceives} times`;
+    default:
+      return `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
+  }
 }
 
 const comparisons: Record<RecoveryCriterion["comparison"], string> = {

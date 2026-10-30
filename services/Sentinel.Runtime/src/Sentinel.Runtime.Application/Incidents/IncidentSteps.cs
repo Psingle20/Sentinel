@@ -36,6 +36,11 @@ public sealed class IncidentSteps(
     IOptions<RuntimeOptions> options,
     ILogger<IncidentSteps> logger)
 {
+    private const string PoisonMessagePrefix = "poison-message:";
+
+    // A message received this often is no longer one a retry will process; the cap bounds what one approval moves.
+    private const int PoisonReceives = 3;
+    private const int PoisonMessagesAtMost = 5;
 
     /// <summary>An ID derived from the incident, its cycle and the step, so a retried step names the same investigation.</summary>
     public static InvestigationId StepInvestigationId(IncidentId incidentId, int cycle, string step)
@@ -141,7 +146,8 @@ public sealed class IncidentSteps(
 
     /// <summary>
     /// Turns a diagnosis into a typed plan (Phase 06): a diagnosed deployment is rolled back one
-    /// revision, and a diagnosed saturation caused by a batch service pauses the batch. Each plan
+    /// revision, a diagnosed saturation caused by a batch service pauses the batch, and a diagnosed
+    /// poison message on a queue consumer's queue is quarantined (Phase E01). Each plan
     /// states its preconditions, expected effect, blast radius and compensation, and carries
     /// Executor's plan-time policy evaluation. Any other diagnosis is escalated with its explanation.
     /// </summary>
@@ -172,6 +178,21 @@ public sealed class IncidentSteps(
                 ExpectedEffect = $"{change.ServiceId} serves {previous} again, and {incident.AffectedServiceId}'s recovery signals return within {settings.ObservationWindow.TotalSeconds:F0} s.",
                 BlastRadius = [.. new[] { change.ServiceId, incident.AffectedServiceId }.Distinct()],
                 Compensation = $"None automatic: undoing the rollback would redeploy {change.ServiceId} {change.Version}, which is a human decision."
+            },
+            { LeadingKey: { } key, LeadingServiceId: { } consumer } when key.StartsWith(PoisonMessagePrefix, StringComparison.Ordinal) && settings.QueueServices.TryGetValue(consumer.Value, out string? queue) => new RemediationPlan
+            {
+                PlanId = planId,
+                PlanVersion = 1,
+                PlanHash = string.Empty,
+                HypothesisId = incident.LeadingHypothesisId!.Value,
+                Actions = [new QuarantineMessageAction { ActionId = actionId, TargetServiceId = consumer, Queue = queue, MinimumReceives = PoisonReceives, MaxMessages = PoisonMessagesAtMost, Reason = $"It fails on every receive: {incident.LeadingStatement}" }],
+                ExpectedRecovery = settings.RecoveryCriteriaFor(incident.AffectedServiceId),
+                ObservationWindow = settings.ObservationWindow,
+                Risk = RiskLevel.Low,
+                Preconditions = [new PlanPrecondition(consumer, "queue-state", "poisoned")],
+                ExpectedEffect = $"The messages of {queue} received at least {PoisonReceives} times leave the queue, and {incident.AffectedServiceId}'s recovery signals return.",
+                BlastRadius = [consumer],
+                Compensation = $"Release the quarantined messages back to {queue} once they can be processed."
             },
             { LeadingServiceId: { } culprit } when settings.BatchServices.Contains(culprit.Value) => new RemediationPlan
             {
@@ -226,6 +247,7 @@ public sealed class IncidentSteps(
             {
                 RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",
                 PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch ({plan.ExpectedEffect})",
+                QuarantineMessageAction quarantine => $"quarantine the messages of {quarantine.TargetServiceId}'s {quarantine.Queue} queue received at least {quarantine.MinimumReceives} times",
                 _ => plan.ExpectedEffect
             }
         }), cancellationToken)).Snapshot;

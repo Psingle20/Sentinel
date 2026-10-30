@@ -19,7 +19,7 @@ The baseline uses only deployment events and the dependency topology. It never l
 | --- | --- |
 | Detection time and affected service | The incident Sentinel opened |
 | Deployments | Ingestion's deployment observations, through the observation query contract |
-| Dependencies | `checkout-service` depends on `order-service`; both depend on Redis, which is not a deployable |
+| Dependencies | `checkout-service` depends on `order-service`; both depend on Redis, which is not a deployable; `queue-consumer` depends on nothing deployable |
 
 ## Expected outcomes
 
@@ -31,5 +31,6 @@ Each manifest records the baseline's expected outcome in its `baseline` field.
 | `S1` | checkout-service v2.4.1 | Roll back checkout-service v2.4.1 → v2.4.0 | Yes |
 | `S2` | checkout-service v2.4.2 | Roll back checkout-service v2.4.2 → v2.4.0 | No: false remediation |
 | `S3` | order-service v1.8.0, then checkout-service v2.4.3 | Roll back checkout-service v2.4.3 → v2.4.0 | No: false remediation |
+| `S6` | queue-consumer v1.4.1 | Roll back queue-consumer v1.4.1 → v1.4.0 | No: false remediation, and the poison message would keep failing on the old revision |
 
 A reset between runs restores baselines immediately and is recorded as kind `reset`, which the rule ignores.

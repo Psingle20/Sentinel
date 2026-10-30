@@ -45,6 +45,20 @@ internal static class AdapterRegistration
                 client.DefaultRequestHeaders.Add(ReportingBatchAdapter.ControlHeader, controlToken);
             }).RemoveAllResilienceHandlers();
         }
+
+        // The quarantine adapter is optional too: without the consumer's endpoint and control token, quarantine-message has no
+        // adapter and is refused (Phase E01).
+        if (configuration["Executor:Adapters:QueueConsumer:Endpoint"] is { Length: > 0 } queue
+            && configuration["Executor:Adapters:QueueConsumer:ControlToken"] is { } queueToken
+            && !string.IsNullOrWhiteSpace(queueToken))
+        {
+            services.AddHttpClient<IRemediationAdapter, ReferenceQueueQuarantineAdapter>(nameof(ReferenceQueueQuarantineAdapter), client =>
+            {
+                client.BaseAddress = new Uri(queue);
+                client.Timeout = TimeSpan.FromSeconds(10);
+                client.DefaultRequestHeaders.Add(ReferenceQueueQuarantineAdapter.ControlHeader, queueToken);
+            }).RemoveAllResilienceHandlers();
+        }
 #pragma warning restore EXTEXP0001
         return services;
     }

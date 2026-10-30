@@ -1,5 +1,5 @@
 {
-  "version": "policy-2026.10.2",
+  "version": "policy-2026.10.3",
   "defaultMode": "ApprovalRequired",
   "environmentModes": {
     "reference": "ApprovalRequired"
@@ -24,6 +24,16 @@
       "minConfidence": 0.5,
       "maxBlastRadius": 1,
       "grants": "SuggestionOnly"
+    },
+    {
+      "id": "quarantine-message.queue-consumer",
+      "action": "quarantine-message",
+      "environments": [ "reference" ],
+      "targets": [ "queue-consumer" ],
+      "maxRisk": "low",
+      "minConfidence": 0.5,
+      "maxBlastRadius": 1,
+      "grants": "ApprovalRequired"
     }
   ],
   "freezes": []

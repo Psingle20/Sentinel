@@ -50,6 +50,8 @@ internal static class Harness
         options.Metrics["latency_p95"] = "p95 latency by service.";
         options.Metrics["dependency_wait_p95"] = "p95 wait on a dependency.";
         options.Metrics["request_rate"] = "Requests per second.";
+        options.Metrics["queue_max_receive_count"] = "Highest receive count of a message in a queue.";
+        options.Metrics["queue_processed_rate"] = "Messages processed per second.";
         return options;
     }
 

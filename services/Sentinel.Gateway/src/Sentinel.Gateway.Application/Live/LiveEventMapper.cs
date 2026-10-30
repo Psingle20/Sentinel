@@ -58,6 +58,7 @@ public static class LiveEventMapper
         {
             RollbackAction rollback => $"roll {rollback.TargetServiceId} back to {rollback.ToRevision}",
             PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch",
+            QuarantineMessageAction quarantine => $"quarantine {quarantine.TargetServiceId}'s poison messages",
             _ => "remediate"
         };
         return new(

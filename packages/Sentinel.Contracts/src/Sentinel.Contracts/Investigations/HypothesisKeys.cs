@@ -15,6 +15,9 @@ public static class HypothesisKeys
 
     public static string LoadChange(ServiceId service) => $"load-change:{service}";
 
+    /// <summary>A message the consumer cannot process, failing on every receive (Phase E01).</summary>
+    public static string PoisonMessage(ServiceId consumer) => $"poison-message:{consumer}";
+
     public const string ExternalDependency = "external-dependency";
 
     /// <summary>The key this key refines, or null for a top-level key.</summary>

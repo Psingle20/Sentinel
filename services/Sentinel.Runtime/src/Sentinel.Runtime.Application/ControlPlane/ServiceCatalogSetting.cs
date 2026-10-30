@@ -12,4 +12,6 @@ public sealed record ServiceCatalogSetting
     public IReadOnlyDictionary<string, string> Owners { get; init; } = new Dictionary<string, string>();
 
     public IReadOnlyList<string> BatchServices { get; init; } = [];
+
+    public IReadOnlyDictionary<string, string> QueueServices { get; init; } = new Dictionary<string, string>();
 }

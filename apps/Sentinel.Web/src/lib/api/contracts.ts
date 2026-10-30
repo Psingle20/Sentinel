@@ -124,10 +124,20 @@ export type PauseBatchAction = {
   reason: string;
 };
 
-export type RemediationAction = RollbackAction | PauseBatchAction;
+export type QuarantineMessageAction = {
+  kind: "quarantine-message";
+  actionId: string;
+  targetServiceId: string;
+  queue: string;
+  minimumReceives: number;
+  maxMessages: number;
+  reason: string;
+};
+
+export type RemediationAction = RollbackAction | PauseBatchAction | QuarantineMessageAction;
 
 // Every action kind Executor has an adapter for; an operator can take each one out of service.
-export const remediationActionKinds: readonly RemediationAction["kind"][] = ["rollback", "pause-batch"];
+export const remediationActionKinds: readonly RemediationAction["kind"][] = ["rollback", "pause-batch", "quarantine-message"];
 
 export type PlanPrecondition = { serviceId: string; check: string; expected: string };
 

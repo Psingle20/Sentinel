@@ -119,6 +119,63 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         }
     }
 
+    /// <summary>
+    /// S6 (Phase E01): a poison message keeps failing on every receive, and a benign consumer deployment serves before
+    /// the incident opens. Sentinel blames the message, not the deployment, quarantines it after approval and verifies
+    /// that the queue recovers; nothing rolls the consumer back, which is what the deploy-blame baseline would do.
+    /// </summary>
+    [Fact]
+    public async Task S6_a_poison_message_is_quarantined_not_rolled_back_and_the_queue_recovers()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S6");
+        try
+        {
+            IncidentDetail incident = await system.WaitForIncidentAsync(
+                detail => detail.Summary.AffectedServiceId.Value == "queue-consumer" && detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "S6 is decided");
+            Log(incident);
+
+            incident.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
+            QuarantineMessageAction quarantine = incident.Plan.ShouldNotBeNull().Plan.Actions.Single().ShouldBeOfType<QuarantineMessageAction>();
+            quarantine.TargetServiceId.Value.ShouldBe("queue-consumer");
+            incident.Plan.PolicyEvaluation.Decision.ShouldBe(PolicyDecision.ApprovalRequired);
+
+            RemediationPlan plan = incident.Plan.Plan;
+            using var approve = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/incidents/{incident.Summary.IncidentId}/plans/{plan.PlanId}/approve")
+            {
+                Content = JsonContent.Create(new { planVersion = plan.PlanVersion, planHash = plan.PlanHash }, options: SentinelJson.Options)
+            };
+            approve.Headers.Add("Idempotency-Key", $"approve-{plan.PlanId}-v{plan.PlanVersion}");
+            using HttpResponseMessage approval = await system.Api.SendAsync(approve);
+            approval.EnsureSuccessStatusCode();
+
+            IncidentDetail resolved = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == incident.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
+                RecoveryTimeout,
+                "S6 recovery is judged");
+            Log(resolved);
+
+            resolved.Summary.Status.ShouldBe(IncidentStatus.Resolved);
+            resolved.Execution.ShouldNotBeNull().Outcome.ShouldBe(ExecutionOutcome.ActionVerified);
+            resolved.Recovery.ShouldNotBeNull().Outcome.ShouldBe(RecoveryOutcome.Recovered);
+            (await system.SentinelRollbacksAsync("queue-consumer")).ShouldBe(0, "the consumer's deployment was innocent");
+
+            await system.RecordOutcomeAsync("S6", resolved, approved: true);
+            await EvaluationRun.WriteAsync(system, "S6", resolved, approved: true);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
     /// <summary>S0, the healthy control: changes and noise without an SLO burn must open no incident.</summary>
     [Fact]
     public async Task S0_the_healthy_control_opens_no_incident()

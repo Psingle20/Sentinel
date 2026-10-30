@@ -100,6 +100,31 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task In_the_poison_message_metrics_and_logs_name_the_message_and_contradict_the_later_deployment()
+    {
+        var telemetry = Telemetry.PoisonMessage();
+        string poison = HypothesisKeys.PoisonMessage(ServiceId.From("queue-consumer"));
+        string deployment = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d10:started"));
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 70);
+        InvestigationRun logs = await Run(telemetry, InvestigationRoles.Logs, 70);
+        InvestigationRun changes = await Run(telemetry, InvestigationRoles.Changes, 70);
+
+        foreach (InvestigationRun run in new[] { metrics, logs })
+        {
+            HypothesisFinding cause = run.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == poison);
+            cause.SuspectedServiceId.ShouldBe(ServiceId.From("queue-consumer"));
+            cause.SupportingEvidenceIds.ShouldNotBeEmpty();
+            run.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == deployment).ContradictingEvidenceIds.ShouldNotBeEmpty();
+        }
+
+        metrics.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("kept processing the other messages", StringComparison.Ordinal));
+        logs.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("failures of message ord-poison-1", StringComparison.Ordinal));
+        EvidenceFinding proximity = changes.Completed.Evidence.Single(evidence => evidence.HypothesisIds.Contains(changes.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == deployment).HypothesisId));
+        proximity.Strength.ShouldBeLessThan(0.3, "the deployment served after the symptoms began, so proximity is weak");
+    }
+
+    [Fact]
     public async Task Runbook_text_is_quoted_as_data_and_never_becomes_evidence()
     {
         Telemetry telemetry = Telemetry.ConnectionLeak().WithPlantedRunbook();

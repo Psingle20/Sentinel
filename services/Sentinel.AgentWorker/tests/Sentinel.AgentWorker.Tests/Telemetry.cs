@@ -31,6 +31,9 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
 
     public bool Partial { get; init; }
 
+    /// <summary>The service the incident is about; checkout-service, whose dependency is order-service, unless a scenario says otherwise.</summary>
+    public string AffectedService { get; init; } = "checkout-service";
+
     /// <summary>S1: checkout v2.4.1 serves from 20 s and leaks connections until the SLO burns from 60 s.</summary>
     public static Telemetry ConnectionLeak(bool partial = false)
     {
@@ -99,6 +102,22 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
             telemetry.Span("checkout-service", "order-service", second, 600 + second);
         }
 
+        return telemetry;
+    }
+
+    /// <summary>
+    /// S6: a poison message fails on every receive from 0 s while the other messages are processed; a benign
+    /// queue-consumer v1.4.1 serves from 50 s; the queue's oldest message passed the onset threshold at 10 s.
+    /// </summary>
+    public static Telemetry PoisonMessage()
+    {
+        var telemetry = new Telemetry { AffectedService = "queue-consumer", _onset = 10 };
+        telemetry.Deployment("queue-consumer", "v1.4.1", "v1.4.0", "d10", 30, 50);
+        telemetry.Series("queue_max_receive_count", "queue-consumer", second => 1 + second / 3.0);
+        telemetry.Series("queue_oldest_message_age", "queue-consumer", second => second + 0.5);
+        telemetry.Series("queue_processed_rate", "queue-consumer", _ => 3.8);
+        telemetry.Series("queue_failure_rate", "queue-consumer", second => second < 1 ? 0 : 0.4);
+        telemetry.Signature("queue-consumer", "Order message ord-poison-1 failed on receive 1: Amount 'NaN' is not a positive number.", 35, 1, 70);
         return telemetry;
     }
 
@@ -175,9 +194,9 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         EnvironmentId = Environment,
         IncidentId = IncidentId.New(),
         InvestigationId = InvestigationId.New(),
-        AffectedServiceId = ServiceId.From("checkout-service"),
-        RelatedServiceIds = [ServiceId.From("order-service")],
-        Objective = "Find the cause of checkout-service's SLO burn.",
+        AffectedServiceId = ServiceId.From(AffectedService),
+        RelatedServiceIds = AffectedService == "checkout-service" ? [ServiceId.From("order-service")] : [],
+        Objective = $"Find the cause of {AffectedService}'s symptoms.",
         ObservationWindow = new TimeRange(Start.AddSeconds(-300), Start.AddSeconds(detectedAt)),
         Budget = new InvestigationBudget(12, 40_000, TimeSpan.FromSeconds(10)),
         SymptomOnset = _onset is { } onset ? Start.AddSeconds(onset) : null

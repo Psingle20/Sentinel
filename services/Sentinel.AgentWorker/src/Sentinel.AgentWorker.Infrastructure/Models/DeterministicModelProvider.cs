@@ -175,6 +175,9 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
     {
         private static readonly TimeSpan ProximityScale = TimeSpan.FromMinutes(2);
 
+        // A message received this often is failing on every receive, not on a passing fault.
+        private const int PoisonReceives = 3;
+
         public static string Run(Conversation conversation, bool singleHypothesis, bool fabricate)
         {
             var output = new Findings();
@@ -190,6 +193,7 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             ContradictChangesAfterRegression(conversation, output, regressions, changes);
             LoadChange(conversation, output, onset);
             LogSignatures(conversation, output, changes, onset);
+            PoisonMessages(conversation, output, changes);
             SlowCalls(conversation, output, changes);
             Topology(conversation, output);
 
@@ -464,6 +468,96 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             }
         }
 
+        /// <summary>
+        /// R9 (Phase E01): one message that fails on every receive while the others are processed. Its receive count keeps
+        /// rising and its failures repeat in the logs under one message ID; a change that began serving after the first
+        /// failure cannot explain it.
+        /// </summary>
+        private static void PoisonMessages(Conversation conversation, Findings output, Change[] changes)
+        {
+            foreach (Series receives in SeriesOf(conversation, "queue_max_receive_count").Where(series => series.Samples.Count > 0))
+            {
+                Sample peak = receives.Samples.MaxBy(sample => sample.Value)!;
+                if (peak.Value < PoisonReceives)
+                {
+                    continue;
+                }
+
+                Sample first = receives.Samples.First(sample => sample.Value > 1);
+                string hypothesis = PoisonHypothesis(output, receives.Service, conversation.AffectedService);
+                output.Evidence(
+                    hypothesis,
+                    $"{receives.Service}'s highest receive count rose above 1 at {first.At:O} and reached {peak.Value:G4} by {peak.At:O}.",
+                    "supports",
+                    0.8,
+                    [first.Id, peak.Id],
+                    first.At,
+                    peak.At,
+                    "call_queue_max_receive_count",
+                    $"queue-receives:{receives.Service}");
+
+                if (SeriesOf(conversation, "queue_processed_rate").FirstOrDefault(series => series.Service == receives.Service) is { Samples.Count: > 0 } processed
+                    && processed.Samples.Where(sample => sample.At >= first.At).ToArray() is { Length: > 0 } after
+                    && after.Min(sample => sample.Value) > 0.5)
+                {
+                    Sample lowest = after.MinBy(sample => sample.Value)!;
+                    output.Evidence(
+                        hypothesis,
+                        $"{receives.Service} kept processing the other messages, at least {lowest.Value:G3} a second, while one kept failing.",
+                        "supports",
+                        0.5,
+                        [after[0].Id, lowest.Id],
+                        after[0].At,
+                        after[^1].At,
+                        "call_queue_processed_rate",
+                        $"queue-processed:{receives.Service}");
+                }
+
+                ContradictChangesAfter(output, changes, receives.Service, first.At, $"{receives.Service}'s receive count was already climbing at {first.At:O}", "call_queue_max_receive_count", first.Id);
+            }
+
+            foreach ((string callId, JsonNode result) in conversation.ToolResults.Where(entry => entry.Value.Tool == "log_signatures" && entry.Value.Result is not null).Select(entry => (entry.Key, entry.Value.Result!)))
+            {
+                string service = result["service"]?.GetValue<string>() ?? conversation.AffectedService;
+                foreach (JsonNode signature in result["signatures"]?.AsArray().OfType<JsonNode>() ?? [])
+                {
+                    if (FailedMessage().Match(signature["message"]?.GetValue<string>() ?? string.Empty) is not { Success: true } failed)
+                    {
+                        continue;
+                    }
+
+                    string id = signature["id"]!.GetValue<string>();
+                    int count = int.TryParse(signature["count"]?.GetValue<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : 1;
+                    if (count < PoisonReceives)
+                    {
+                        continue;
+                    }
+
+                    DateTimeOffset from = Time(signature["firstSeen"]) ?? DateTimeOffset.UtcNow;
+                    DateTimeOffset to = Time(signature["lastSeen"]) ?? from;
+                    string hypothesis = PoisonHypothesis(output, service, conversation.AffectedService);
+                    output.Evidence(hypothesis, $"{service} logged {count} failures of message {failed.Groups[1].Value} from {from:O} to {to:O}.", "supports", 0.7, [id], from, to, callId, $"logs:{service}:poison-message");
+                    ContradictChangesAfter(output, changes, service, from, $"Message {failed.Groups[1].Value} was already failing at {from:O} and kept failing until {to:O}", callId, id);
+                }
+            }
+        }
+
+        private static string PoisonHypothesis(Findings output, string service, string affected) => output.Hypothesis(
+            $"poison-message:{service}",
+            $"A poison message on {service}'s queue fails on every receive while the other messages are processed.",
+            ["a message no revision can process", "it fails and returns after its visibility timeout", "its receive count and the queue's oldest-message age rise", $"{affected} detects the ageing queue"],
+            service,
+            null);
+
+        private static void ContradictChangesAfter(Findings output, Change[] changes, string service, DateTimeOffset began, string fact, string callId, string observationId)
+        {
+            foreach (Change change in changes.Where(change => change.Service == service && change.Kind is "deploy" or "rollback" && change.ServingFrom is { } serving && serving > began))
+            {
+                string hypothesis = output.Hypothesis(change.Key, $"The {change.Service} {change.Version} deployment caused the symptoms.", [$"deploy {change.Service} {change.Version}", $"regression in {change.Service}", "symptoms"], change.Service, change.StartedId);
+                output.Evidence(hypothesis, $"{fact}, before {change.Service} {change.Version} served from {change.ServingFrom:O}.", "contradicts", 0.8, [observationId, change.StartedId], began, change.ServingFrom!.Value, callId, $"poison-before-change:{change.Service}");
+            }
+        }
+
         /// <summary>R8: slow calls to a dependency in traces.</summary>
         private static void SlowCalls(Conversation conversation, Findings output, Change[] changes)
         {
@@ -540,6 +634,8 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
 
             return burn.Samples[first].At;
         }
+
+        private static Regex FailedMessage() => new(@"message (\S+) failed on receive", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
         private static Regex GaveUp() => new("gave up on ([a-z0-9-]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 

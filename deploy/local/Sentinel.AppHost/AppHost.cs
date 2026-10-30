@@ -95,7 +95,9 @@ void AddSentinel()
     executor
         .WithEnvironment("Executor__Adapters__DeployController__Token", reference.DeployToken)
         .WithEnvironment("Executor__Adapters__ReportingWorker__ControlToken", reference.ControlToken)
+        .WithEnvironment("Executor__Adapters__QueueConsumer__ControlToken", reference.ControlToken)
         .WithReference(reference.ReportingWorker)
+        .WithReference(reference.QueueConsumer)
         .WithReference(reference.DeployController)
         .WithReference(runtime)
         .WithReference(gateway);

@@ -44,7 +44,7 @@ public static class FindingsValidator
           }],
           "hypotheses": [{
             "id": "h1",
-            "key": "change:<deployment observation ID> | redis-saturation[:service] | dependency-regression[:service] | load-change:service | external-dependency",
+            "key": "change:<deployment observation ID> | redis-saturation[:service] | dependency-regression[:service] | load-change:service | external-dependency | poison-message:service",
             "statement": "a possible cause, in one sentence",
             "causalChain": ["cause", "effect", "symptom"],
             "suspectedService": "service name or null",

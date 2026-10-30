@@ -10,6 +10,7 @@ internal static class IncidentScenario
     public static readonly DateTimeOffset Start = new(2026, 10, 28, 9, 0, 0, TimeSpan.Zero);
     public static readonly ServiceId Checkout = ServiceId.From("checkout-service");
     public static readonly ServiceId Reporting = ServiceId.From("reporting-worker");
+    public static readonly ServiceId Consumer = ServiceId.From("queue-consumer");
 
     public static LinkedChange Deployment(string service, string version, string previous, int startedAt, int? servingAt, string id) => new()
     {

@@ -89,6 +89,7 @@ internal sealed class InMemoryRuntime : IDisposable
         options.Recovery["checkout-service"] = [new RecoveryCriterionOptions { Metric = "slo_burn_rate", Comparison = ThresholdComparison.LessThan, Threshold = 1 }];
         options.Owners["checkout-service"] = "payments";
         options.BatchServices.Add("reporting-worker");
+        options.QueueServices["queue-consumer"] = "orders";
     }
 
     public async Task<T> InScopeAsync<T>(Func<IServiceProvider, Task<T>> action)

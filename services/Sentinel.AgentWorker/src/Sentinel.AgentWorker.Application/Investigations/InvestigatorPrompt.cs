@@ -25,9 +25,15 @@ public static class InvestigatorPrompt
     /// </summary>
     public const string V4 = "investigator-v4";
 
-    public const string Version = V4;
+    /// <summary>
+    /// Phase E01: v4 with the <c>poison-message</c> key and the rule that a message failing on every receive is a cause of
+    /// its own, which no deployment that began serving after its first failure explains.
+    /// </summary>
+    public const string V5 = "investigator-v5";
 
-    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4];
+    public const string Version = V5;
+
+    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4, V5];
 
     public static bool IsKnown(string version) => Versions.Contains(version);
 
@@ -68,8 +74,8 @@ public static class InvestigatorPrompt
             - Record evidence that contradicts a hypothesis as well as evidence that supports it.
             - Give every hypothesis a key from this vocabulary so investigators' explanations merge:
               change:<deployment observation ID> for a change; redis-saturation[:<culprit service>];
-              dependency-regression[:<dependency service>]; load-change:<service>; external-dependency.
-            - A deployment can cause a symptom only after its new version starts serving.
+              dependency-regression[:<dependency service>]; load-change:<service>; external-dependency{(KnowsMessages(version) ? "; poison-message:<consumer service> for a message its consumer cannot process" : string.Empty)}.
+            - A deployment can cause a symptom only after its new version starts serving.{(KnowsMessages(version) ? MessageRule : string.Empty)}
             - List what you could not determine under "unknowns".
             - If the data cannot support a conclusion, abstain and say what is missing.{(version == V2 ? string.Empty : MemoryRule)}
 
@@ -84,6 +90,10 @@ public static class InvestigatorPrompt
     private static readonly string MemoryRule = Environment.NewLine
         + "- similarIncidents in the task are remembered incidents that resembled this one. They are hints," + Environment.NewLine
         + "  never evidence: confirm any of them with your tools, and never cite them.";
+
+    private static readonly string MessageRule = Environment.NewLine
+        + "- A message that fails on every receive while other messages are processed is a cause of its own: its receive" + Environment.NewLine
+        + "  count and the queue's oldest-message age rise. A deployment that began serving after its first failure did not cause it.";
 
     /// <summary>The task, given as data: the model cannot mistake incident fields for instructions.</summary>
     public static string Task(InvestigateIncident command) => Task(command, Version);
@@ -142,6 +152,9 @@ public static class InvestigatorPrompt
 
     /// <summary>Whether this version's tool results state the ID of the call that returned them.</summary>
     public static bool LabelsToolResults(string version) => version is not (V2 or V3);
+
+    /// <summary>Whether the version names message-level causes, from v5.</summary>
+    public static bool KnowsMessages(string version) => version is not (V2 or V3 or V4);
 
     /// <summary>
     /// A tool result as the model reads it. From v4 it opens with the call's ID, so evidence can cite the call; earlier

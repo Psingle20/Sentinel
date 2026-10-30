@@ -22,6 +22,9 @@ public sealed class RuntimeOptions
     /// <summary>Services that run background batches: a saturation they cause is remediated by pausing the batch (Phase 06).</summary>
     public IList<string> BatchServices { get; } = [];
 
+    /// <summary>Services that consume a queue, and the queue: a poison message they cannot process is remediated by quarantining it (Phase E01).</summary>
+    public IDictionary<string, string> QueueServices { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     /// <summary>The service catalog's owning team per service.</summary>
     public IDictionary<string, string> Owners { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 

@@ -49,6 +49,25 @@ public sealed class RemediationPlanningTests : IDisposable
     }
 
     [Fact]
+    public async Task A_poison_message_gets_a_quarantine_of_messages_received_too_often_that_needs_approval()
+    {
+        IncidentId incidentId = await DiagnoseAsync(new HypothesisSpec("poison-message:queue-consumer", null, Consumer));
+
+        IncidentSnapshot planned = await _runtime.InScopeAsync(provider => Steps(provider).PlanAsync(incidentId, CancellationToken.None));
+
+        planned.State.ShouldBe(IncidentState.AwaitingApproval);
+        RemediationPlan plan = _runtime.Outbox.Of<Sentinel.Contracts.Remediation.RemediationPlanProposed>().Single().Plan;
+        QuarantineMessageAction quarantine = plan.Actions.Single().ShouldBeOfType<QuarantineMessageAction>();
+        quarantine.TargetServiceId.ShouldBe(Consumer);
+        quarantine.Queue.ShouldBe("orders");
+        quarantine.MinimumReceives.ShouldBe(3);
+        quarantine.MaxMessages.ShouldBe(5);
+        plan.Preconditions.ShouldNotBeNull().ShouldHaveSingleItem().ShouldBe(new PlanPrecondition(Consumer, "queue-state", "poisoned"));
+        plan.BlastRadius.ShouldNotBeNull().ShouldBe([Consumer]);
+        plan.Compensation.ShouldNotBeNull().ShouldContain("Release");
+    }
+
+    [Fact]
     public async Task Signals_worse_after_the_action_than_before_it_require_compensation()
     {
         IncidentId incidentId = await DiagnoseAsync(new HypothesisSpec("change:deploy-controller:deployment:d1:started", ObservationId.From("deploy-controller:deployment:d1:started"), null));
