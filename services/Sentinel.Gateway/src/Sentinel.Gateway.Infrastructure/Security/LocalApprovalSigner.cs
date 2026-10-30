@@ -16,8 +16,9 @@ namespace Sentinel.Gateway.Infrastructure.Security;
 /// <summary>
 /// The local development implementation of <see cref="IApprovalSigner"/> (ADR-006): an ES256 key
 /// pair generated in memory at startup and never written anywhere. Only public keys are stored,
-/// so attestations signed before a restart or rotation stay verifiable until they expire. In
-/// production this interface is backed by a managed, non-exportable signing key.
+/// so attestations signed before a restart or rotation stay verifiable until they expire, and a
+/// restart is a rotation. It runs as a single instance, because its first key retires every key
+/// still current. In production this interface is backed by a managed, non-exportable signing key.
 /// </summary>
 internal sealed class LocalApprovalSigner(
     NpgsqlDataSource dataSource,
@@ -100,12 +101,21 @@ internal sealed class LocalApprovalSigner(
 
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-        if (_keyId is not null)
+        // The retiring key stays published for as long as an attestation it signed can be valid. The first rotation in a
+        // process retires the key a previous process left current: its private half went with that process.
+        await using (var retire = new NpgsqlCommand(
+            _keyId is null
+                ? "update api.approval_keys set expires = @expires where expires is null"
+                : "update api.approval_keys set expires = @expires where key_id = @key_id",
+            connection,
+            transaction))
         {
-            // The retiring key stays published for as long as an attestation it signed can be valid.
-            await using var retire = new NpgsqlCommand("update api.approval_keys set expires = @expires where key_id = @key_id", connection, transaction);
             retire.Parameters.AddWithValue("expires", now + approvals.Value.AttestationLifetime + TimeSpan.FromMinutes(5));
-            retire.Parameters.AddWithValue("key_id", _keyId);
+            if (_keyId is not null)
+            {
+                retire.Parameters.AddWithValue("key_id", _keyId);
+            }
+
             await retire.ExecuteNonQueryAsync(cancellationToken);
         }
 

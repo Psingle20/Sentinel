@@ -72,6 +72,29 @@ public sealed class LocalApprovalSignerTests : IAsyncLifetime
         (await signer.PublishedKeysAsync(CancellationToken.None)).Keys.Select(key => key.KeyId).ShouldBe([after.KeyId]);
     }
 
+    [Fact]
+    public async Task After_a_restart_the_previous_process_key_stays_published_only_until_its_attestations_expire()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 28, 9, 0, 0, TimeSpan.Zero));
+        SignedAttestation before;
+        using (LocalApprovalSigner stopped = Signer(time))
+        {
+            before = await stopped.SignAsync(Claims(time.GetUtcNow()), CancellationToken.None);
+        }
+
+        time.Advance(TimeSpan.FromMinutes(1));
+        using LocalApprovalSigner restarted = Signer(time);
+        SignedAttestation after = await restarted.SignAsync(Claims(time.GetUtcNow()), CancellationToken.None);
+        ApprovalKeySet keys = await restarted.PublishedKeysAsync(CancellationToken.None);
+
+        after.KeyId.ShouldNotBe(before.KeyId);
+        Verify(before.Token, keys).ShouldBeTrue("an attestation signed before the restart verifies until it expires");
+        keys.Keys.Single(key => key.KeyId == before.KeyId).Expires.ShouldBe(time.GetUtcNow().AddMinutes(20).ToUnixTimeSeconds());
+
+        time.Advance(TimeSpan.FromMinutes(21));
+        (await restarted.PublishedKeysAsync(CancellationToken.None)).Keys.Select(key => key.KeyId).ShouldBe([after.KeyId]);
+    }
+
     private LocalApprovalSigner Signer(TimeProvider time) => new(
         _dataSource,
         time,
