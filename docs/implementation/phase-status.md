@@ -282,7 +282,7 @@ Delivered:
 Open:
 
 - A deployment definition beyond `deploy/local/`, which waits on the choice of production environment.
-- Service-to-service authentication, which has no ADR. Until then Runtime's operator endpoints stay unauthenticated ([ADR-017](../decisions/ADR-017-runtime-actor-and-workflow-hosting.md)).
+- Service-to-service authentication. [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) proposes signed service tokens with a caller allowlist per route and a Redis user per service, and awaits a decision. Until then Runtime's operator endpoints stay unauthenticated ([ADR-017](../decisions/ADR-017-runtime-actor-and-workflow-hosting.md)).
 - Alerting on the SLOs. They are defined and measured, but nothing pages anyone yet; that arrives with the deployment definition.
 - Failure injection beyond `S4`, `S5` and single-service restarts, such as a slow database or a partitioned message broker.
 - A deployment runbook, and production versions of key rotation and restore, which arrive with the deployment definition.

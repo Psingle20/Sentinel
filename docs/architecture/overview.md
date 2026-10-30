@@ -103,7 +103,7 @@ Accepted:
 Still open:
 
 - Deployment environment for the initial product release; only the Aspire local orchestration exists (Phase 09).
-- Service-to-service authentication between the five backend services. Approval attestations are covered by ADR-006; the execute command, start confirmation and observation queries have no recorded decision yet.
+- Service-to-service authentication between the five backend services. Approval attestations are covered by ADR-006; for the execute command, start confirmation, observation queries and every other internal call, [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) proposes signed service tokens with a caller allowlist per route and a Redis user per service, and awaits a decision.
 - Approver identity before Phase 08; the walking skeleton uses local development identities.
 
 Delivery status against the phases is tracked in the [phase status ledger](../implementation/phase-status.md).
