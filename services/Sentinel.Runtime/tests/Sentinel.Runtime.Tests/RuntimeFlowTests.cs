@@ -19,6 +19,7 @@ using Sentinel.Runtime.Application.Abstractions.Runtime;
 using Sentinel.Runtime.Application.Abstractions.Persistence;
 using Sentinel.Runtime.Application.Detection;
 using Sentinel.Runtime.Application.Incidents.Commands;
+using Sentinel.Runtime.Application.Options;
 using Sentinel.Runtime.Application.Projections;
 using Sentinel.Runtime.Domain.Incidents.Events;
 using Sentinel.Runtime.Application.BusinessProcesses.Incidents;
@@ -65,6 +66,41 @@ public sealed class RuntimeFlowTests : IDisposable
         (await _runtime.Store.ListAsync(10, CancellationToken.None)).ShouldBeEmpty();
         _runtime.Workflows.Started.ShouldBeEmpty();
         _runtime.Outbox.Of<IncidentOpened>().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_incident_clears_only_on_the_signal_that_opened_it_not_on_another_quiet_rule_of_its_service()
+    {
+        using var runtime = new InMemoryRuntime(services => services.Configure<RuntimeOptions>(options =>
+            options.Detection.Add(new DetectionRuleOptions { Service = "checkout-service", Metric = "error_rate", DetectionThreshold = 5, OnsetThreshold = 1, RequiredSamples = 2 })));
+        Task<Result> Observe(Observation observation) =>
+            runtime.InScopeAsync(provider => provider.GetRequiredService<DetectionService>().HandleAsync(observation, CancellationToken.None));
+        static MetricObservation Errors(int second) => InMemoryRuntime.Burn(second, 0) with
+        {
+            ObservationId = ObservationId.From($"prometheus:error_rate:checkout-service:{second}"),
+            MetricName = "error_rate"
+        };
+
+        await Observe(InMemoryRuntime.Burn(0, 3));
+        await Observe(InMemoryRuntime.Burn(5, 4));
+        IncidentId incidentId = (await runtime.Store.ListAsync(10, CancellationToken.None)).ShouldHaveSingleItem().IncidentId;
+        (await runtime.Owner.SendAsync(incidentId, new EscalateCommand("Diagnosed without a remediation."), CancellationToken.None)).IsSuccess.ShouldBeTrue();
+
+        // The error rate never fired, and its quiet for longer than ClearAfter says nothing about the burn.
+        for (int second = 10; second <= 160; second += 15)
+        {
+            await Observe(Errors(second));
+            await Observe(InMemoryRuntime.Burn(second, 4));
+        }
+
+        (await runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.State.ShouldBe(IncidentState.Escalated);
+
+        for (int second = 175; second <= 310; second += 15)
+        {
+            await Observe(InMemoryRuntime.Burn(second, 0.2));
+        }
+
+        (await runtime.Owner.GetAsync(incidentId, CancellationToken.None))!.State.ShouldBe(IncidentState.Resolved);
     }
 
     [Fact]

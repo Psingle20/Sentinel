@@ -22,6 +22,9 @@ public sealed record IncidentSnapshot
 
     public required string Title { get; init; }
 
+    /// <summary>The metric whose detection rule opened the incident.</summary>
+    public string? TriggerMetric { get; init; }
+
     public IReadOnlyList<ServiceId> AffectedServices { get; init; } = [];
 
     public required IncidentState State { get; init; }
@@ -114,6 +117,7 @@ public sealed record IncidentSnapshot
             TenantId = incident.TenantId,
             EnvironmentId = incident.EnvironmentId,
             AffectedServiceId = incident.AffectedServiceId,
+            TriggerMetric = incident.TriggerMetric,
             State = incident.State,
             Severity = incident.Severity,
             Version = incident.Version,

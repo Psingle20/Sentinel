@@ -123,7 +123,11 @@ public sealed class DetectionService(
         {
             string reason = string.Create(CultureInfo.InvariantCulture, $"Symptoms cleared: {rule.MetricName} stayed below {rule.OnsetThreshold} for {rule.ClearAfter.TotalMinutes:F0} min without Sentinel remediation.");
             IncidentSnapshot? current = await owner.GetAsync(open, cancellationToken);
+
+            // Only the signal that opened the incident clears it: a service watched by more than one rule, such as a
+            // queue's age and its duplicate rate, is not healthy because a rule that never fired stayed quiet.
             if (current?.State is IncidentState.AwaitingApproval or IncidentState.Escalated
+                && (current.TriggerMetric is null || current.TriggerMetric == rule.MetricName)
                 && await owner.SendAsync(open, new ResolveClearedCommand(reason), cancellationToken) is { IsSuccess: true, Value: { Changed: true } reply })
             {
                 await workflows.SignalAsync(reply.Snapshot, new IncidentSignal(IncidentSignalKind.Closed), cancellationToken);
