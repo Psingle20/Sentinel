@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Reference.Scenarios.Api.Contracts;
 using Reference.Scenarios.Api.Manifests;
 using Reference.Scenarios.Application.Runs;
@@ -11,7 +13,8 @@ namespace Sentinel.EndToEnd.Tests;
 /// <summary>
 /// Phase 01 exit criteria, checked against the reference Prometheus with Sentinel not running:
 /// each scenario's symptoms and discriminating signals appear within bounded time, the permitted
-/// remediation restores the recovery signals, and S0 never burns the SLO.
+/// remediation restores the recovery signals, and S0 never burns the SLO. A checkout is also one
+/// trace from checkout through orders to Redis, which the traces specialist relies on.
 /// </summary>
 [Collection(ReferenceCollection.Name)]
 [Trait("Category", "EndToEnd")]
@@ -28,6 +31,18 @@ public sealed class ReferenceScenarioTests(ReferenceOnlySystem system, ITestOutp
 
         rate.ShouldBeLessThan(15);
         (await system.Prometheus.ScalarAsync("slo:checkout_success:burn_rate1m") ?? 0).ShouldBeLessThan(1);
+    }
+
+    [Fact]
+    public async Task A_checkout_is_one_trace_across_checkout_orders_and_redis()
+    {
+        string services = await Eventually.ValueAsync(
+            ContinuousTraceAsync,
+            found => found.Length > 0,
+            TimeSpan.FromMinutes(2),
+            "a checkout trace reaches order-service and Redis");
+
+        output.WriteLine($"One trace spans {services}.");
     }
 
     [Theory]
@@ -60,6 +75,29 @@ public sealed class ReferenceScenarioTests(ReferenceOnlySystem system, ITestOutp
         {
             await system.StopScenarioAsync(run.RunId);
         }
+    }
+
+    // The services of the first recent checkout trace that reaches order-service and touches Redis, or empty.
+    private async Task<string> ContinuousTraceAsync()
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+        string window = string.Create(CultureInfo.InvariantCulture, $"start={now - 300_000_000}&end={now}");
+        using JsonDocument traces = (await system.Jaeger.GetFromJsonAsync<JsonDocument>($"/api/traces?service=checkout-service&{window}&limit=20"))!;
+        foreach (JsonElement trace in traces.RootElement.GetProperty("data").EnumerateArray())
+        {
+            var processes = trace.GetProperty("processes").EnumerateObject()
+                .ToDictionary(process => process.Name, process => process.Value.GetProperty("serviceName").GetString()!);
+            JsonElement[] spans = [.. trace.GetProperty("spans").EnumerateArray()];
+            HashSet<string> services = [.. spans.Select(span => processes[span.GetProperty("processID").GetString()!])];
+            bool redis = spans.Any(span => span.GetProperty("tags").EnumerateArray()
+                .Any(tag => tag.GetProperty("key").GetString() == "db.system.name" && tag.GetProperty("value").GetString() == "redis"));
+            if (services.Contains("checkout-service") && services.Contains("order-service") && redis)
+            {
+                return string.Join(", ", services.Order(StringComparer.Ordinal));
+            }
+        }
+
+        return string.Empty;
     }
 
     private async Task AssertSignalAsync(SignalExpectation signal, DateTimeOffset activatedAt, int toleranceSeconds)
@@ -129,22 +167,24 @@ public sealed class ReferenceScenarioTests(ReferenceOnlySystem system, ITestOutp
     private async Task AssertRecoveryAsync(ScenarioRecovery recovery)
     {
         await Eventually.ValueAsync(
-            () => AllMetAsync(recovery.Criteria),
-            met => met,
+            () => UnmetAsync(recovery.Criteria),
+            unmet => unmet is null,
             TimeSpan.FromSeconds(recovery.EvaluationTimeoutSeconds),
             "every recovery criterion is met",
             TimeSpan.FromSeconds(5));
+        output.WriteLine("Every recovery criterion is met.");
 
         // Recovered means the criteria hold for the whole observation window, not just once.
         DateTimeOffset windowEnd = DateTimeOffset.UtcNow.AddSeconds(recovery.ObservationWindowSeconds);
         while (DateTimeOffset.UtcNow < windowEnd)
         {
-            (await AllMetAsync(recovery.Criteria)).ShouldBeTrue("a recovery criterion regressed inside the observation window");
+            (await UnmetAsync(recovery.Criteria)).ShouldBeNull("a recovery criterion regressed inside the observation window");
             await Task.Delay(TimeSpan.FromSeconds(10));
         }
     }
 
-    private async Task<bool> AllMetAsync(IReadOnlyList<RecoveryExpectation> criteria)
+    // The first criterion not met, with the value that missed it, or null when all are met.
+    private async Task<string?> UnmetAsync(IReadOnlyList<RecoveryExpectation> criteria)
     {
         foreach (RecoveryExpectation criterion in criteria)
         {
@@ -158,11 +198,11 @@ public sealed class ReferenceScenarioTests(ReferenceOnlySystem system, ITestOutp
             };
             if (!met)
             {
-                return false;
+                return string.Create(CultureInfo.InvariantCulture, $"{criterion.Description} {value:G4} is not {criterion.Comparison} {criterion.Threshold}");
             }
         }
 
-        return true;
+        return null;
     }
 
     private sealed record ServiceStatus(string Name, string? ServingRevision, string BaselineRevision);

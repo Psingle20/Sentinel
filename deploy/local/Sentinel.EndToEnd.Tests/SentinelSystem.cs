@@ -58,6 +58,9 @@ public class SentinelSystem : IAsyncLifetime
 
     public PrometheusClient Prometheus { get; private set; } = null!;
 
+    /// <summary>The reference Jaeger's query API, for trace checks.</summary>
+    public HttpClient Jaeger { get; private set; } = null!;
+
     public HttpClient ScenarioRunner { get; private set; } = null!;
 
     public HttpClient DeployController { get; private set; } = null!;
@@ -111,6 +114,7 @@ public class SentinelSystem : IAsyncLifetime
         }
 
         Prometheus = new PrometheusClient(App.CreateHttpClient("prometheus", "http"));
+        Jaeger = App.CreateHttpClient("jaeger", "http");
 
         ScenarioRunner = App.CreateHttpClient("scenario-runner");
         ScenarioRunner.DefaultRequestHeaders.Add("X-Reference-Control-Token", await ParameterAsync("reference-control-token"));
