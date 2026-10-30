@@ -67,8 +67,13 @@ public sealed record OutcomeRecord
         HypothesisView? leader = incident.Decision?.LeadingHypothesisId is { } leading
             ? incident.Hypotheses.FirstOrDefault(hypothesis => hypothesis.Finding.HypothesisId == leading)
             : null;
-        RollbackAction? planned = incident.Plan?.Plan.Actions.OfType<RollbackAction>().FirstOrDefault();
+        RemediationAction? planned = incident.Plan?.Plan.Actions is [var first, ..] ? first : null;
         bool diagnosed = incident.Decision?.Outcome == DecisionOutcome.Diagnosed;
+
+        // The right service is not enough: in S6 the innocent deployment went to the very service the poison message hurts,
+        // so an explanation is right only when it blames a change exactly when the injected cause is one.
+        bool causeIsDeployment = manifest.Steps.Any(step => step.Role == "cause" && step.Action == "deploy");
+        bool leaderIsChange = leader?.Finding.SuspectedChangeObservationId is not null;
 
         HypothesisFinding? blamed = baseline is { Outcome: InvestigationOutcome.Completed } && baseline.Hypotheses.Count > 0 ? baseline.Hypotheses[0] : null;
 
@@ -82,14 +87,20 @@ public sealed record OutcomeRecord
             ExpectedRemediation = string.Join("; ", manifest.Remediation.Permitted.Select(remedy => $"{remedy.Action} {remedy.Service} ({remedy.Mode})")),
             SentinelDecision = incident.Decision?.Outcome.ToString().ToLowerInvariant() ?? "none",
             SentinelCause = leader?.Finding.Statement,
-            SentinelPlan = planned is null ? null : $"rollback {planned.TargetServiceId} {planned.FromRevision} -> {planned.ToRevision}",
+            SentinelPlan = planned switch
+            {
+                RollbackAction rollback => $"rollback {rollback.TargetServiceId} {rollback.FromRevision} -> {rollback.ToRevision}",
+                PauseBatchAction pause => $"pause-batch {pause.TargetServiceId}",
+                QuarantineMessageAction quarantine => $"quarantine {quarantine.TargetServiceId} {quarantine.Queue} messages received {quarantine.MinimumReceives}+ times",
+                _ => null
+            },
             SentinelIncidentStatus = incident.Summary.Status.ToString(),
             SentinelRecovery = incident.Recovery?.Outcome.ToString(),
-            SentinelCorrect = diagnosed ? leader?.Finding.SuspectedServiceId?.Value == expectedService : abstentionAcceptable,
-            SentinelFalseRemediation = planned is not null && IsFalse(manifest, planned.TargetServiceId.Value),
+            SentinelCorrect = diagnosed ? leader?.Finding.SuspectedServiceId?.Value == expectedService && leaderIsChange == causeIsDeployment : abstentionAcceptable,
+            SentinelFalseRemediation = planned is RollbackAction rolledBack && IsFalse(manifest, rolledBack.TargetServiceId.Value),
             BaselineDecision = blamed is null ? "abstained" : $"blame {blamed.SuspectedServiceId}",
             BaselinePlan = blamed?.SuspectedServiceId is { } service ? $"rollback {service}" : null,
-            BaselineCorrect = blamed?.SuspectedServiceId is { } blamedService ? blamedService.Value == expectedService : abstentionAcceptable,
+            BaselineCorrect = blamed?.SuspectedServiceId is { } blamedService ? blamedService.Value == expectedService && causeIsDeployment : abstentionAcceptable,
             BaselineFalseRemediation = blamed?.SuspectedServiceId is { } target && IsFalse(manifest, target.Value),
             Approved = approved
         };
