@@ -286,7 +286,7 @@ Open:
 - Alerting on the SLOs. They are defined and measured, but nothing pages anyone yet; that arrives with the deployment definition.
 - Failure injection beyond `S4`, `S5` and single-service restarts, such as a slow database or a partitioned message broker.
 - A deployment runbook, and production versions of key rotation and restore, which arrive with the deployment definition.
-- A whole-system restore drill: every database restored together with an incident in flight, which then completes. Only Temporal's restore is tested so far, so the [backup and restore](../runbooks/backup-and-restore.md) steps are designed rather than proven.
+- A whole-system restore drill: every database restored together with an incident in flight, which then completes. Temporal's and Runtime's databases are each tested restored into a new server ([IncidentWorkflowTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/IncidentWorkflowTests.cs), [RuntimeRestoreTests](../../services/Sentinel.Runtime/tests/Sentinel.Runtime.Tests/RuntimeRestoreTests.cs)), but not every database together, so the [backup and restore](../runbooks/backup-and-restore.md) steps are designed rather than proven.
 - The local stack sometimes fails to start: in two of thirteen end-to-end runs on 2026-10-29 and 30, the Temporal container was never created, so Runtime never started and every test failed at once. A rerun succeeded each time, and the cause is not yet known; the next occurrence should be read from Docker's events for the Temporal image.
 
 ## Phase 10 – Scale and evolution
