@@ -10,21 +10,21 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 4 High-Level Architecture | [00](phase-00-foundations.md) | [09](phase-09-production-hardening.md), [10](phase-10-scale-evolution.md) |
 | 5 Control Plane vs Data Plane | [08](phase-08-product-experience.md) | [03](phase-03-incident-runtime.md), [10](phase-10-scale-evolution.md) |
 | 6 Domain Model | [00](phase-00-foundations.md) | [03](phase-03-incident-runtime.md), [06](phase-06-safe-remediation.md) |
-| 7 Canonical Observation Model | [02](phase-02-telemetry-ingestion.md) | [07](phase-07-memory-replay-evaluation.md) |
-| 8 Provider / Plugin Architecture | [02](phase-02-telemetry-ingestion.md) | [06](phase-06-safe-remediation.md), [10](phase-10-scale-evolution.md); AWS-shaped adapters in [E01](phase-e01-aws-reference-environment.md) |
+| 7 Canonical Observation Model | [02](phase-02-telemetry-ingestion.md) | [07](phase-07-memory-replay-evaluation.md), the `Visual` kind in [E07](phase-e07-visual-synthetic-monitor.md) |
+| 8 Provider / Plugin Architecture | [02](phase-02-telemetry-ingestion.md) | [06](phase-06-safe-remediation.md), [10](phase-10-scale-evolution.md); AWS-shaped adapters in [E01](phase-e01-aws-reference-environment.md), the visual provider in [E07](phase-e07-visual-synthetic-monitor.md) |
 | 9 Microsoft Orleans Model | [03](phase-03-incident-runtime.md) | [09](phase-09-production-hardening.md) |
 | 10 Event Sourcing | [03](phase-03-incident-runtime.md) | [07](phase-07-memory-replay-evaluation.md) |
 | 11 CQRS | [03](phase-03-incident-runtime.md) | [08](phase-08-product-experience.md) |
 | 12 Durable Workflow Architecture | [03](phase-03-incident-runtime.md) | [06](phase-06-safe-remediation.md), [09](phase-09-production-hardening.md); engine per [ADR-005](../decisions/ADR-005-durable-workflow-engine.md) |
 | 13 Saga / Compensation Model | [06](phase-06-safe-remediation.md) | [09](phase-09-production-hardening.md) |
 | 14 Evidence Blackboard Architecture | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md) |
-| 15 Evidence Model | [04](phase-04-ai-investigation.md) | [07](phase-07-memory-replay-evaluation.md), source-linked presentation in [E04](phase-e04-judge-mode.md) |
+| 15 Evidence Model | [04](phase-04-ai-investigation.md) | [07](phase-07-memory-replay-evaluation.md), source-linked presentation in [E04](phase-e04-judge-mode.md), artifact claims corroborated before they are evidence in [E06](phase-e06-incident-artifacts.md) |
 | 16 Causal Graph | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md), [08](phase-08-product-experience.md) |
 | 17 Hypothesis Engine | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md) |
 | 18 Adversarial Verification | [05](phase-05-verification-consensus.md) | [07](phase-07-memory-replay-evaluation.md) |
-| 19 Multi-Agent Architecture | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md), [10](phase-10-scale-evolution.md) |
+| 19 Multi-Agent Architecture | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md), [10](phase-10-scale-evolution.md), the escalation and artifact roles in [E05](phase-e05-escalation-investigator.md) and [E06](phase-e06-incident-artifacts.md) |
 | 20 Agent Execution Contract | [04](phase-04-ai-investigation.md) | [09](phase-09-production-hardening.md) |
-| 21 Consensus Engine | [05](phase-05-verification-consensus.md) | [07](phase-07-memory-replay-evaluation.md) |
+| 21 Consensus Engine | [05](phase-05-verification-consensus.md) | [07](phase-07-memory-replay-evaluation.md), abstention for ambiguity triggering [E05](phase-e05-escalation-investigator.md) |
 | 22 Confidence Calibration | [05](phase-05-verification-consensus.md) | [07](phase-07-memory-replay-evaluation.md) |
 | 23 Incident Correlation | [03](phase-03-incident-runtime.md) | [07](phase-07-memory-replay-evaluation.md) |
 | 24 Event-Time Processing | [02](phase-02-telemetry-ingestion.md) | [03](phase-03-incident-runtime.md), [09](phase-09-production-hardening.md) |
@@ -52,7 +52,7 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 46 AI Observability | [04](phase-04-ai-investigation.md) | [07](phase-07-memory-replay-evaluation.md), [09](phase-09-production-hardening.md) |
 | 47 Auditability | [03](phase-03-incident-runtime.md) | [06](phase-06-safe-remediation.md), [09](phase-09-production-hardening.md) |
 | 48 Data Privacy | [09](phase-09-production-hardening.md) | Controls begin in [02](phase-02-telemetry-ingestion.md) |
-| 49 Prompt Injection and Tool Safety | [04](phase-04-ai-investigation.md) | [09](phase-09-production-hardening.md) |
+| 49 Prompt Injection and Tool Safety | [04](phase-04-ai-investigation.md) | [09](phase-09-production-hardening.md), every input kind under the same rule in [E06](phase-e06-incident-artifacts.md) and [E07](phase-e07-visual-synthetic-monitor.md) |
 | 50 Meta-Native Reference Deployment | [04](phase-04-ai-investigation.md) | [09](phase-09-production-hardening.md) |
 | 51 Service Boundaries | [00](phase-00-foundations.md) | [10](phase-10-scale-evolution.md) |
 | 52 Production-First Topology and Delivery Strategy | [00](phase-00-foundations.md) | [01A](phase-01a-walking-skeleton.md) delivers the first vertical feature; [10](phase-10-scale-evolution.md) |

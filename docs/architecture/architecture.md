@@ -548,6 +548,24 @@ TopologyObservation
 
 ---
 
+## 7.7 VisualObservation (planned, ADR-024)
+
+A measured state of a recorded user journey, produced by the visual synthetic monitor ([model roles](model-roles.md)). The segmentation model locates elements; deterministic rules measure state and time; every region links to the frame it was computed from.
+
+```text
+VisualObservation
+- JourneyId
+- StepId
+- State (reached | timed out | error shown | duplicate shown)
+- Duration
+- FrameReference
+- FrameHash
+- SegmentationConfidence
+- MeasuredBy
+```
+
+---
+
 # 8. Provider / Plugin Architecture
 
 Sentinel core must expose SPIs rather than vendor assumptions.
@@ -998,6 +1016,8 @@ Neutral
 
 Evidence should be immutable after creation; corrections create new evidence and supersession links.
 
+An operator-supplied artifact (a screenshot, diagram or document) yields `ArtifactFinding`s, which are evidence candidates, not evidence: a claim becomes Evidence only when Ingestion corroborates it through a provider, and then the Evidence cites the observations found. An uncorroborated claim is shown as a claim and carries no weight in consensus ([ADR-024](../decisions/ADR-024-model-roles.md)).
+
 ---
 
 # 16. Causal Graph
@@ -1129,12 +1149,10 @@ Muse Spark 1.3
  └── recovery-summary generation
 
 Muse Wonder
- ├── optional high-complexity incident coordinator
- ├── long-horizon causal synthesis
- └── adversarial verification for difficult incidents
+ └── escalation investigator: one discriminating query, once per ambiguous cycle (ADR-024)
 
 Muse Spark Open / Muse Glimmer
- └── future self-hosted or data-local inference options
+ └── self-hosted or data-local inference; not adopted while no access exists (ADR-024)
 ```
 
 The Meta adapter should use:
@@ -1148,7 +1166,7 @@ The Meta adapter should use:
 - explicit reasoning-effort selection based on incident complexity and latency budget
 - model and API metadata captured in every `AgentExecution`
 
-Muse Image, Muse Voice Transcribe, and SAM 3.1 remain optional model capabilities. They may be added when a concrete incident workflow requires image generation, voice transcription, screenshot/document understanding, or visual segmentation; they should not be included merely to increase model count.
+Roles beyond the specialists are decided in [ADR-024](../decisions/ADR-024-model-roles.md) and designed in [model roles](model-roles.md): an escalation investigator on Muse Wonder that proposes the one observation separating two surviving explanations; an artifact investigator on multimodal Muse Spark that turns operator-supplied screenshots and documents into claims Ingestion must corroborate; and a visual synthetic monitor that uses a segmentation and tracking model behind an Ingestion provider to turn a recorded user journey into canonical observations. Two uses are ruled out: generated imagery anywhere a fact lives, and any model in the approval path. Incident-bridge transcription is set aside until a consent and retention policy exists.
 
 The domain, evidence model, workflow semantics, and safety layer must not depend directly on a Meta-specific response type. A `MetaModelProvider` translates Meta API requests and responses into Sentinel-owned contracts.
 
@@ -1987,6 +2005,8 @@ instructions
 
 Actions must come from typed planner outputs and pass policy checks.
 
+The boundary holds for every input kind, not only text: an image, a document, a frame of a recorded journey or a transcript is data in the same channel, the planted-instruction scan covers the text extracted from it, and a claim read from it becomes evidence only once a provider corroborates it. Two corollaries are decided in [ADR-024](../decisions/ADR-024-model-roles.md): no generated imagery appears where incident facts live, because an image cannot cite its sources; and no model approves, rejects or revokes a plan, whatever the modality of the instruction.
+
 ---
 
 # 50. Meta-Native Reference Deployment
@@ -2002,8 +2022,8 @@ Backend platform        → .NET 10 LTS (ADR-003)
 APIs                    → ASP.NET Core container
 Durable workflows       → Temporal, self-hosted (ADR-005)
 Primary reasoning       → Meta Model API / Muse Spark 1.3
-Complex synthesis       → Meta Model API / Muse Wonder when justified
-Self-hosted model path  → Muse Spark Open or Muse Glimmer
+Escalation investigator → Meta Model API / Muse Wonder, once per ambiguous cycle (ADR-024)
+Self-hosted model path  → not adopted; no access to open-weight models today (ADR-024)
 Event bus               → pluggable durable event transport
 Logs                    → OpenTelemetry Collector + Loki or compatible store
 Metrics                 → OpenTelemetry Collector + Prometheus

@@ -34,6 +34,9 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Complete | Form and feedback primitives with the feature code on them, the full token model under the lint rule, motion tokens, one status vocabulary, theme selection, the tablet width, interaction stories | None; Linux screenshot baselines are deferred by the owner until CI exists |
 | [E03 – Demonstration depth](#phase-e03--demonstration-depth) | In progress | `S9`, manipulation resistance, end to end; `S10`, self-correction: a remedy that took effect without recovery opens one follow-up cycle, which rolls back the cause that remains, end to end; the incident page shows a repeat as seen before, the baseline's counterfactual, the remedies tried and the investigation as it happens | `S9` and `S10` in the evaluation report. The audience fault page and guarded autonomy were set aside |
 | [E04 – Judge mode](#phase-e04--judge-mode) | Not started | Nothing; the design is scoped to a view over existing records | Slice 1: the captured `S9` story in Sentinel.Web |
+| [E05 – Escalation investigator](#phase-e05--escalation-investigator) | Not started | Nothing; the design and ADR-024 are written | Slice 1: the consensus abstention reasons and the `escalation` contract |
+| [E06 – Incident artifacts](#phase-e06--incident-artifacts) | Not started | Nothing; the design and ADR-024 are written | Slice 1: attachment, redaction and storage |
+| [E07 – Visual synthetic monitor](#phase-e07--visual-synthetic-monitor) | Not started | Nothing; the design and ADR-024 are written | Slice 1: the recorded journey and its fixtures |
 
 ## Recorded runs
 
@@ -382,8 +385,39 @@ Open:
 - Slice 2: the live story over the existing stream, with the workspace's own approval dialog for an authorized operator.
 - Slice 3: every ending in the design's failure table, and the tablet pass.
 
+## Phase E05 – Escalation investigator
+
+Status: **Not started**. The fifth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e05-escalation-investigator.md)). Its design source is role 1 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md), both Proposed on 2026-10-31.
+
+Open:
+
+- Slice 1: consensus distinguishes abstention for ambiguity from absence of evidence; the once-per-cycle escalation request; the `escalation` role and `DiscriminatingQuery` in Contracts.
+- Slice 2: the role with the test double and an ambiguous scenario it resolves.
+- Slice 3: the live `meta-wonder` run, the harness group and the escalation-yield measure.
+
+## Phase E06 – Incident artifacts
+
+Status: **Not started**. The sixth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e06-incident-artifacts.md)). Its design source is role 2 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
+
+Open:
+
+- Slice 1: attachment through the Gateway, redaction of text in images and documents, storage and retention with the incident.
+- Slice 2: the `artifacts` role, `ArtifactFinding`, corroboration and the acceptance rule, with the test double and fixture screenshots in `S6`.
+- Slice 3: the live multimodal run, documents, the harness group and the corroboration-rate measure.
+
+## Phase E07 – Visual synthetic monitor
+
+Status: **Not started**. The seventh enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e07-visual-synthetic-monitor.md)). Its design source is role 3 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
+
+Open:
+
+- Slice 1: the recorded checkout journey and its fixtures with masks.
+- Slice 2: the `Visual` observation kind, the Ingestion provider and its conformance tests.
+- Slice 3: the scenario in which the journey fails while the backend stays healthy, with detection, recovery and the journey tool.
+
 ## Decisions this ledger surfaces
 
 - Service-to-service authentication between the five services: [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) is Proposed and awaits a decision.
 - Approver identity: [ADR-023](../decisions/ADR-023-approver-identity.md) is Proposed and awaits a decision, although approvals are signed from Phase 01A and JWT identity exists.
+- Model roles beyond the specialists: [ADR-024](../decisions/ADR-024-model-roles.md) is Proposed and awaits a decision; it becomes Accepted when Phase E05's role is scored by the harness with no wrong diagnosis introduced.
 - `packages/Sentinel.Testing` is a shared test-support package that [ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md) does not list.

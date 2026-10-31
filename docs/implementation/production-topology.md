@@ -136,6 +136,9 @@ The slice is complete only when it runs across real process boundaries, survives
 | E02 – Frontend design-system depth | Web only; no service or contract changes | Every responder and administrator screen composes the design system, in both themes and at tablet width |
 | E03 – Demonstration depth | AgentWorker scans untrusted results; Runtime records them and runs one follow-up cycle; Web shows them; the reference system injects the new faults | Sentinel's judgement is visible live: a planted instruction ignored, an incomplete fix corrected, a repeat recognised, the damage avoided shown |
 | E04 – Judge mode | Web only; no service or contract changes | One incident is shown as a guided, source-linked story in captured and live modes from the records the Gateway already serves |
+| E05 – Escalation investigator | Runtime triggers; AgentWorker runs the role; Contracts carry the query | An ambiguous cycle ends in a correct diagnosis through one more observation, or abstains as before |
+| E06 – Incident artifacts | Gateway attaches; Runtime records and accepts; AgentWorker reads and corroborates; Ingestion redacts; Web shows | A screenshot's claim is confirmed or refuted through telemetry before it counts |
+| E07 – Visual synthetic monitor | Reference system records the journey; Ingestion publishes the kind; Runtime detects and judges recovery on it | An incident the customer sees opens before backend telemetry shows it |
 
 ## Completeness controls
 
