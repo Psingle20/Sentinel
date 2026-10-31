@@ -33,7 +33,6 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [E01 – AWS-emulated reference environment](#phase-e01--aws-emulated-reference-environment) | In progress | Stage 0: Floci pinned (ADR-021). Stage 0b: the queue scenarios `S6`, `S7` and `S8`, each diagnosed end to end where the baseline rolls back an innocent deployment. Stage 1: the AWS environment in Aspire, with the consumer on ECS and SQS, and `AWS-S0`. Stage 2: `AWS-S1` end to end through Ingestion's ECS, topology and SQS adapters and Executor's SQS quarantine, gate check 8 within its budget, and the queue scenarios in the evaluation report. Stage 3 in part: provider conformance for the AWS adapters, fidelity labels in run records and the report, the quarantine journey in the web app. Stage 4: `AWS-S7`, event route drift, end to end, and the admission checks that keep `AWS-S4` out | Stage 3: a web journey against the real system for the AWS scenarios and replay of a captured AWS run. Stage 4: `AWS-S4` waits for an emulator that enforces IAM, `AWS-S12` for Phase 10's multi-tenant operation. Stage 5 is deferred by the owner |
 | [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Complete | Form and feedback primitives with the feature code on them, the full token model under the lint rule, motion tokens, one status vocabulary, theme selection, the tablet width, interaction stories | None; Linux screenshot baselines are deferred by the owner until CI exists |
 | [E03 – Demonstration depth](#phase-e03--demonstration-depth) | In progress | `S9`, manipulation resistance: an instruction to AI agents planted in order-service's logs during the `S1` leak is found in AgentWorker's untrusted tool results, recorded on the incident, shown on its page and never obeyed; the real cause is rolled back after approval and recovers, end to end | Self-correction with `S10`, recurrence, the damage avoided and the live investigation view; the owner set aside the audience fault page and guarded autonomy |
-| [E04 – Time budget and speed](#phase-e04--time-budget-and-speed) | Not started | Nothing; the measured budget and design are written | Tier 1: the local profile in the AppHost and the recorded baselines |
 
 ## Recorded runs
 
@@ -365,16 +364,6 @@ Open:
 
 - Self-correction: `S10` and Runtime's follow-up cycle after a remedy that took effect without recovering the incident.
 - Recurrence, the damage avoided and the live investigation view on the incident page.
-
-## Phase E04 – Time budget and speed
-
-Status: **Not started**. The fourth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e04-time-budget.md)). Its design source, the [time budget](../architecture/time-budget.md), measures the 2026-10-30 runs: `S1` takes 379 s from scenario start to resolved with the test double and 437 s live, of which investigations are 39 s of completeness waits rather than reasoning and recovery is 105 to 116 s against a 60 s physical floor; the seven core end-to-end tests take 50 minutes, two to three of them per test in the quiet check after an escalated scenario.
-
-Open:
-
-- Tier 1: `Sentinel:Profile=local` applied by the AppHost, with the manifests' rollout timings adjusted, and the start-up, per-test and `test` task baselines recorded here.
-- Tier 2: investigation range ending at detection minus source lag, the verifier starting on metrics, changes and topology, streaming recovery evaluation, confirmed detection, and per-role live-model budgets, with ADR-016 amended.
-- Tier 3: the quiet check bounded to 60 s, `S0` shortened, the built web app in the suite, the Temporal dev server for the ephemeral profile, and Testcontainers reuse with `--no-build` in the `test` task.
 
 ## Decisions this ledger surfaces
 

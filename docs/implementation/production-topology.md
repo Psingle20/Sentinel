@@ -135,7 +135,6 @@ The slice is complete only when it runs across real process boundaries, survives
 | E01 – AWS-emulated reference environment | Reference environment, outside Sentinel service count; Ingestion and Executor gain adapters, Runtime and AgentWorker gain queue rules and one tool | Sentinel diagnoses a non-deployment cause and executes a non-rollback remedy through the same contracts, against a second environment |
 | E02 – Frontend design-system depth | Web only; no service or contract changes | Every responder and administrator screen composes the design system, in both themes and at tablet width |
 | E03 – Demonstration depth | AgentWorker scans untrusted results; Runtime records them and runs one follow-up cycle; Web shows them; the reference system injects the new faults | Sentinel's judgement is visible live: a planted instruction ignored, an incomplete fix corrected, a repeat recognised, the damage avoided shown |
-| E04 – Time budget and speed | AppHost profile and start-up; Ingestion, AgentWorker and Runtime pipeline timing; the end-to-end suite and the `test` task | The golden scenario resolves in four minutes and the suite in thirty, with the same decisions and evidence |
 
 ## Completeness controls
 
