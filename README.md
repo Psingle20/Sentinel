@@ -16,7 +16,7 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet: the deployment definition is Phase 09's open exit criterion and the pipeline is Phase 00's.
 
-Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. All six reference scenarios pass end to end with the deterministic test double, and Sentinel diagnoses `S1`, `S2` and `S3` correctly, two of which the deploy-blame baseline gets wrong. With Meta's models investigating, each role on its suggested profile, all three are diagnosed correctly as well: `S1` is rolled back after approval and recovers, `S2` escalates without a rollback, and `S3`'s rollback of the right service awaits approval. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
+Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. Every scenario package, `S0` to `S10` and the AWS scenarios `AWS-S1` and `AWS-S7`, runs end to end with the deterministic test double, and the evaluation harness scores Sentinel right on the cause in every one with no false remediation, where the deploy-blame baseline would have remediated falsely in more than half. A repeat of the leak is recognised as seen before, and `S10`'s first remedy is followed up when it does not end the incident. With Meta's models investigating, each role on its suggested profile, `S1`, `S2` and `S3` are diagnosed correctly as well: `S1` is rolled back after approval and recovers, `S2` escalates without a rollback, and `S3`'s rollback of the right service awaits approval. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
 
 Models run through Sentinel's own model interface. The default provider is a deterministic test double, so every local run and test is reproducible; the Meta model adapter is used only when it is configured with credentials (see [Getting started](#getting-started)).
 
@@ -466,7 +466,7 @@ The end-to-end suites start the whole system and drive real scenarios, so they a
 | --- | --- | --- |
 | Smoke | `Tier=Smoke` | The healthy control `S0`, the golden `S1` through approved rollback and verified recovery, and the poison message `S6` through its quarantine |
 | Reference | `Suite=Reference` | The reference system on its own, without Sentinel, for changes under `reference-system/` |
-| AWS | `Suite=Aws` | `AWS-S0` and `AWS-S1` in the AWS environment, for changes to its adapters or the environment; it needs the pinned local AWS image |
+| AWS | `Suite=Aws` | `AWS-S0`, `AWS-S1` and `AWS-S7` in the AWS environment, for changes to its adapters or the environment; it needs the pinned local AWS image |
 | Everything | none | Every suite, the restart, outage and failure scenarios included |
 
 ```text

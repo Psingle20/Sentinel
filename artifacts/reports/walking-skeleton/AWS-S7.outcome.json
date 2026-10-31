@@ -1,0 +1,20 @@
+{
+  "scenarioId": "AWS-S7",
+  "kind": "confounder",
+  "recordedAt": "2026-10-31T14:44:21.9326256+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "the orders-route pattern no longer matches the producer\u0027s order events",
+  "expectedRemediation": "restore-route queue-consumer (approval-required)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "The pattern 05a2bf4c change to queue-consumer\u0027s event route stopped delivering its orders.",
+  "sentinelPlan": "restore the orders-route route to queue-consumer",
+  "sentinelIncidentStatus": "Resolved",
+  "sentinelRecovery": "Recovered",
+  "sentinelCorrect": false,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame queue-consumer",
+  "baselinePlan": "rollback queue-consumer",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": true
+}

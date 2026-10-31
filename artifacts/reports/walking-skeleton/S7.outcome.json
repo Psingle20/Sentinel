@@ -1,0 +1,18 @@
+{
+  "scenarioId": "S7",
+  "kind": "confounder",
+  "recordedAt": "2026-10-31T16:05:39.9546726+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "order-service\u0027s slow confirmations, amplified by the consumer\u0027s immediate retries",
+  "expectedRemediation": "escalate order-service (suggestion-only)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "order-service slowed down, and queue-consumer timed out waiting for it.",
+  "sentinelIncidentStatus": "Escalated",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame queue-consumer",
+  "baselinePlan": "rollback queue-consumer",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": false
+}

@@ -1,0 +1,20 @@
+{
+  "scenarioId": "S6",
+  "kind": "confounder",
+  "recordedAt": "2026-10-31T15:41:51.9288176+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "a poison order message fails on every receive",
+  "expectedRemediation": "quarantine-message queue-consumer (approval-required)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed.",
+  "sentinelPlan": "quarantine queue-consumer orders messages received 3\u002B times",
+  "sentinelIncidentStatus": "Resolved",
+  "sentinelRecovery": "Recovered",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame queue-consumer",
+  "baselinePlan": "rollback queue-consumer",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": true
+}

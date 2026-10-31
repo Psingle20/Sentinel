@@ -1,0 +1,18 @@
+{
+  "scenarioId": "S8",
+  "kind": "confounder",
+  "recordedAt": "2026-10-31T15:58:46.0109981+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "duplicate publication meets a booking that is not idempotent",
+  "expectedRemediation": "escalate queue-consumer (suggestion-only)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "Orders reach queue-consumer\u0027s queue twice, in separate messages, and its booking is not idempotent, so they are booked twice.",
+  "sentinelIncidentStatus": "Escalated",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame queue-consumer",
+  "baselinePlan": "rollback queue-consumer",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": false
+}

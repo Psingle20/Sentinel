@@ -64,7 +64,7 @@ Phases 00 to 10 implement the architecture document, and the [coverage matrix](c
 
 Set on 2026-10-31; the ledger records each phase's state.
 
-1. **In progress:** [E03](phase-e03-demonstration-depth.md) and the AWS tiers of [E01](phase-e01-aws-reference-environment.md).
+1. **In progress:** the AWS tiers of [E01](phase-e01-aws-reference-environment.md). [E03](phase-e03-demonstration-depth.md) completed on 2026-10-31.
 2. **Next: [E05](phase-e05-escalation-investigator.md).** The only pending item that changes what Sentinel can do rather than how it is shown, and small: a consensus reason, one role, one tool call and a scenario. It gives the `meta-wonder` profile a role of its own and is kept only if the harness shows it introduces no wrong diagnosis.
 3. **Then: [E04](phase-e04-judge-mode.md) slice 1.** The captured story over run records, web-only, with fixtures as its only dependency; the artifact every demonstration after the first is built on.
 4. **Deferred until production:** [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](../decisions/ADR-023-approver-identity.md). The local deployment has no identity provider, so both are decided with the production deployment environment; they close the threat model's open findings then.

@@ -1,0 +1,20 @@
+{
+  "scenarioId": "S10",
+  "kind": "golden",
+  "recordedAt": "2026-10-31T15:57:00.2029284+00:00",
+  "investigator": "unknown",
+  "expectedCause": "order-service v1.8.1 slowed order-service past checkout\u0027s attempt timeout",
+  "expectedRemediation": "rollback checkout-service (approval-required); rollback order-service (approval-required)",
+  "sentinelDecision": "diagnosed",
+  "sentinelCause": "The order-service v1.8.1 deployment caused the symptoms.",
+  "sentinelPlan": "rollback order-service v1.8.1 -\u003E v1.7.0",
+  "sentinelIncidentStatus": "Resolved",
+  "sentinelRecovery": "Recovered",
+  "sentinelCorrect": true,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame checkout-service",
+  "baselinePlan": "rollback checkout-service",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": true
+}

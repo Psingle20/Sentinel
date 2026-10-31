@@ -2,10 +2,20 @@
   "schemaVersion": 2,
   "scenarioId": "S0",
   "packageVersion": 1,
-  "dataset": "scenarios-v1",
-  "recordedAt": "2026-10-30T05:19:16.6353337\u002B00:00",
-  "scenarioStartedAt": "2026-10-30T05:14:01.1904268\u002B00:00",
+  "dataset": "scenarios-v5",
+  "recordedAt": "2026-10-31T15:37:20.5877623\u002B00:00",
+  "scenarioStartedAt": "2026-10-31T15:32:59.5122414\u002B00:00",
   "approved": false,
+  "configuredProvider": "test-double",
+  "environment": {
+    "environment": "local",
+    "ready": true,
+    "problems": [],
+    "provider": null,
+    "imageDigest": null,
+    "provisioningVersion": null
+  },
+  "fidelity": null,
   "runRecord": null,
   "agentExecutions": []
 }

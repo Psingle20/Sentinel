@@ -1,7 +1,7 @@
 {
   "scenarioId": "S1",
   "kind": "golden",
-  "recordedAt": "2026-10-30T06:36:43.5735884+00:00",
+  "recordedAt": "2026-10-31T15:32:45.515313+00:00",
   "investigator": "sentinel-test-double/deterministic-analyst",
   "expectedCause": "checkout-service v2.4.1 introduced a Redis connection leak",
   "expectedRemediation": "rollback checkout-service (approval-required)",

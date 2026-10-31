@@ -1,0 +1,1683 @@
+{
+  "schemaVersion": 1,
+  "incident": {
+    "summary": {
+      "tenantId": "acme",
+      "environmentId": "reference",
+      "incidentId": "039b702b-1454-512f-98ca-1f0bcc2424b4",
+      "affectedServiceId": "queue-consumer",
+      "title": "queue-consumer queue_oldest_message_age at 73.8",
+      "severity": "critical",
+      "status": "resolved",
+      "openedAt": "2026-10-31T14:47:52.8491176+00:00",
+      "updatedAt": "2026-10-31T14:50:57.1743064+00:00",
+      "streamVersion": 24,
+      "symptomOnset": "2026-10-31T14:46:35+00:00"
+    },
+    "triggerObservationIds": [
+      "prometheus:queue_oldest_message_age:queue-consumer:1793458055"
+    ],
+    "linkedDeploymentObservationIds": [
+      "eventbridge:deployment:default/orders-route/1793457757263:completed",
+      "eventbridge:deployment:default/orders-route/1793457757263:started",
+      "eventbridge:deployment:default/orders-route/1793457626660:completed",
+      "eventbridge:deployment:default/orders-route/1793457626660:started",
+      "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:completed",
+      "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started",
+      "ecs:deployment:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c:completed",
+      "ecs:deployment:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c:started",
+      "ecs:deployment:ecs-svc/8282f1bc0e12463d80fd689398a379e8:completed",
+      "ecs:deployment:ecs-svc/8282f1bc0e12463d80fd689398a379e8:started"
+    ],
+    "timeline": [
+      {
+        "streamVersion": 1,
+        "occurredAt": "2026-10-31T14:47:52.8491176+00:00",
+        "kind": "incident.detected",
+        "summary": "queue-consumer queue_oldest_message_age at 73.8; 5 recent change(s) correlated."
+      },
+      {
+        "streamVersion": 2,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "metrics investigation requested: As the metrics specialist, find the evidence in metrics that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 3,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "logs investigation requested: As the logs specialist, find the evidence in logs that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 4,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "traces investigation requested: As the traces specialist, find the evidence in traces that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 5,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "changes investigation requested: As the changes specialist, find the evidence in changes that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 6,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "topology investigation requested: As the topology specialist, find the evidence in topology that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 7,
+        "occurredAt": "2026-10-31T14:47:52.9481931+00:00",
+        "kind": "investigation.requested",
+        "summary": "knowledge investigation requested: As the knowledge specialist, find the evidence in knowledge that explains queue-consumer queue_oldest_message_age at 73.8, with symptoms from 2026-10-31T14:46:35.0000000\u002B00:00, and the hypotheses it supports or contradicts."
+      },
+      {
+        "streamVersion": 8,
+        "occurredAt": "2026-10-31T14:47:55.095137+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 0 hypotheses, 0 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 9,
+        "occurredAt": "2026-10-31T14:47:58.2525823+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 4 hypotheses, 4 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 10,
+        "occurredAt": "2026-10-31T14:48:10.1910775+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 2 hypotheses, 2 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 11,
+        "occurredAt": "2026-10-31T14:48:13.3336302+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 2 hypotheses, 3 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 12,
+        "occurredAt": "2026-10-31T14:48:22.382545+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 0 hypotheses, 1 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 13,
+        "occurredAt": "2026-10-31T14:48:37.7391835+00:00",
+        "kind": "investigation.reported",
+        "summary": "deterministic-analyst investigation Completed: 1 hypotheses, 2 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 14,
+        "occurredAt": "2026-10-31T14:48:37.8239291+00:00",
+        "kind": "investigation.requested",
+        "summary": "verifier investigation requested: Try to falsify each hypothesis about queue-consumer queue_oldest_message_age at 73.8: look for contradicting evidence and alternative explanations."
+      },
+      {
+        "streamVersion": 15,
+        "occurredAt": "2026-10-31T14:48:54.7651727+00:00",
+        "kind": "investigation.reported",
+        "summary": "adversarial-verifier investigation Completed: 0 hypotheses, 5 accepted evidence, 0 rejected."
+      },
+      {
+        "streamVersion": 16,
+        "occurredAt": "2026-10-31T14:48:54.8523853+00:00",
+        "kind": "decision.made",
+        "summary": "Diagnosed: A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed. It scores 1.66 from 3 independent evidence families against 0.00 for the next explanation, and it survived 0 challenge(s)."
+      },
+      {
+        "streamVersion": 17,
+        "occurredAt": "2026-10-31T14:48:54.9251582+00:00",
+        "kind": "plan.proposed",
+        "summary": "Plan v1 proposed for queue-consumer; policy policy-2026.10.4: ApprovalRequired."
+      },
+      {
+        "streamVersion": 18,
+        "occurredAt": "2026-10-31T14:48:56.9366166+00:00",
+        "kind": "plan.approved",
+        "summary": "Plan v1 approved by responder@example.test."
+      },
+      {
+        "streamVersion": 19,
+        "occurredAt": "2026-10-31T14:48:57.0549425+00:00",
+        "kind": "execution.requested",
+        "summary": "Execution of plan v1 requested with fencing token 19."
+      },
+      {
+        "streamVersion": 20,
+        "occurredAt": "2026-10-31T14:48:58.2242272+00:00",
+        "kind": "execution.started",
+        "summary": "Executor confirmed the start; the action is under way."
+      },
+      {
+        "streamVersion": 21,
+        "occurredAt": "2026-10-31T14:48:59.9969529+00:00",
+        "kind": "execution.reported",
+        "summary": "Executor reported ActionVerified: Dead-lettered 1 message(s) of orders received at least 3 times."
+      },
+      {
+        "streamVersion": 22,
+        "occurredAt": "2026-10-31T14:49:00.1472343+00:00",
+        "kind": "recovery.scheduled",
+        "summary": "Recovery is observed from 2026-10-31T14:49:00.1472343\u002B00:00 to 2026-10-31T14:50:30.1472343\u002B00:00."
+      },
+      {
+        "streamVersion": 23,
+        "occurredAt": "2026-10-31T14:50:57.1743064+00:00",
+        "kind": "recovery.evaluated",
+        "summary": "Recovery Recovered."
+      },
+      {
+        "streamVersion": 24,
+        "occurredAt": "2026-10-31T14:50:57.1743064+00:00",
+        "kind": "incident.resolved",
+        "summary": "Resolved: Recovery verified from telemetry."
+      }
+    ],
+    "investigations": [
+      {
+        "investigationId": "cf544058-c87c-53e1-bce5-f49006b735c7",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-7202-7e42-9113-4f932ccf8fb5",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/metrics"
+        },
+        "completedAt": "2026-10-31T14:48:12.4590596+00:00",
+        "role": "metrics",
+        "timedOut": false
+      },
+      {
+        "investigationId": "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-7202-7b9f-87b5-1097c8bbc9da",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/logs"
+        },
+        "completedAt": "2026-10-31T14:48:09.3284868+00:00",
+        "role": "logs",
+        "timedOut": false
+      },
+      {
+        "investigationId": "fae28e2d-63ec-51d3-b8d6-ddf5ca385dbe",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-71da-704b-a490-184fe3885d37",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/traces"
+        },
+        "completedAt": "2026-10-31T14:48:36.5514452+00:00",
+        "role": "traces",
+        "timedOut": false
+      },
+      {
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-720e-7525-b6bc-64e284e476e5",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/changes"
+        },
+        "completedAt": "2026-10-31T14:47:57.1690927+00:00",
+        "role": "changes",
+        "timedOut": false
+      },
+      {
+        "investigationId": "a6534429-8025-5695-91b4-85111e0fe5c6",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-71d9-749c-9977-1ed6eefc7ac8",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/topology"
+        },
+        "completedAt": "2026-10-31T14:48:21.3320752+00:00",
+        "role": "topology",
+        "timedOut": false
+      },
+      {
+        "investigationId": "2021c5a3-9792-50a0-ba48-c76c82755c5d",
+        "requestedAt": "2026-10-31T14:47:52.9481931+00:00",
+        "agentExecutionId": "01a1926e-720e-706e-b256-17a73e18c8ca",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel-test-double",
+          "model": "deterministic-analyst",
+          "modelVersion": "3",
+          "promptVersion": "investigator-v8/knowledge"
+        },
+        "completedAt": "2026-10-31T14:47:54.1493768+00:00",
+        "role": "knowledge",
+        "timedOut": false
+      },
+      {
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "requestedAt": "2026-10-31T14:48:37.8239291+00:00",
+        "agentExecutionId": "01a1926f-5bb9-7269-b3fd-5c25130b3114",
+        "outcome": "completed",
+        "model": {
+          "provider": "sentinel",
+          "model": "adversarial-verifier",
+          "modelVersion": "1",
+          "promptVersion": "falsifiers-v3"
+        },
+        "completedAt": "2026-10-31T14:48:53.9459232+00:00",
+        "role": "verifier",
+        "timedOut": false
+      }
+    ],
+    "evidence": [
+      {
+        "finding": {
+          "evidenceId": "01a1926e-7df0-7d61-8a61-37e96d364413",
+          "statement": "queue-consumer v1.4.1 started at 2026-10-31T14:39:37.4830000\u002B00:00 and served from 2026-10-31T14:39:41.5471159\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.31,
+          "sourceObservationIds": [
+            "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started",
+            "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-7efe-9fc1-97abba7c13aa"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:39:37.483+00:00",
+            "to": "2026-10-31T14:39:41.5471159+00:00"
+          },
+          "toolCallId": "call_deployments",
+          "independenceGroup": "deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-7df0-780b-aec7-df24d02d3e1f",
+          "statement": "queue-consumer pattern 05a2bf4c started at 2026-10-31T14:40:26.6600016\u002B00:00 and served from 2026-10-31T14:40:26.6600016\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.32,
+          "sourceObservationIds": [
+            "eventbridge:deployment:default/orders-route/1793457626660:completed",
+            "eventbridge:deployment:default/orders-route/1793457626660:started"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-77b6-b207-2a070463c793"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:40:26.6600016+00:00",
+            "to": "2026-10-31T14:40:26.6600016+00:00"
+          },
+          "toolCallId": "call_deployments",
+          "independenceGroup": "deployment:default/orders-route/1793457626660"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-7df0-7005-b77d-758d6ffb4dfc",
+          "statement": "queue-consumer pattern 0f94700e started at 2026-10-31T14:42:37.2633602\u002B00:00 and served from 2026-10-31T14:42:37.2633602\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.36,
+          "sourceObservationIds": [
+            "eventbridge:deployment:default/orders-route/1793457757263:completed",
+            "eventbridge:deployment:default/orders-route/1793457757263:started"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-779d-bacb-207a2896a849"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:42:37.2633602+00:00",
+            "to": "2026-10-31T14:42:37.2633602+00:00"
+          },
+          "toolCallId": "call_deployments",
+          "independenceGroup": "deployment:default/orders-route/1793457757263"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-7df0-7b57-ba3a-a154396404f3",
+          "statement": "queue-consumer v1.4.1 started at 2026-10-31T14:46:49.1510000\u002B00:00 and served from 2026-10-31T14:46:54.9152251\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.2,
+          "sourceObservationIds": [
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started",
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-705c-ae99-f091a0e8275e"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:49.151+00:00",
+            "to": "2026-10-31T14:46:54.9152251+00:00"
+          },
+          "toolCallId": "call_deployments",
+          "independenceGroup": "deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-ad70-7680-960a-1dc66ab69048",
+          "statement": "queue-consumer logged 32 failures of message msg-poison-1793457978661 from 2026-10-31T14:46:19.1256365\u002B00:00 to 2026-10-31T14:47:52.0821233\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.7,
+          "sourceObservationIds": [
+            "loki:service-warnings:queue-consumer:1793457979125636500:8a9aa0e2b2f9"
+          ],
+          "hypothesisIds": [
+            "01a1926e-ad70-7cb8-b5fc-ac0515106489"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:19.1256365+00:00",
+            "to": "2026-10-31T14:47:52.0821233+00:00"
+          },
+          "toolCallId": "call_logs_queue-consumer",
+          "independenceGroup": "logs:queue-consumer:poison-message"
+        },
+        "investigationId": "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-ad70-7182-952c-7f57bfff39be",
+          "statement": "Message msg-poison-1793457978661 was already failing at 2026-10-31T14:46:19.1256365\u002B00:00 and kept failing until 2026-10-31T14:47:52.0821233\u002B00:00, before queue-consumer v1.4.1 served from 2026-10-31T14:46:54.9152251\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.8,
+          "sourceObservationIds": [
+            "loki:service-warnings:queue-consumer:1793457979125636500:8a9aa0e2b2f9",
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-705c-ae99-f091a0e8275e"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:19.1256365+00:00",
+            "to": "2026-10-31T14:46:54.9152251+00:00"
+          },
+          "toolCallId": "call_logs_queue-consumer",
+          "independenceGroup": "poison-before-change:queue-consumer"
+        },
+        "investigationId": "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-b9aa-79f0-8d82-42eb063b09f9",
+          "statement": "queue-consumer\u0027s highest receive count rose above 1 at 2026-10-31T14:46:30.0000000\u002B00:00 and reached 18 by 2026-10-31T14:47:00.0000000\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.8,
+          "sourceObservationIds": [
+            "prometheus:queue_max_receive_count:queue-consumer:1793457990",
+            "prometheus:queue_max_receive_count:queue-consumer:1793458020"
+          ],
+          "hypothesisIds": [
+            "01a1926e-ad70-7cb8-b5fc-ac0515106489"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:30+00:00",
+            "to": "2026-10-31T14:47:00+00:00"
+          },
+          "toolCallId": "call_queue_max_receive_count",
+          "independenceGroup": "queue-receives:queue-consumer"
+        },
+        "investigationId": "cf544058-c87c-53e1-bce5-f49006b735c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-b9aa-7308-b2ed-f50a9b4856fd",
+          "statement": "queue-consumer kept processing the other messages, at least 3.71 a second, while one kept failing.",
+          "direction": "supports",
+          "strength": 0.5,
+          "sourceObservationIds": [
+            "prometheus:queue_processed_rate:queue-consumer:1793458000",
+            "prometheus:queue_processed_rate:queue-consumer:1793458020"
+          ],
+          "hypothesisIds": [
+            "01a1926e-ad70-7cb8-b5fc-ac0515106489"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:40+00:00",
+            "to": "2026-10-31T14:47:50+00:00"
+          },
+          "toolCallId": "call_queue_processed_rate",
+          "independenceGroup": "queue-processed:queue-consumer"
+        },
+        "investigationId": "cf544058-c87c-53e1-bce5-f49006b735c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-b9aa-7640-933d-6c9603e1a624",
+          "statement": "queue-consumer\u0027s receive count was already climbing at 2026-10-31T14:46:30.0000000\u002B00:00, before queue-consumer v1.4.1 served from 2026-10-31T14:46:54.9152251\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.8,
+          "sourceObservationIds": [
+            "prometheus:queue_max_receive_count:queue-consumer:1793457990",
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-705c-ae99-f091a0e8275e"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:30+00:00",
+            "to": "2026-10-31T14:46:54.9152251+00:00"
+          },
+          "toolCallId": "call_queue_max_receive_count",
+          "independenceGroup": "poison-before-change:queue-consumer"
+        },
+        "investigationId": "cf544058-c87c-53e1-bce5-f49006b735c7",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926e-dc54-7459-8d80-0054914a89b5",
+          "statement": "queue-consumer is connected to orders (calls it), orders-dlq (calls it), order-service (calls it).",
+          "direction": "neutral",
+          "strength": 0.3,
+          "sourceObservationIds": [
+            "aws:dependency:queue-consumer:orders:29890967",
+            "aws:dependency:queue-consumer:orders-dlq:29890967",
+            "jaeger:dependency:queue-consumer:order-service:29890967"
+          ],
+          "hypothesisIds": [],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:35+00:00",
+            "to": "2026-10-31T14:46:35+00:00"
+          },
+          "toolCallId": "call_dependencies",
+          "independenceGroup": "topology:queue-consumer",
+          "partial": true
+        },
+        "investigationId": "a6534429-8025-5695-91b4-85111e0fe5c6",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-17c7-7b1a-8cb3-c7ec18b14f8f",
+          "statement": "1 of queue-consumer\u0027s slowest calls went to order-service, up to 658 ms, from 2026-10-31T14:38:32.4255070\u002B00:00 to 2026-10-31T14:38:32.4255070\u002B00:00.",
+          "direction": "supports",
+          "strength": 0.6,
+          "sourceObservationIds": [
+            "jaeger:4f9df63b1b08eb4df867830bcd915824:da0ab460b840d42d"
+          ],
+          "hypothesisIds": [
+            "01a1926f-17c7-7350-aeaa-8fe9cf569848"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:38:32.425507+00:00",
+            "to": "2026-10-31T14:38:32.425507+00:00"
+          },
+          "toolCallId": "call_spans_queue-consumer",
+          "independenceGroup": "traces:queue-consumer-\u003Eorder-service"
+        },
+        "investigationId": "fae28e2d-63ec-51d3-b8d6-ddf5ca385dbe",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-17c7-7ceb-808e-081c32c00920",
+          "statement": "queue-consumer is connected to orders (calls it), orders-dlq (calls it), order-service (calls it).",
+          "direction": "neutral",
+          "strength": 0.3,
+          "sourceObservationIds": [
+            "aws:dependency:queue-consumer:orders:29890967",
+            "aws:dependency:queue-consumer:orders-dlq:29890967",
+            "jaeger:dependency:queue-consumer:order-service:29890967"
+          ],
+          "hypothesisIds": [],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:35+00:00",
+            "to": "2026-10-31T14:46:35+00:00"
+          },
+          "toolCallId": "call_dependencies",
+          "independenceGroup": "topology:queue-consumer",
+          "partial": true
+        },
+        "investigationId": "fae28e2d-63ec-51d3-b8d6-ddf5ca385dbe",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-5bb8-7447-bede-a49349061722",
+          "statement": "queue-consumer v1.4.1 was replaced by pattern 05a2bf4c at 2026-10-31T14:40:26.6600016\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.9,
+          "sourceObservationIds": [
+            "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started",
+            "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:completed",
+            "eventbridge:deployment:default/orders-route/1793457626660:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-7efe-9fc1-97abba7c13aa"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:39:41.5471159+00:00",
+            "to": "2026-10-31T14:40:26.6600016+00:00"
+          },
+          "toolCallId": "call_verify_deployments",
+          "independenceGroup": "deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e"
+        },
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-5bb8-7646-89e4-f2af0acf4399",
+          "statement": "queue-consumer pattern 05a2bf4c was replaced by pattern 0f94700e at 2026-10-31T14:42:37.2633602\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.9,
+          "sourceObservationIds": [
+            "eventbridge:deployment:default/orders-route/1793457626660:completed",
+            "eventbridge:deployment:default/orders-route/1793457626660:started",
+            "eventbridge:deployment:default/orders-route/1793457757263:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-77b6-b207-2a070463c793"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:40:26.6600016+00:00",
+            "to": "2026-10-31T14:42:37.2633602+00:00"
+          },
+          "toolCallId": "call_verify_deployments",
+          "independenceGroup": "deployment:default/orders-route/1793457626660"
+        },
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-5bb8-7fc6-99de-1cf2116c7f5f",
+          "statement": "queue-consumer pattern 0f94700e was replaced by v1.4.0 at 2026-10-31T14:44:38.4672731\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.9,
+          "sourceObservationIds": [
+            "eventbridge:deployment:default/orders-route/1793457757263:completed",
+            "eventbridge:deployment:default/orders-route/1793457757263:started",
+            "ecs:deployment:ecs-svc/8282f1bc0e12463d80fd689398a379e8:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-779d-bacb-207a2896a849"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:42:37.2633602+00:00",
+            "to": "2026-10-31T14:44:38.4672731+00:00"
+          },
+          "toolCallId": "call_verify_deployments",
+          "independenceGroup": "deployment:default/orders-route/1793457757263"
+        },
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-5bb9-7c7d-b9c5-5e16cad6a017",
+          "statement": "queue-consumer v1.4.1 began serving at 2026-10-31T14:46:54.9152251\u002B00:00, after symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00.",
+          "direction": "contradicts",
+          "strength": 0.9,
+          "sourceObservationIds": [
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started",
+            "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:completed"
+          ],
+          "hypothesisIds": [
+            "01a1926e-7def-705c-ae99-f091a0e8275e"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:46:49.151+00:00",
+            "to": "2026-10-31T14:46:54.9152251+00:00"
+          },
+          "toolCallId": "call_verify_deployments",
+          "independenceGroup": "deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3"
+        },
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "status": "accepted"
+      },
+      {
+        "finding": {
+          "evidenceId": "01a1926f-5bb9-7b20-b1f4-96574be4591f",
+          "statement": "order-service p95 latency stayed between 0.04922 and 0.2 up to onset.",
+          "direction": "contradicts",
+          "strength": 0.8,
+          "sourceObservationIds": [
+            "prometheus:latency_p95:order-service:1793457425",
+            "prometheus:latency_p95:order-service:1793458115"
+          ],
+          "hypothesisIds": [
+            "01a1926f-17c7-7350-aeaa-8fe9cf569848"
+          ],
+          "eventTimeRange": {
+            "from": "2026-10-31T14:37:05+00:00",
+            "to": "2026-10-31T14:48:35+00:00"
+          },
+          "toolCallId": "call_verify_latency_p95",
+          "independenceGroup": "latency:order-service"
+        },
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab",
+        "status": "accepted"
+      }
+    ],
+    "hypotheses": [
+      {
+        "finding": {
+          "hypothesisId": "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "statement": "The queue-consumer v1.4.1 deployment caused the symptoms.",
+          "causalChain": [
+            "deploy queue-consumer v1.4.1",
+            "regression in queue-consumer",
+            "queue-consumer SLO burn"
+          ],
+          "suspectedServiceId": "queue-consumer",
+          "suspectedChangeObservationId": "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started",
+          "supportingEvidenceIds": [
+            "01a1926e-7df0-7d61-8a61-37e96d364413"
+          ],
+          "contradictingEvidenceIds": [],
+          "key": "change:ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "rejected",
+        "lineage": [
+          "01a1926e-7def-7efe-9fc1-97abba7c13aa"
+        ],
+        "proposedBy": [
+          "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7"
+        ]
+      },
+      {
+        "finding": {
+          "hypothesisId": "01a1926e-7def-77b6-b207-2a070463c793",
+          "statement": "The pattern 05a2bf4c change to queue-consumer\u0027s event route stopped delivering its orders.",
+          "causalChain": [
+            "route change to pattern 05a2bf4c",
+            "order events no longer match the route",
+            "orders never reach the queue",
+            "queue-consumer has nothing to process"
+          ],
+          "suspectedServiceId": "queue-consumer",
+          "suspectedChangeObservationId": "eventbridge:deployment:default/orders-route/1793457626660:completed",
+          "supportingEvidenceIds": [
+            "01a1926e-7df0-780b-aec7-df24d02d3e1f"
+          ],
+          "contradictingEvidenceIds": [],
+          "key": "change:eventbridge:deployment:default/orders-route/1793457626660:completed"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "rejected",
+        "lineage": [
+          "01a1926e-7def-77b6-b207-2a070463c793"
+        ],
+        "proposedBy": [
+          "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7"
+        ]
+      },
+      {
+        "finding": {
+          "hypothesisId": "01a1926e-7def-779d-bacb-207a2896a849",
+          "statement": "The pattern 0f94700e change to queue-consumer\u0027s event route stopped delivering its orders.",
+          "causalChain": [
+            "route change to pattern 0f94700e",
+            "order events no longer match the route",
+            "orders never reach the queue",
+            "queue-consumer has nothing to process"
+          ],
+          "suspectedServiceId": "queue-consumer",
+          "suspectedChangeObservationId": "eventbridge:deployment:default/orders-route/1793457757263:completed",
+          "supportingEvidenceIds": [
+            "01a1926e-7df0-7005-b77d-758d6ffb4dfc"
+          ],
+          "contradictingEvidenceIds": [],
+          "key": "change:eventbridge:deployment:default/orders-route/1793457757263:completed"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "rejected",
+        "lineage": [
+          "01a1926e-7def-779d-bacb-207a2896a849"
+        ],
+        "proposedBy": [
+          "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7"
+        ]
+      },
+      {
+        "finding": {
+          "hypothesisId": "01a1926e-7def-705c-ae99-f091a0e8275e",
+          "statement": "The queue-consumer v1.4.1 deployment caused the symptoms.",
+          "causalChain": [
+            "deploy queue-consumer v1.4.1",
+            "regression in queue-consumer",
+            "queue-consumer SLO burn"
+          ],
+          "suspectedServiceId": "queue-consumer",
+          "suspectedChangeObservationId": "ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started",
+          "supportingEvidenceIds": [
+            "01a1926e-7df0-7b57-ba3a-a154396404f3"
+          ],
+          "contradictingEvidenceIds": [
+            "01a1926e-ad70-7182-952c-7f57bfff39be",
+            "01a1926e-b9aa-7640-933d-6c9603e1a624"
+          ],
+          "key": "change:ecs:deployment:ecs-svc/7aa56fd1e6014a51bd7ec3cb846c65d3:started"
+        },
+        "investigationId": "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+        "status": "rejected",
+        "lineage": [
+          "01a1926e-7def-705c-ae99-f091a0e8275e",
+          "01a1926e-ad70-7c69-a55c-0dcc9bb7dcb1",
+          "01a1926e-b9aa-712a-a3b6-006636ce9795"
+        ],
+        "proposedBy": [
+          "b2ea7bfe-529c-5ab4-b7ad-68d9ebbae7c7",
+          "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+          "cf544058-c87c-53e1-bce5-f49006b735c7"
+        ]
+      },
+      {
+        "finding": {
+          "hypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "statement": "A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed.",
+          "causalChain": [
+            "a message no revision can process",
+            "it fails and returns after its visibility timeout",
+            "its receive count and the queue\u0027s oldest-message age rise",
+            "queue-consumer detects the ageing queue"
+          ],
+          "suspectedServiceId": "queue-consumer",
+          "supportingEvidenceIds": [
+            "01a1926e-ad70-7680-960a-1dc66ab69048",
+            "01a1926e-b9aa-79f0-8d82-42eb063b09f9",
+            "01a1926e-b9aa-7308-b2ed-f50a9b4856fd"
+          ],
+          "contradictingEvidenceIds": [],
+          "key": "poison-message:queue-consumer"
+        },
+        "investigationId": "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+        "status": "confirmed",
+        "lineage": [
+          "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "01a1926e-b9aa-7052-bdeb-e55b5b92bdc7"
+        ],
+        "proposedBy": [
+          "e29ab5e6-b02a-5d22-8e77-6e96f26550d9",
+          "cf544058-c87c-53e1-bce5-f49006b735c7"
+        ]
+      },
+      {
+        "finding": {
+          "hypothesisId": "01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "statement": "order-service slowed down, and queue-consumer timed out waiting for it.",
+          "causalChain": [
+            "order-service slow calls",
+            "queue-consumer timeouts",
+            "SLO burn"
+          ],
+          "suspectedServiceId": "order-service",
+          "supportingEvidenceIds": [
+            "01a1926f-17c7-7b1a-8cb3-c7ec18b14f8f"
+          ],
+          "contradictingEvidenceIds": [],
+          "key": "dependency-regression:order-service"
+        },
+        "investigationId": "fae28e2d-63ec-51d3-b8d6-ddf5ca385dbe",
+        "status": "rejected",
+        "lineage": [
+          "01a1926f-17c7-7350-aeaa-8fe9cf569848"
+        ],
+        "proposedBy": [
+          "fae28e2d-63ec-51d3-b8d6-ddf5ca385dbe"
+        ]
+      }
+    ],
+    "decision": {
+      "decisionId": "95db26dc-fb49-5f70-81e6-cda6a26a767a",
+      "outcome": "diagnosed",
+      "leadingHypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+      "rejectedHypothesisIds": [
+        "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+        "01a1926e-7def-77b6-b207-2a070463c793",
+        "01a1926e-7def-779d-bacb-207a2896a849",
+        "01a1926e-7def-705c-ae99-f091a0e8275e",
+        "01a1926f-17c7-7350-aeaa-8fe9cf569848"
+      ],
+      "confidence": 0.7323212962962962,
+      "evidenceCompleteness": 0.9529,
+      "calibration": "uncalibrated",
+      "rationale": "A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed. It scores 1.66 from 3 independent evidence families against 0.00 for the next explanation, and it survived 0 challenge(s).",
+      "checks": [
+        {
+          "name": "cause-precedes-symptom-onset",
+          "passed": true,
+          "detail": "The earliest supporting signal began at 2026-10-31T14:46:19.1256365\u002B00:00, before symptom onset at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "name": "independent-corroboration",
+          "passed": true,
+          "detail": "3 independent evidence families support the leader; 2 are required."
+        },
+        {
+          "name": "confidence-above-threshold",
+          "passed": true,
+          "detail": "Confidence 0.73 with evidence completeness 0.95; Sentinel abstains below 0.50. Margin over the runner-up 1.66."
+        }
+      ],
+      "decidedAt": "2026-10-31T14:48:54.8523853+00:00",
+      "dissentingHypothesisIds": [],
+      "assessments": [
+        {
+          "hypothesisId": "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "score": -0.362,
+          "independentSupport": 1,
+          "independentContradiction": 1,
+          "eliminated": true,
+          "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+        },
+        {
+          "hypothesisId": "01a1926e-7def-77b6-b207-2a070463c793",
+          "score": -0.356,
+          "independentSupport": 1,
+          "independentContradiction": 1,
+          "eliminated": true,
+          "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+        },
+        {
+          "hypothesisId": "01a1926e-7def-779d-bacb-207a2896a849",
+          "score": -0.332,
+          "independentSupport": 1,
+          "independentContradiction": 1,
+          "eliminated": true,
+          "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+        },
+        {
+          "hypothesisId": "01a1926e-7def-705c-ae99-f091a0e8275e",
+          "score": -0.744,
+          "independentSupport": 1,
+          "independentContradiction": 1,
+          "eliminated": true,
+          "reason": "Falsified: The change was not serving before symptoms began, so it cannot have caused them."
+        },
+        {
+          "hypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "score": 1.66,
+          "independentSupport": 3,
+          "independentContradiction": 0,
+          "eliminated": false,
+          "reason": "Stands."
+        },
+        {
+          "hypothesisId": "01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "score": -0.384,
+          "independentSupport": 1,
+          "independentContradiction": 1,
+          "eliminated": true,
+          "reason": "Falsified: order-service\u0027s p95 latency did not shift before symptoms began."
+        }
+      ],
+      "missingEvidence": [
+        "Runbook passages were read as reference only; they cannot be cited as evidence."
+      ],
+      "algorithmVersion": "consensus-v4",
+      "inputsHash": "sha256:fe202652ba54814fea6b825b62b9187fa50d7c6fae7854cd94f8b44c2a780e97"
+    },
+    "plan": {
+      "plan": {
+        "planId": "b72207c3-c228-5419-9b00-ee2882c8216e",
+        "planVersion": 1,
+        "planHash": "sha256:194e992f0b1cfe22607ca2dc85c5080b0cdbd37ba442f0ad541c842cb8edc450",
+        "hypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+        "actions": [
+          {
+            "kind": "quarantine-message",
+            "queue": "orders",
+            "minimumReceives": 3,
+            "maxMessages": 5,
+            "reason": "It fails on every receive: A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed.",
+            "actionId": "017a0913-2d00-5049-8040-962a9e3fa16b",
+            "targetServiceId": "queue-consumer"
+          }
+        ],
+        "expectedRecovery": [
+          {
+            "serviceId": "queue-consumer",
+            "metricName": "queue_oldest_message_age",
+            "comparison": "lessThan",
+            "threshold": 20
+          },
+          {
+            "serviceId": "queue-consumer",
+            "metricName": "queue_failure_rate",
+            "comparison": "lessThan",
+            "threshold": 0.02
+          }
+        ],
+        "observationWindow": "00:01:30",
+        "risk": "low",
+        "preconditions": [
+          {
+            "serviceId": "queue-consumer",
+            "condition": "queue-state",
+            "expected": "poisoned"
+          }
+        ],
+        "expectedEffect": "The messages of orders received at least 3 times leave the queue, and queue-consumer\u0027s recovery signals return.",
+        "blastRadius": [
+          "queue-consumer"
+        ],
+        "compensation": "Release the quarantined messages back to orders once they can be processed."
+      },
+      "policyEvaluation": {
+        "decision": "approvalRequired",
+        "policyVersion": "policy-2026.10.4",
+        "ruleTrace": [
+          "quarantine-message.queue-consumer: quarantine-message on queue-consumer in reference grants ApprovalRequired"
+        ],
+        "evaluatedAt": "2026-10-31T14:48:54.9251582+00:00"
+      },
+      "status": "executed",
+      "approvedBy": "responder@example.test",
+      "approvedAt": "2026-10-31T14:48:56.9366166+00:00",
+      "approvalDeadline": "2026-10-31T15:18:54.9251582+00:00"
+    },
+    "execution": {
+      "planId": "b72207c3-c228-5419-9b00-ee2882c8216e",
+      "planVersion": 1,
+      "outcome": "actionVerified",
+      "detail": "Dead-lettered 1 message(s) of orders received at least 3 times.",
+      "requestedAt": "2026-10-31T14:48:57.0549425+00:00",
+      "startedAt": "2026-10-31T14:48:58.2242272+00:00",
+      "completedAt": "2026-10-31T14:48:59.9969529+00:00"
+    },
+    "recovery": {
+      "planId": "b72207c3-c228-5419-9b00-ee2882c8216e",
+      "outcome": "recovered",
+      "measurements": [
+        {
+          "criterion": {
+            "serviceId": "queue-consumer",
+            "metricName": "queue_oldest_message_age",
+            "comparison": "lessThan",
+            "threshold": 20
+          },
+          "observedValue": 0,
+          "met": true,
+          "baselineValue": 115.42291993888891
+        },
+        {
+          "criterion": {
+            "serviceId": "queue-consumer",
+            "metricName": "queue_failure_rate",
+            "comparison": "lessThan",
+            "threshold": 0.02
+          },
+          "observedValue": 0,
+          "met": true,
+          "baselineValue": 0.3712564498790387
+        }
+      ],
+      "observedThrough": "2026-10-31T14:50:30.1472343+00:00",
+      "evaluatedAt": "2026-10-31T14:50:57.1743064+00:00"
+    },
+    "affectedServices": [
+      "queue-consumer"
+    ],
+    "changes": [
+      {
+        "deploymentId": "default/orders-route/1793457757263",
+        "serviceId": "queue-consumer",
+        "changeKind": "route",
+        "version": "pattern 0f94700e",
+        "previousVersion": "pattern 05a2bf4c",
+        "startedAt": "2026-10-31T14:42:37.26336+00:00",
+        "servingFrom": "2026-10-31T14:42:37.26336+00:00",
+        "failed": false,
+        "score": 0.407,
+        "reasons": [
+          "same service as the symptom (queue-consumer)",
+          "serving 4.0 min before onset",
+          "route pattern 0f94700e"
+        ],
+        "observationIds": [
+          "eventbridge:deployment:default/orders-route/1793457757263:completed",
+          "eventbridge:deployment:default/orders-route/1793457757263:started"
+        ]
+      },
+      {
+        "deploymentId": "default/orders-route/1793457626660",
+        "serviceId": "queue-consumer",
+        "changeKind": "route",
+        "version": "pattern 05a2bf4c",
+        "previousVersion": "pattern 0f94700e",
+        "startedAt": "2026-10-31T14:40:26.660001+00:00",
+        "servingFrom": "2026-10-31T14:40:26.660001+00:00",
+        "failed": false,
+        "score": 0.264,
+        "reasons": [
+          "same service as the symptom (queue-consumer)",
+          "serving 6.1 min before onset",
+          "route pattern 05a2bf4c"
+        ],
+        "observationIds": [
+          "eventbridge:deployment:default/orders-route/1793457626660:completed",
+          "eventbridge:deployment:default/orders-route/1793457626660:started"
+        ]
+      },
+      {
+        "deploymentId": "ecs-svc/ab42b586d9194a63b9f17bfd6d56071e",
+        "serviceId": "queue-consumer",
+        "changeKind": "deploy",
+        "version": "v1.4.1",
+        "previousVersion": "v1.4.0",
+        "startedAt": "2026-10-31T14:39:37.483+00:00",
+        "servingFrom": "2026-10-31T14:39:41.547115+00:00",
+        "failed": false,
+        "score": 0.252,
+        "reasons": [
+          "same service as the symptom (queue-consumer)",
+          "serving 6.9 min before onset",
+          "deploy v1.4.1"
+        ],
+        "observationIds": [
+          "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:completed",
+          "ecs:deployment:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e:started"
+        ]
+      },
+      {
+        "deploymentId": "ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c",
+        "serviceId": "queue-consumer",
+        "changeKind": "create",
+        "version": "v1.4.0",
+        "startedAt": "2026-10-31T14:44:53.315+00:00",
+        "servingFrom": "2026-10-31T14:45:04.036921+00:00",
+        "failed": false,
+        "score": 0.222,
+        "reasons": [
+          "same service as the symptom (queue-consumer)",
+          "serving 1.5 min before onset",
+          "create v1.4.0"
+        ],
+        "observationIds": [
+          "ecs:deployment:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c:completed",
+          "ecs:deployment:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c:started"
+        ]
+      },
+      {
+        "deploymentId": "ecs-svc/8282f1bc0e12463d80fd689398a379e8",
+        "serviceId": "queue-consumer",
+        "changeKind": "create",
+        "version": "v1.4.0",
+        "startedAt": "2026-10-31T14:44:30.273+00:00",
+        "servingFrom": "2026-10-31T14:44:38.467273+00:00",
+        "failed": false,
+        "score": 0.203,
+        "reasons": [
+          "same service as the symptom (queue-consumer)",
+          "serving 1.9 min before onset",
+          "create v1.4.0"
+        ],
+        "observationIds": [
+          "ecs:deployment:ecs-svc/8282f1bc0e12463d80fd689398a379e8:completed",
+          "ecs:deployment:ecs-svc/8282f1bc0e12463d80fd689398a379e8:started"
+        ]
+      }
+    ],
+    "suspectedInjections": [],
+    "linkedSignals": [],
+    "challenges": [
+      {
+        "hypothesisId": "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+        "falsifier": "change-serving-before-onset",
+        "verdict": "survived",
+        "detail": "queue-consumer v1.4.1 served from 2026-10-31T14:39:41.5471159\u002B00:00, before onset at 2026-10-31T14:46:35.0000000\u002B00:00.",
+        "evidenceIds": [],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+        "falsifier": "change-still-serving-at-onset",
+        "verdict": "falsified",
+        "detail": "A later deployment replaced the change before symptoms began, so it was not serving when they started.",
+        "evidenceIds": [
+          "01a1926f-5bb8-7447-bede-a49349061722"
+        ],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-77b6-b207-2a070463c793",
+        "falsifier": "change-serving-before-onset",
+        "verdict": "survived",
+        "detail": "queue-consumer pattern 05a2bf4c served from 2026-10-31T14:40:26.6600016\u002B00:00, before onset at 2026-10-31T14:46:35.0000000\u002B00:00.",
+        "evidenceIds": [],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-77b6-b207-2a070463c793",
+        "falsifier": "change-still-serving-at-onset",
+        "verdict": "falsified",
+        "detail": "A later deployment replaced the change before symptoms began, so it was not serving when they started.",
+        "evidenceIds": [
+          "01a1926f-5bb8-7646-89e4-f2af0acf4399"
+        ],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-779d-bacb-207a2896a849",
+        "falsifier": "change-serving-before-onset",
+        "verdict": "survived",
+        "detail": "queue-consumer pattern 0f94700e served from 2026-10-31T14:42:37.2633602\u002B00:00, before onset at 2026-10-31T14:46:35.0000000\u002B00:00.",
+        "evidenceIds": [],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-779d-bacb-207a2896a849",
+        "falsifier": "change-still-serving-at-onset",
+        "verdict": "falsified",
+        "detail": "A later deployment replaced the change before symptoms began, so it was not serving when they started.",
+        "evidenceIds": [
+          "01a1926f-5bb8-7fc6-99de-1cf2116c7f5f"
+        ],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-7def-705c-ae99-f091a0e8275e",
+        "falsifier": "change-serving-before-onset",
+        "verdict": "falsified",
+        "detail": "The change was not serving before symptoms began, so it cannot have caused them.",
+        "evidenceIds": [
+          "01a1926f-5bb9-7c7d-b9c5-5e16cad6a017"
+        ],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+        "falsifier": "no-falsifier",
+        "verdict": "inconclusive",
+        "detail": "No falsification test applies to this explanation; it stands or falls on its evidence.",
+        "evidenceIds": [],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      },
+      {
+        "hypothesisId": "01a1926f-17c7-7350-aeaa-8fe9cf569848",
+        "falsifier": "culprit-shift-precedes-onset",
+        "verdict": "falsified",
+        "detail": "order-service\u0027s p95 latency did not shift before symptoms began.",
+        "evidenceIds": [
+          "01a1926f-5bb9-7b20-b1f4-96574be4591f"
+        ],
+        "investigationId": "fbd5e913-9151-5e97-a2b6-c2c1bfd7e6ab"
+      }
+    ],
+    "decisions": [
+      {
+        "decisionId": "95db26dc-fb49-5f70-81e6-cda6a26a767a",
+        "outcome": "diagnosed",
+        "leadingHypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+        "rejectedHypothesisIds": [
+          "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "01a1926e-7def-77b6-b207-2a070463c793",
+          "01a1926e-7def-779d-bacb-207a2896a849",
+          "01a1926e-7def-705c-ae99-f091a0e8275e",
+          "01a1926f-17c7-7350-aeaa-8fe9cf569848"
+        ],
+        "confidence": 0.7323212962962962,
+        "evidenceCompleteness": 0.9529,
+        "calibration": "uncalibrated",
+        "rationale": "A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed. It scores 1.66 from 3 independent evidence families against 0.00 for the next explanation, and it survived 0 challenge(s).",
+        "checks": [
+          {
+            "name": "cause-precedes-symptom-onset",
+            "passed": true,
+            "detail": "The earliest supporting signal began at 2026-10-31T14:46:19.1256365\u002B00:00, before symptom onset at 2026-10-31T14:46:35.0000000\u002B00:00."
+          },
+          {
+            "name": "independent-corroboration",
+            "passed": true,
+            "detail": "3 independent evidence families support the leader; 2 are required."
+          },
+          {
+            "name": "confidence-above-threshold",
+            "passed": true,
+            "detail": "Confidence 0.73 with evidence completeness 0.95; Sentinel abstains below 0.50. Margin over the runner-up 1.66."
+          }
+        ],
+        "decidedAt": "2026-10-31T14:48:54.8523853+00:00",
+        "dissentingHypothesisIds": [],
+        "assessments": [
+          {
+            "hypothesisId": "01a1926e-7def-7efe-9fc1-97abba7c13aa",
+            "score": -0.362,
+            "independentSupport": 1,
+            "independentContradiction": 1,
+            "eliminated": true,
+            "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+          },
+          {
+            "hypothesisId": "01a1926e-7def-77b6-b207-2a070463c793",
+            "score": -0.356,
+            "independentSupport": 1,
+            "independentContradiction": 1,
+            "eliminated": true,
+            "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+          },
+          {
+            "hypothesisId": "01a1926e-7def-779d-bacb-207a2896a849",
+            "score": -0.332,
+            "independentSupport": 1,
+            "independentContradiction": 1,
+            "eliminated": true,
+            "reason": "Falsified: A later deployment replaced the change before symptoms began, so it was not serving when they started."
+          },
+          {
+            "hypothesisId": "01a1926e-7def-705c-ae99-f091a0e8275e",
+            "score": -0.744,
+            "independentSupport": 1,
+            "independentContradiction": 1,
+            "eliminated": true,
+            "reason": "Falsified: The change was not serving before symptoms began, so it cannot have caused them."
+          },
+          {
+            "hypothesisId": "01a1926e-ad70-7cb8-b5fc-ac0515106489",
+            "score": 1.66,
+            "independentSupport": 3,
+            "independentContradiction": 0,
+            "eliminated": false,
+            "reason": "Stands."
+          },
+          {
+            "hypothesisId": "01a1926f-17c7-7350-aeaa-8fe9cf569848",
+            "score": -0.384,
+            "independentSupport": 1,
+            "independentContradiction": 1,
+            "eliminated": true,
+            "reason": "Falsified: order-service\u0027s p95 latency did not shift before symptoms began."
+          }
+        ],
+        "missingEvidence": [
+          "Runbook passages were read as reference only; they cannot be cited as evidence."
+        ],
+        "algorithmVersion": "consensus-v4",
+        "inputsHash": "sha256:fe202652ba54814fea6b825b62b9187fa50d7c6fae7854cd94f8b44c2a780e97"
+      }
+    ],
+    "remediesTried": [],
+    "cycle": 0,
+    "causalGraph": {
+      "nodes": [
+        {
+          "id": "symptom",
+          "kind": "symptom",
+          "label": "queue-consumer queue_oldest_message_age at 73.8"
+        },
+        {
+          "id": "service:queue-consumer",
+          "kind": "service",
+          "label": "queue-consumer"
+        },
+        {
+          "id": "change:default/orders-route/1793457757263",
+          "kind": "change",
+          "label": "queue-consumer route pattern 0f94700e"
+        },
+        {
+          "id": "change:default/orders-route/1793457626660",
+          "kind": "change",
+          "label": "queue-consumer route pattern 05a2bf4c"
+        },
+        {
+          "id": "change:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e",
+          "kind": "change",
+          "label": "queue-consumer deploy v1.4.1"
+        },
+        {
+          "id": "change:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c",
+          "kind": "change",
+          "label": "queue-consumer create v1.4.0"
+        },
+        {
+          "id": "change:ecs-svc/8282f1bc0e12463d80fd689398a379e8",
+          "kind": "change",
+          "label": "queue-consumer create v1.4.0"
+        },
+        {
+          "id": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "kind": "hypothesis",
+          "label": "The queue-consumer v1.4.1 deployment caused the symptoms."
+        },
+        {
+          "id": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "kind": "hypothesis",
+          "label": "The pattern 05a2bf4c change to queue-consumer\u0027s event route stopped delivering its orders."
+        },
+        {
+          "id": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "kind": "hypothesis",
+          "label": "The pattern 0f94700e change to queue-consumer\u0027s event route stopped delivering its orders."
+        },
+        {
+          "id": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "kind": "hypothesis",
+          "label": "The queue-consumer v1.4.1 deployment caused the symptoms."
+        },
+        {
+          "id": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "kind": "hypothesis",
+          "label": "A poison message on queue-consumer\u0027s queue fails on every receive while the other messages are processed."
+        },
+        {
+          "id": "hypothesis:01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "kind": "hypothesis",
+          "label": "order-service slowed down, and queue-consumer timed out waiting for it."
+        },
+        {
+          "id": "service:order-service",
+          "kind": "service",
+          "label": "order-service"
+        },
+        {
+          "id": "evidence:01a1926e-7df0-7d61-8a61-37e96d364413",
+          "kind": "evidence",
+          "label": "queue-consumer v1.4.1 started at 2026-10-31T14:39:37.4830000\u002B00:00 and served from 2026-10-31T14:39:41.5471159\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-7df0-780b-aec7-df24d02d3e1f",
+          "kind": "evidence",
+          "label": "queue-consumer pattern 05a2bf4c started at 2026-10-31T14:40:26.6600016\u002B00:00 and served from 2026-10-31T14:40:26.6600016\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-7df0-7005-b77d-758d6ffb4dfc",
+          "kind": "evidence",
+          "label": "queue-consumer pattern 0f94700e started at 2026-10-31T14:42:37.2633602\u002B00:00 and served from 2026-10-31T14:42:37.2633602\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-7df0-7b57-ba3a-a154396404f3",
+          "kind": "evidence",
+          "label": "queue-consumer v1.4.1 started at 2026-10-31T14:46:49.1510000\u002B00:00 and served from 2026-10-31T14:46:54.9152251\u002B00:00; symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-ad70-7680-960a-1dc66ab69048",
+          "kind": "evidence",
+          "label": "queue-consumer logged 32 failures of message msg-poison-1793457978661 from 2026-10-31T14:46:19.1256365\u002B00:00 to 2026-10-31T14:47:52.0821233\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-ad70-7182-952c-7f57bfff39be",
+          "kind": "evidence",
+          "label": "Message msg-poison-1793457978661 was already failing at 2026-10-31T14:46:19.1256365\u002B00:00 and kept failing until 2026-10-31T14:47:52.0821233\u002B00:00, before queue-consumer v1.4.1 served from 2026-10-31T14:46:54.9152251\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-b9aa-79f0-8d82-42eb063b09f9",
+          "kind": "evidence",
+          "label": "queue-consumer\u0027s highest receive count rose above 1 at 2026-10-31T14:46:30.0000000\u002B00:00 and reached 18 by 2026-10-31T14:47:00.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-b9aa-7308-b2ed-f50a9b4856fd",
+          "kind": "evidence",
+          "label": "queue-consumer kept processing the other messages, at least 3.71 a second, while one kept failing."
+        },
+        {
+          "id": "evidence:01a1926e-b9aa-7640-933d-6c9603e1a624",
+          "kind": "evidence",
+          "label": "queue-consumer\u0027s receive count was already climbing at 2026-10-31T14:46:30.0000000\u002B00:00, before queue-consumer v1.4.1 served from 2026-10-31T14:46:54.9152251\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926e-dc54-7459-8d80-0054914a89b5",
+          "kind": "evidence",
+          "label": "queue-consumer is connected to orders (calls it), orders-dlq (calls it), order-service (calls it)."
+        },
+        {
+          "id": "evidence:01a1926f-17c7-7b1a-8cb3-c7ec18b14f8f",
+          "kind": "evidence",
+          "label": "1 of queue-consumer\u0027s slowest calls went to order-service, up to 658 ms, from 2026-10-31T14:38:32.4255070\u002B00:00 to 2026-10-31T14:38:32.4255070\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926f-17c7-7ceb-808e-081c32c00920",
+          "kind": "evidence",
+          "label": "queue-consumer is connected to orders (calls it), orders-dlq (calls it), order-service (calls it)."
+        },
+        {
+          "id": "evidence:01a1926f-5bb8-7447-bede-a49349061722",
+          "kind": "evidence",
+          "label": "queue-consumer v1.4.1 was replaced by pattern 05a2bf4c at 2026-10-31T14:40:26.6600016\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926f-5bb8-7646-89e4-f2af0acf4399",
+          "kind": "evidence",
+          "label": "queue-consumer pattern 05a2bf4c was replaced by pattern 0f94700e at 2026-10-31T14:42:37.2633602\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926f-5bb8-7fc6-99de-1cf2116c7f5f",
+          "kind": "evidence",
+          "label": "queue-consumer pattern 0f94700e was replaced by v1.4.0 at 2026-10-31T14:44:38.4672731\u002B00:00, before symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926f-5bb9-7c7d-b9c5-5e16cad6a017",
+          "kind": "evidence",
+          "label": "queue-consumer v1.4.1 began serving at 2026-10-31T14:46:54.9152251\u002B00:00, after symptoms began at 2026-10-31T14:46:35.0000000\u002B00:00."
+        },
+        {
+          "id": "evidence:01a1926f-5bb9-7b20-b1f4-96574be4591f",
+          "kind": "evidence",
+          "label": "order-service p95 latency stayed between 0.04922 and 0.2 up to onset."
+        }
+      ],
+      "edges": [
+        {
+          "from": "symptom",
+          "to": "service:queue-consumer",
+          "relation": "affects"
+        },
+        {
+          "from": "change:default/orders-route/1793457757263",
+          "to": "service:queue-consumer",
+          "relation": "changed",
+          "weight": 0.407
+        },
+        {
+          "from": "change:default/orders-route/1793457626660",
+          "to": "service:queue-consumer",
+          "relation": "changed",
+          "weight": 0.264
+        },
+        {
+          "from": "change:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e",
+          "to": "service:queue-consumer",
+          "relation": "changed",
+          "weight": 0.252
+        },
+        {
+          "from": "change:ecs-svc/4eb8ef8ce4e64cbbb3cbe11bc2e7d71c",
+          "to": "service:queue-consumer",
+          "relation": "changed",
+          "weight": 0.222
+        },
+        {
+          "from": "change:ecs-svc/8282f1bc0e12463d80fd689398a379e8",
+          "to": "service:queue-consumer",
+          "relation": "changed",
+          "weight": 0.203
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "to": "service:queue-consumer",
+          "relation": "implicates"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "to": "change:ecs-svc/ab42b586d9194a63b9f17bfd6d56071e",
+          "relation": "blames"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "to": "service:queue-consumer",
+          "relation": "implicates"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "to": "change:default/orders-route/1793457626660",
+          "relation": "blames"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "to": "service:queue-consumer",
+          "relation": "implicates"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "to": "change:default/orders-route/1793457757263",
+          "relation": "blames"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "to": "service:queue-consumer",
+          "relation": "implicates"
+        },
+        {
+          "from": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "to": "service:queue-consumer",
+          "relation": "implicates"
+        },
+        {
+          "from": "hypothesis:01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "to": "symptom",
+          "relation": "explains"
+        },
+        {
+          "from": "hypothesis:01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "to": "service:order-service",
+          "relation": "implicates"
+        },
+        {
+          "from": "evidence:01a1926e-7df0-7d61-8a61-37e96d364413",
+          "to": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "relation": "supports",
+          "weight": 0.31
+        },
+        {
+          "from": "evidence:01a1926e-7df0-780b-aec7-df24d02d3e1f",
+          "to": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "relation": "supports",
+          "weight": 0.32
+        },
+        {
+          "from": "evidence:01a1926e-7df0-7005-b77d-758d6ffb4dfc",
+          "to": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "relation": "supports",
+          "weight": 0.36
+        },
+        {
+          "from": "evidence:01a1926e-7df0-7b57-ba3a-a154396404f3",
+          "to": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "relation": "supports",
+          "weight": 0.2
+        },
+        {
+          "from": "evidence:01a1926e-ad70-7680-960a-1dc66ab69048",
+          "to": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "relation": "supports",
+          "weight": 0.7
+        },
+        {
+          "from": "evidence:01a1926e-ad70-7182-952c-7f57bfff39be",
+          "to": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "relation": "contradicts",
+          "weight": 0.8
+        },
+        {
+          "from": "evidence:01a1926e-b9aa-79f0-8d82-42eb063b09f9",
+          "to": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "relation": "supports",
+          "weight": 0.8
+        },
+        {
+          "from": "evidence:01a1926e-b9aa-7308-b2ed-f50a9b4856fd",
+          "to": "hypothesis:01a1926e-ad70-7cb8-b5fc-ac0515106489",
+          "relation": "supports",
+          "weight": 0.5
+        },
+        {
+          "from": "evidence:01a1926e-b9aa-7640-933d-6c9603e1a624",
+          "to": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "relation": "contradicts",
+          "weight": 0.8
+        },
+        {
+          "from": "evidence:01a1926f-17c7-7b1a-8cb3-c7ec18b14f8f",
+          "to": "hypothesis:01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "relation": "supports",
+          "weight": 0.6
+        },
+        {
+          "from": "evidence:01a1926f-5bb8-7447-bede-a49349061722",
+          "to": "hypothesis:01a1926e-7def-7efe-9fc1-97abba7c13aa",
+          "relation": "contradicts",
+          "weight": 0.9
+        },
+        {
+          "from": "evidence:01a1926f-5bb8-7646-89e4-f2af0acf4399",
+          "to": "hypothesis:01a1926e-7def-77b6-b207-2a070463c793",
+          "relation": "contradicts",
+          "weight": 0.9
+        },
+        {
+          "from": "evidence:01a1926f-5bb8-7fc6-99de-1cf2116c7f5f",
+          "to": "hypothesis:01a1926e-7def-779d-bacb-207a2896a849",
+          "relation": "contradicts",
+          "weight": 0.9
+        },
+        {
+          "from": "evidence:01a1926f-5bb9-7c7d-b9c5-5e16cad6a017",
+          "to": "hypothesis:01a1926e-7def-705c-ae99-f091a0e8275e",
+          "relation": "contradicts",
+          "weight": 0.9
+        },
+        {
+          "from": "evidence:01a1926f-5bb9-7b20-b1f4-96574be4591f",
+          "to": "hypothesis:01a1926f-17c7-7350-aeaa-8fe9cf569848",
+          "relation": "contradicts",
+          "weight": 0.8
+        }
+      ]
+    }
+  },
+  "exportedAt": "2026-10-31T14:50:58.5498486+00:00"
+}
