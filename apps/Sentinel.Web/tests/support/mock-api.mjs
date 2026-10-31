@@ -11,6 +11,10 @@
 //   POST /__large { timeline, evidence } make the incident that large, for the performance tests
 //   POST /__quarantine                plan a poison message's quarantine instead of the rollback, as in S6 and AWS-S1
 //   POST /__inject                    record an instruction to AI agents found in order-service's logs, as in S9
+//   POST /__counterfactual            make the deploy-blame baseline blame an innocent order-service deployment Sentinel eliminated
+//   POST /__followup                  open a follow-up cycle after a rollback that took effect without recovery, as in S10
+//   POST /__investigating             put the incident back to its six specialists investigating, none reported yet
+//   POST /__report { role }           record that specialist's report and publish it live
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
@@ -123,6 +127,127 @@ function recordInjection() {
   }));
 }
 
+// The baseline blames an innocent order-service deployment that served after onset; Sentinel proposed it and eliminated it.
+function blameInnocentDeployment() {
+  const { incident } = state;
+  const observationId = "deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d2:started";
+  const hypothesisId = "0192f0c4-0000-7000-8000-000000000014";
+  incident.changes = [
+    ...incident.changes,
+    {
+      deploymentId: "0192f0c4-0000-7000-8000-0000000000d2",
+      serviceId: "order-service",
+      changeKind: "deployment",
+      version: "v1.7.1",
+      previousVersion: "v1.7.0",
+      startedAt: "2026-10-28T09:04:10+00:00",
+      servingFrom: "2026-10-28T09:04:30+00:00",
+      failed: false,
+      score: 0.31,
+      reasons: ["dependency of checkout-service", "served 30 s after onset"],
+      observationIds: [observationId],
+    },
+  ];
+  incident.hypotheses = [
+    ...incident.hypotheses,
+    {
+      finding: {
+        hypothesisId,
+        statement: "The order-service v1.7.1 deployment caused the symptoms.",
+        causalChain: ["deploy order-service v1.7.1", "regression", "SLO burn"],
+        suspectedServiceId: "order-service",
+        suspectedChangeObservationId: observationId,
+        key: `change:${observationId}`,
+      },
+      investigationId: "0192f0c4-0000-7000-8000-000000000002",
+      status: "rejected",
+    },
+  ];
+  incident.decision.assessments = [
+    ...incident.decision.assessments,
+    { hypothesisId, score: -0.9, independentSupport: 0, independentContradiction: 1, eliminated: true, reason: "Falsified: the change was not serving before symptoms began." },
+  ];
+  baselineBlames(observationId, "order-service", "v1.7.1");
+}
+
+function baselineBlames(observationId, serviceId, version) {
+  const shadow = state.history.agentExecutions.find((execution) => execution.shadow);
+  shadow.findings = JSON.stringify({
+    outcome: "completed",
+    hypotheses: [
+      {
+        hypothesisId: "0192f0c4-0000-7000-8000-000000000015",
+        statement: `The ${serviceId} ${version} deployment caused the symptoms.`,
+        causalChain: [`deploy ${serviceId} ${version}`, "regression", "SLO burn"],
+        suspectedServiceId: serviceId,
+        suspectedChangeObservationId: observationId,
+      },
+      { hypothesisId: "0192f0c4-0000-7000-8000-000000000016", statement: "The symptoms have a cause other than a deployment.", causalChain: ["unknown cause", "SLO burn"] },
+    ],
+    evidence: [],
+  });
+}
+
+// S10: the rollback took effect at its target, but the SLO kept burning, so a follow-up cycle opened.
+function followUp() {
+  const reason = "Recovery Unchanged although the action took effect: Expected signals not restored: slo_burn_rate=6.4 Sentinel investigates again, knowing what was tried.";
+  append("incident.reopened", `Follow-up cycle: ${reason}`, {
+    cycle: 1,
+    remediesTried: [
+      {
+        cycle: 0,
+        planId: "0192f0c4-0000-7000-8000-000000000020",
+        targetServiceId: "checkout-service",
+        summary: "roll checkout-service back from v2.4.1 to v2.4.0",
+        outcome: "unchanged",
+        measurements: [
+          {
+            criterion: { serviceId: "checkout-service", metricName: "slo_burn_rate", comparison: "lessThan", threshold: 1 },
+            observedValue: 6.4,
+            met: false,
+            baselineValue: 18.2,
+          },
+        ],
+        reason: "Expected signals not restored: slo_burn_rate=6.4",
+        judgedAt: "2026-10-28T09:12:00+00:00",
+        followedUp: true,
+      },
+    ],
+  });
+}
+
+const specialists = ["metrics", "logs", "traces", "changes", "topology", "knowledge"];
+
+// The investigation under way: every specialist asked, none reported, no decision or plan yet.
+function investigate() {
+  const requestedAt = new Date().toISOString();
+  append("investigation.requested", "Six specialist investigations requested.", {
+    summary: { status: "investigating" },
+    investigations: specialists.map((role, index) => ({
+      investigationId: `0192f0c4-0000-7000-8000-0000000003${String(index).padStart(2, "0")}`,
+      requestedAt,
+      role,
+    })),
+    hypotheses: [],
+    evidence: [],
+    challenges: [],
+    decision: undefined,
+    decisions: [],
+    plan: undefined,
+  });
+}
+
+function report(role) {
+  const completedAt = new Date().toISOString();
+  append("investigation.reported", `deterministic-analyst investigation Completed for ${role}.`, {
+    investigations: state.incident.investigations.map((investigation) =>
+      investigation.role === role
+        ? { ...investigation, completedAt, outcome: "completed", agentExecutionId: "0192f0c4-0000-7000-8000-000000000400" }
+        : investigation,
+    ),
+  });
+}
+
 // The poison-message plan of S6 and AWS-S1: quarantine the message on the consumer's queue, not a rollback.
 function planQuarantine() {
   const plan = state.incident.plan.plan;
@@ -193,7 +318,7 @@ function failure(group) {
 async function handleIncident(request, response, url) {
   const { incident } = state;
   const id = incident.summary.incidentId;
-  const planId = incident.plan.plan.planId;
+  const planId = incident.plan?.plan.planId;
   const base = `/api/v1/incidents/${id}`;
 
   if (request.method === "GET" && url.pathname === "/api/v1/incidents") {
@@ -508,6 +633,27 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && url.pathname === "/__inject") {
     recordInjection();
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__counterfactual") {
+    blameInnocentDeployment();
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__followup") {
+    followUp();
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__investigating") {
+    investigate();
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__report") {
+    const body = await readBody(request);
+    report(body.role ?? "metrics");
     return send(response, 204);
   }
 

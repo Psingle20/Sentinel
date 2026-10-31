@@ -56,7 +56,8 @@
       "outputTokens": 0,
       "schemaFailures": 0,
       "startedAt": "2026-10-28T09:05:00+00:00",
-      "completedAt": "2026-10-28T09:05:00.2+00:00"
+      "completedAt": "2026-10-28T09:05:00.2+00:00",
+      "findings": "{\"outcome\":\"completed\",\"hypotheses\":[{\"hypothesisId\":\"0192f0c4-0000-7000-8000-000000000012\",\"statement\":\"The checkout-service v2.4.1 deployment caused the symptoms.\",\"causalChain\":[\"deploy checkout-service v2.4.1\",\"regression\",\"SLO burn\"],\"suspectedServiceId\":\"checkout-service\",\"suspectedChangeObservationId\":\"deploy-controller:deployment:0192f0c4-0000-7000-8000-0000000000d1:started\"},{\"hypothesisId\":\"0192f0c4-0000-7000-8000-000000000013\",\"statement\":\"The symptoms have a cause other than a deployment.\",\"causalChain\":[\"unknown cause\",\"SLO burn\"]}],\"evidence\":[]}"
     }
   ],
   "similar": [
@@ -67,7 +68,8 @@
       "causeKey": "change:0192f0c4-0000-7000-8000-0000000000e1",
       "causeStatement": "A checkout-service deployment exhausted its Redis connection pool.",
       "outcome": "resolved",
-      "recordedAt": "2026-10-14T16:20:00+00:00"
+      "recordedAt": "2026-10-14T16:20:00+00:00",
+      "actionSummary": "roll checkout-service back from v2.4.1 to v2.4.0"
     }
   ],
   "postmortem": {

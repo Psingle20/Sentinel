@@ -233,6 +233,19 @@ export type RecoveryView = {
   reason?: string;
 };
 
+// Phase E03: a remedy an earlier cycle executed and verified at its target, with the recovery verdict that followed.
+export type RemedyTried = {
+  cycle: number;
+  planId: string;
+  targetServiceId: string;
+  summary: string;
+  outcome: RecoveryOutcome;
+  measurements: RecoveryMeasurement[];
+  reason?: string;
+  judgedAt: string;
+  followedUp: boolean;
+};
+
 export type ModelMetadata = { provider: string; model: string; modelVersion?: string; promptVersion: string };
 
 export type InvestigationView = {
@@ -309,6 +322,7 @@ export type IncidentDetail = {
   cycle?: number;
   causalGraph?: CausalGraphView;
   suspectedInjections?: SuspectedInjection[];
+  remediesTried?: RemedyTried[];
 };
 
 // Phase 07: memory, replay and postmortems.
@@ -321,6 +335,7 @@ export type SimilarIncident = {
   causeStatement?: string;
   outcome: string;
   recordedAt: string;
+  actionSummary?: string;
 };
 
 export type SourceRef = { kind: string; ref: string };
@@ -404,6 +419,8 @@ export type AgentExecution = {
   schemaFailures: number;
   startedAt: string;
   completedAt: string;
+  // The findings in contract JSON, as sent or, for the shadow baseline, as they would have been sent.
+  findings?: string;
 };
 
 // Phase 08: live updates and the control plane.

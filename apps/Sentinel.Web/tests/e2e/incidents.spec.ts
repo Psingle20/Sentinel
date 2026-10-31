@@ -165,6 +165,62 @@ test.describe("incidents", () => {
     await expect(page.getByRole("region", { name: "Instructions to AI agents" })).toHaveCount(0);
   });
 
+  test("leads with a resolved incident it resembles as seen before, citing what resolved it", async ({ page }) => {
+    await openIncident(page);
+
+    const seen = page.getByRole("region", { name: "Seen before" });
+    await expect(seen).toContainText("81% alike");
+    await expect(seen).toContainText("Resolved by: roll checkout-service back from v2.4.1 to v2.4.0");
+    await expect(seen.getByRole("link", { name: "A checkout-service deployment exhausted its Redis connection pool." })).toHaveAttribute(
+      "href",
+      "/incidents/0192f0c4-0000-7000-8000-0000000000f1",
+    );
+  });
+
+  test("sets the deploy-blame baseline's action beside Sentinel's verdict on it", async ({ page, request }) => {
+    await openIncident(page);
+    const avoided = page.getByRole("region", { name: "Damage avoided" });
+    await expect(avoided).toContainText("Baseline agrees");
+    await expect(avoided).toContainText("would have rolled back checkout-service v2.4.1 to v2.4.0 as well");
+
+    await request.post(`${mockApi}/__counterfactual`);
+    await page.reload();
+    await expect(avoided).toContainText("Damage avoided");
+    await expect(avoided).toContainText("The deploy-blame baseline would have rolled back order-service v1.7.1 to v1.7.0.");
+    await expect(avoided).toContainText("Sentinel eliminated that explanation: Falsified: the change was not serving before symptoms began.");
+    await expect(avoided).toContainText("Sentinel proposes instead: Roll back checkout-service from v2.4.1 to v2.4.0");
+  });
+
+  test("shows the remedy that took effect without ending the incident and the follow-up it opened", async ({ page, request }) => {
+    await request.post(`${mockApi}/__followup`);
+    await page.reload();
+    await openIncident(page);
+
+    const correction = page.getByRole("region", { name: "Self-correction" });
+    await expect(correction).toContainText("First remedy did not end the incident");
+    await expect(correction).toContainText("Sentinel investigated again, knowing what it had tried");
+    await expect(correction.getByRole("list", { name: "Remedies tried" })).toContainText("Cycle 1: roll checkout-service back from v2.4.1 to v2.4.0");
+    await expect(correction).toContainText("Recovery unchanged");
+    await expect(page.getByLabel("Incident timeline")).toContainText("Follow-up cycle: Recovery Unchanged");
+  });
+
+  test("shows each investigator's report as it arrives, without a reload", async ({ page, request }) => {
+    await request.post(`${mockApi}/__investigating`);
+    await page.reload();
+    await openIncident(page);
+    await expect(page.getByRole("status").filter({ hasText: /^Live$/ })).toBeVisible();
+
+    const progress = page.getByRole("region", { name: "Investigation in progress" });
+    await expect(progress).toContainText("0 of 6 investigators have reported");
+    const investigators = progress.getByRole("list", { name: "Investigators" });
+    await expect(investigators.getByRole("listitem").filter({ hasText: "metrics" })).toContainText("Investigating");
+
+    await request.post(`${mockApi}/__report`, { data: { role: "metrics" } });
+    await expect(progress).toContainText("1 of 6 investigators have reported");
+    await expect(investigators.getByRole("listitem").filter({ hasText: "metrics" })).toContainText("Reported");
+    await expect(investigators.getByRole("listitem").filter({ hasText: "traces" })).toContainText("Investigating");
+  });
+
   test("revokes an approval before execution starts", async ({ page }) => {
     await openIncident(page);
     await page.getByRole("button", { name: "Approve plan" }).click();
