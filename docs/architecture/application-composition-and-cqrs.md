@@ -11,11 +11,11 @@ The design applies established clean-architecture practice to decisions Sentinel
 
 The corresponding decision is [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md). Sections marked **Current** describe the repository on 2026-10-29; everything else is the target.
 
-## Why this refactor is needed
+## Status and history
 
-**Status (2026-10-29).** The refactoring sequence below has been carried out in all five services and in the reference system's deploy controller and scenario runner: every host composes through layer modules and a `DependencyContainer`, every endpoint and consumer sends a request through `IRequestDispatcher`, and the one-type-per-file rules are errors everywhere with no exemptions. Rules 6 to 13 run in every service's architecture tests with no pending entries. Where the code departs from this guide's names: Runtime's recovery child entity is `RecoveryVerification` (`Recovery` collides with an `Incident` member), its in-process owner sits in `Incidents/InProcess/`, AgentWorker's persisted record is `AgentExecutionRecord` beside the `AgentExecution` aggregate, and the reference services have Domain, Application and Api projects only, with their HTTP adapters in the Api project. The **Before the refactoring** notes record what this guide was written against.
+As of 2026-10-29 the conventions in this guide are implemented in all five services and in the reference system's deploy controller and scenario runner: every host composes through layer modules and a `DependencyContainer`, every endpoint and consumer sends a request through `IRequestDispatcher`, and the one-type-per-file rules are errors everywhere with no exemptions. Rules 6 to 13 run in every service's architecture tests with no pending entries. Where the code departs from this guide's names: Runtime's recovery child entity is `RecoveryVerification` (`Recovery` collides with an `Incident` member), its in-process owner sits in `Incidents/InProcess/`, AgentWorker's persisted record is `AgentExecutionRecord` beside the `AgentExecution` aggregate, and the reference services have Domain, Application and Api projects only, with their HTTP adapters in the Api project. The paragraphs marked **History** record the state the guide was written against, so that the reasons for each rule stay visible.
 
-**Before the refactoring.** Sentinel's service boundaries are right and its building blocks are capable, but inside each service the composition has drifted:
+**History.** Sentinel's service boundaries are right and its building blocks are capable, but inside each service the composition has drifted:
 
 - Every host calls `AddBuildingBlocks` itself and then registers messaging, so the Application layer does not own its own handlers and validators.
 - Every Infrastructure registration method also registers Application services. Runtime's registers fourteen Application types; Api's registers its three application services beside its HTTP clients.
@@ -59,7 +59,7 @@ flowchart LR
 | Ports | Application `Abstractions/` | One interface per external need | Expose SDK types |
 | Adapters | Infrastructure | Implement ports with grains, PostgreSQL, Redis Streams, HTTP clients, Temporal | Register Application types |
 
-`IRequestDispatcher.HandleRequestAsync` (so named by the owner on 2026-10-29; `SendAsync` until building blocks `0.1.0-alpha.6`) resolves the processor from the container by the request's runtime type, `IProcessor<TRequest, TResult>` for an `IRequest<TResult>`, through a cached invoker, the same way the command and query dispatchers resolve handlers. No endpoint or consumer names a processor type.
+`IRequestDispatcher.HandleRequestAsync` (`SendAsync` until building blocks `0.1.0-alpha.6`) resolves the processor from the container by the request's runtime type, `IProcessor<TRequest, TResult>` for an `IRequest<TResult>`, through a cached invoker, the same way the command and query dispatchers resolve handlers. No endpoint or consumer names a processor type.
 
 The processor is the seam between transport and use case. It exists so that an HTTP endpoint and a message consumer for the same use case are two thin adapters over one application entry point, and so that validation happens once, where untrusted input becomes an application message. The cost is one extra type per operation and a request record that often mirrors its command. That cost is accepted uniformly, for queries too, because a path that is sometimes two hops and sometimes three is harder to read than one that is always three.
 
@@ -173,7 +173,7 @@ Message registration (`Produces<>` and `Consumes<,>`) moves from `Program.cs` in
 
 ## Service and layer naming
 
-The service **directory** under `services/` is the service's short name, `Sentinel.<Name>/`, the same name its projects carry. **Decided by the owner on 2026-10-29:** a `<Name>Service` folder suffix was considered and rejected, because it reads poorly beside the project names and the `services/` parent already says what the folder holds. The **projects and namespaces** inside keep the short name with no suffix: `Sentinel.<Name>.Api`, `.Application`, `.Domain`, `.Infrastructure`. The outer layer is named **Api**, not Host; solution explorers and file listings sort projects alphabetically, so `Api`, `Application`, `Domain`, `Infrastructure` reads top-down in dependency order, while `Host` lands third and hides the entry point. Every service has an Api project, including those whose Api is mostly health, operator and query endpoints beside a message consumer.
+The service **directory** under `services/` is the service's short name, `Sentinel.<Name>/`, the same name its projects carry. A `<Name>Service` folder suffix was considered and rejected, because it reads poorly beside the project names and the `services/` parent already says what the folder holds. The **projects and namespaces** inside keep the short name with no suffix: `Sentinel.<Name>.Api`, `.Application`, `.Domain`, `.Infrastructure`. The outer layer is named **Api**, not Host; solution explorers and file listings sort projects alphabetically, so `Api`, `Application`, `Domain`, `Infrastructure` reads top-down in dependency order, while `Host` lands third and hides the entry point. Every service has an Api project, including those whose Api is mostly health, operator and query endpoints beside a message consumer.
 
 | Today | Target directory | Target projects | Resource and producer name | Configuration root |
 | --- | --- | --- | --- | --- |
@@ -266,19 +266,19 @@ services/Sentinel.<Service>/src/
 
 ### Application layout
 
-**Decided by the owner on 2026-10-29.** An Application project separates what a caller asks from the work that carries it out, each split by capability: `BusinessProcesses/<Capability>/` holds the requests, their processors and what they return; `BusinessTasks/Commands/<Capability>/` and `BusinessTasks/Queries/<Capability>/` hold the commands and queries a processor dispatches, with their handlers; `Validators/<Capability>/` holds the request validators. `Abstractions/`, `Options/` and `Services/` stay at the root. A capability is a business area such as `Approvals`, `Remediation` or `Execution`, the same name in every root folder, so every process, command, query and validator of a service can be listed at a glance and one operation is the files with its name across them. This replaces the feature folder per operation that the first draft of this guide used.
+An Application project separates what a caller asks from the work that carries it out, each split by capability: `BusinessProcesses/<Capability>/` holds the requests, their processors and what they return; `BusinessTasks/Commands/<Capability>/` and `BusinessTasks/Queries/<Capability>/` hold the commands and queries a processor dispatches, with their handlers; `Validators/<Capability>/` holds the request validators. `Abstractions/`, `Options/` and `Services/` stay at the root. A capability is a business area such as `Approvals`, `Remediation` or `Execution`, the same name in every root folder, so every process, command, query and validator of a service can be listed at a glance and one operation is the files with its name across them.
 
 The layout keeps rule 6 checkable by namespace: a request and its processor share `BusinessProcesses.<Capability>`, a command and its handler share `BusinessTasks.Commands.<Capability>`, a query and its handler share `BusinessTasks.Queries.<Capability>`. An error that no aggregate owns sits beside the handlers that return it; aggregate errors stay in Domain (rule 12).
 
 ### Project roots
 
-**Decided by the owner on 2026-10-29.** A project's root holds only its composition files: `Program.cs`, `DependencyContainer.cs` and `ApiDependencyModule.cs` in an Api project, and the layer's dependency module in Application and Infrastructure, beside `AssemblyReference.cs`, the marker the architecture tests load the assembly by. Everything else sits in a folder named for its concern: `Controllers/`, `Contracts/`, `Filters/`, `Identity/`, `Idempotency/`, `Live/` in an Api project; `Abstractions/`, `BusinessProcesses/`, `BusinessTasks/`, `Validators/`, `Options/`, `Services/` in Application; `DependencyInjection/`, `Messaging/`, `Persistence/`, `Security/` and the like in Infrastructure. A file still at a root is one of the grab-bag files the inventory below schedules for a later step.
+A project's root holds only its composition files: `Program.cs`, `DependencyContainer.cs` and `ApiDependencyModule.cs` in an Api project, and the layer's dependency module in Application and Infrastructure, beside `AssemblyReference.cs`, the marker the architecture tests load the assembly by. Everything else sits in a folder named for its concern: `Controllers/`, `Contracts/`, `Filters/`, `Identity/`, `Idempotency/`, `Live/` in an Api project; `Abstractions/`, `BusinessProcesses/`, `BusinessTasks/`, `Validators/`, `Options/`, `Services/` in Application; `DependencyInjection/`, `Messaging/`, `Persistence/`, `Security/` and the like in Infrastructure. A file still at a root is one of the grab-bag files the inventory below schedules for a later step.
 
 Tests mirror the structure: the approval handlers' tests sit in `BusinessTasks/Commands/Approvals/` and the aggregate's in `Domain/`.
 
 ## One type per file
 
-A file contains one top-level type and is named after it. This is the rule the user review asked for, and it is what makes the five questions above answerable from a file listing.
+A file contains one top-level type and is named after it. It is what makes the five questions above answerable from a file listing.
 
 - Nested private types, and a private record used only by the file's type, may stay in the file.
 - A closed polymorphic hierarchy keeps its base type in one file and each derived type in its own file in a folder named for the base: `Incidents/Commands/IncidentCommand.cs`, `Incidents/Commands/OpenIncidentCommand.cs`. The `JsonDerivedType` attributes remain on the base.
@@ -289,9 +289,9 @@ Enforce it with analyzers rather than review. Add `StyleCop.Analyzers` to `Direc
 
 ## Domain modelling
 
-The model to follow is a sealed aggregate with private setters, a factory, behaviour methods that return `Result`, an explicit transition table, an error catalogue per aggregate, one enum per file and one domain event per file. Its application handlers load the aggregate, call one method, persist and publish; its infrastructure maps the aggregate to tables and knows nothing about the rules. Sentinel already does this well in two places and badly in several others.
+The model to follow is a sealed aggregate with private setters, a factory, behaviour methods that return `Result`, an explicit transition table, an error catalogue per aggregate, one enum per file and one domain event per file. Its application handlers load the aggregate, call one method, persist and publish; its infrastructure maps the aggregate to tables and knows nothing about the rules.
 
-**Before the refactoring.** `Incident` and `ExecutionRequest` are real aggregates: private state, `Result`-returning operations, error catalogues, a transition table in Executor. The problems are around them. Twelve enums are clubbed into files with the records that use them (`IncidentModel.cs` alone has seven enums and eleven records). `Incident` is 770 lines and carries four lifecycles, investigation, decision, remediation and recovery, with no explicit transition table for any of them. Api's domain is one record and one enum, while the approval rules it should own, hash equality, single decision per plan version, expiry, live in `ApprovalService` in Application. `AgentExecution` and `SourceState` are records with no behaviour. Recovery success is decided by comparing measurements to thresholds in `RecoveryVerificationService` in Application, which is a domain rule.
+**History.** `Incident` and `ExecutionRequest` are real aggregates: private state, `Result`-returning operations, error catalogues, a transition table in Executor. The problems are around them. Twelve enums are clubbed into files with the records that use them (`IncidentModel.cs` alone has seven enums and eleven records). `Incident` is 770 lines and carries four lifecycles, investigation, decision, remediation and recovery, with no explicit transition table for any of them. Api's domain is one record and one enum, while the approval rules it should own, hash equality, single decision per plan version, expiry, live in `ApprovalService` in Application. `AgentExecution` and `SourceState` are records with no behaviour. Recovery success is decided by comparing measurements to thresholds in `RecoveryVerificationService` in Application, which is a domain rule.
 
 ### Rules
 
@@ -335,7 +335,7 @@ An interface earns its existence by crossing a layer or by being a substitution 
 
 ## Message consumers
 
-**Before the refactoring.** Consumers implement `IIntegrationMessageHandler<T>` in Infrastructure files beside HTTP clients and call application services directly. Every consumer now follows the target below.
+**History.** Consumers implement `IIntegrationMessageHandler<T>` in Infrastructure files beside HTTP clients and call application services directly. Every consumer now follows the target below.
 
 Target: one consumer class per contract under `Infrastructure/Messaging/Consumers/`, each a five-line adapter that maps the contract to a `<Operation>Request` and sends it through `IRequestDispatcher`. The same processor and handler then serve HTTP and messages. Consumers stay in Infrastructure because the building-block consumer contract lives there and because the inbox and unit of work are infrastructure concerns.
 
@@ -366,7 +366,7 @@ Protocol, configuration, route-root, service and telemetry identifiers live as c
 
 The first slice, chosen because it crosses the public edge, Runtime's authority and Executor's privileged boundary.
 
-**Before the refactoring.** `POST /api/v1/incidents/{id}/plans/{planId}/approve` was an inline lambda in Api's `Program.cs` that builds an `ApprovePlan` record and calls `ApprovalService.ApproveAsync`, a 311-line file that also declares the three ports it uses, the options class, the receipt and the error catalogue. The approval reaches Runtime as `RecordApproval`, consumed by `RecordApprovalHandler` in `RuntimeAdapters.cs`, which calls `RemediationControlService`.
+**History.** `POST /api/v1/incidents/{id}/plans/{planId}/approve` was an inline lambda in Api's `Program.cs` that builds an `ApprovePlan` record and calls `ApprovalService.ApproveAsync`, a 311-line file that also declares the three ports it uses, the options class, the receipt and the error catalogue. The approval reaches Runtime as `RecordApproval`, consumed by `RecordApprovalHandler` in `RuntimeAdapters.cs`, which calls `RemediationControlService`.
 
 Target, Api:
 
@@ -427,7 +427,7 @@ The characterization tests that must stay green: approval negative tests (missin
 
 The reference system under `reference-system/` is not a Sentinel service, and [ADR-011](../decisions/ADR-011-reference-system-location.md#internal-composition-amendment-2026-10-29) applies this guide to it in two levels. The deploy controller and the scenario runner follow it in full, including the layer modules, the processor seam and a reference to the building blocks, because they have real use cases and the deploy controller sits on the golden path. Checkout, orders and the reporting worker follow only the one-type-per-file, folder-per-concern and thin-`Program.cs` rules, so their injected faults stay easy to find. Nothing in the reference system references a `Sentinel.*` package. The reference-system rows in the inventory below reflect that split.
 
-## Current clutter inventory and target placement
+## History: clutter inventory and target placement
 
 The files below are the ones to split first. Counts are top-level types per file on 2026-10-29.
 
@@ -468,7 +468,7 @@ The files below are the ones to split first. Counts are top-level types per file
 
 Ingestion is the least cluttered service and the best place to confirm the shape cheaply after the approval slice. The reference deploy controller is the right place to prove the guide outside Sentinel's own services, because the end-to-end suite exercises it on every golden-path run.
 
-## Refactoring sequence
+## History: refactoring sequence
 
 Refactor by vertical behaviour and keep the end-to-end path green after each step.
 

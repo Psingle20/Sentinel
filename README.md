@@ -14,7 +14,7 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 ## Status
 
-Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet; both are deliberate for now.
+Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet: the deployment definition is Phase 09's open exit criterion and the pipeline is Phase 00's.
 
 Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. All six reference scenarios pass end to end with the deterministic test double, and Sentinel diagnoses `S1`, `S2` and `S3` correctly, two of which the deploy-blame baseline gets wrong. With Meta's models investigating, each role on its suggested profile, all three are diagnosed correctly as well: `S1` is rolled back after approval and recovers, `S2` escalates without a rollback, and `S3`'s rollback of the right service awaits approval. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
 
@@ -336,7 +336,8 @@ stateDiagram-v2
     Remediating --> Verifying: action verified, recovery window scheduled
     Remediating --> Escalated: action failed
     Verifying --> Resolved: recovery signals met
-    Verifying --> Escalated: not recovered, worse or inconclusive
+    Verifying --> Detected: unchanged or degraded after the action took effect, one follow-up cycle
+    Verifying --> Escalated: worse, inconclusive or a second remedy not recovered
     AwaitingApproval --> Resolved: symptom cleared
     Escalated --> Resolved: symptom cleared
     Resolved --> Detected: symptom returned, new cycle
@@ -417,7 +418,7 @@ All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still o
 - `artifacts/`: generated diagrams and reports, with their sources.
 - `scripts/`: repeatable build, test and lint automation.
 - `.agents/`, `.codex/`, `.claude/`: project steering, commit guidelines and agent adapters.
-- `personal-docs/`: the owner's personal-use documents in topic folders, excluded from version control.
+- `personal-docs/`: personal-use documents in topic folders, excluded from version control.
 - `Sentinel.slnx`, `global.json`, `Directory.Build.props` and `Directory.Packages.props` pin the SDK, analyzers and package versions for every project.
 
 ## Getting started

@@ -204,7 +204,7 @@ What is missing:
 | Responsive and platform coverage | One 1280 px viewport in Playwright; a handful of `lg:` breakpoints; Windows-only screenshot baselines | Narrow screens are untested; the CI acceptance criterion stays open |
 | Small inconsistencies | `cn` from an npm package while the shadcn config aliases a local utility; a hard-coded locale; the graph's pixel constants not declared as the visualization exception | Minor drift from the rules |
 
-Phase E02 closed these gaps on 2026-10-30, apart from the second platform's screenshot baselines, which the owner deferred until CI exists: feature code composes `Field` and `ActionResult` and writes no label, input, select or result message by hand; the token model above exists and the lint rule covers it, with fixture tests; the motion tokens drive every animation; one status vocabulary; theme selection in the app, with an incident journey in light; the tablet width in Playwright; interaction stories for the decision dialogs and the editors; `cn` from the local utility; and one display locale.
+Phase E02 closed these gaps on 2026-10-30, apart from the second platform's screenshot baselines, deferred until CI exists: feature code composes `Field` and `ActionResult` and writes no label, input, select or result message by hand; the token model above exists and the lint rule covers it, with fixture tests; the motion tokens drive every animation; one status vocabulary; theme selection in the app, with an incident journey in light; the tablet width in Playwright; interaction stories for the decision dialogs and the editors; `cn` from the local utility; and one display locale.
 
 ## Acceptance criteria
 

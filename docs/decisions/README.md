@@ -25,7 +25,7 @@ Each decision should record status, context, constraints, considered options, de
 - [ADR-017: Runtime actor and workflow hosting](ADR-017-runtime-actor-and-workflow-hosting.md) — Accepted
 - [ADR-018: Observation publication scope](ADR-018-observation-publication-scope.md) — Accepted
 - [ADR-019: Incident memory, replay and retention](ADR-019-incident-memory-replay-and-retention.md) — Accepted
-- [ADR-020: Application composition and CQRS conventions](ADR-020-application-composition-and-cqrs.md) — Proposed
+- [ADR-020: Application composition and CQRS conventions](ADR-020-application-composition-and-cqrs.md) — Accepted
 - [ADR-021: AWS emulator for the reference environment](ADR-021-aws-emulator.md) — Accepted (Floci 2.3.0, pinned by digest)
 - [ADR-022: Service-to-service authentication](ADR-022-service-to-service-authentication.md) — Proposed
 - [ADR-023: Approver identity](ADR-023-approver-identity.md) — Proposed

@@ -1,6 +1,6 @@
 # Sentinel.Web
 
-The responder and administrator frontend. It talks only to `Sentinel.Api` and follows the governed [frontend design system](../../docs/architecture/frontend-design-system.md) ([ADR-002](../../docs/decisions/ADR-002-frontend-design-system.md)).
+The responder and administrator frontend. It talks only to `Sentinel.Gateway` and follows the governed [frontend design system](../../docs/architecture/frontend-design-system.md) ([ADR-002](../../docs/decisions/ADR-002-frontend-design-system.md)).
 
 ## Stack
 
