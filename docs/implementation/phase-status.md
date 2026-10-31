@@ -33,10 +33,10 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [E01 – AWS reference environment](#phase-e01--aws-reference-environment) | In progress | Stage 0: Floci pinned (ADR-021). Stage 0b: the queue scenarios `S6`, `S7` and `S8`, each diagnosed end to end where the baseline rolls back an innocent deployment. Stage 1: the AWS environment in Aspire, with the consumer on ECS and SQS, and `AWS-S0`. Stage 2: `AWS-S1` end to end through Ingestion's ECS, topology and SQS adapters and Executor's SQS quarantine, gate check 8 within its budget, and the queue scenarios in the evaluation report. Stage 3 in part: provider conformance for the AWS adapters, fidelity labels in run records and the report, the quarantine journey in the web app. Stage 4: `AWS-S7`, event route drift, end to end, and the admission checks that keep `AWS-S4` out | Stage 3: a web journey against the real system for the AWS scenarios and replay of a captured AWS run. Stage 4: `AWS-S4` waits for a local AWS tool that enforces IAM, `AWS-S12` for Phase 10's multi-tenant operation. Stage 5 is deferred until a production claim requires it |
 | [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Complete | Form and feedback primitives with the feature code on them, the full token model under the lint rule, motion tokens, one status vocabulary, theme selection, the tablet width, interaction stories | None; Linux screenshot baselines are deferred until CI exists |
 | [E03 – Demonstration depth](#phase-e03--demonstration-depth) | In progress | `S9`, manipulation resistance, end to end; `S10`, self-correction: a remedy that took effect without recovery opens one follow-up cycle, which rolls back the cause that remains, end to end; the incident page shows a repeat as seen before, the baseline's counterfactual, the remedies tried and the investigation as it happens | `S9` and `S10` in the evaluation report. The audience fault page and guarded autonomy were set aside |
-| [E04 – Judge mode](#phase-e04--judge-mode) | Not started | Nothing; the design is scoped to a view over existing records | Slice 1: the captured `S9` story in Sentinel.Web |
-| [E05 – Escalation investigator](#phase-e05--escalation-investigator) | Not started | Nothing; the design and ADR-024 are written | Slice 1: the consensus abstention reasons and the `escalation` contract |
-| [E06 – Incident artifacts](#phase-e06--incident-artifacts) | Not started | Nothing; the design and ADR-024 are written | Slice 1: attachment, redaction and storage |
-| [E07 – Visual synthetic monitor](#phase-e07--visual-synthetic-monitor) | Not started | Nothing; the design and ADR-024 are written | Slice 1: the recorded journey and its fixtures |
+| [E04 – Judge mode](#phase-e04--judge-mode) | Not started | Nothing; the design is scoped to a view over existing records | Slice 1: the captured `S9` story in Sentinel.Web; second in the [order of work](README.md#order-of-work) |
+| [E05 – Escalation investigator](#phase-e05--escalation-investigator) | Not started | Nothing; the design and ADR-024 are written | Slice 1: the consensus abstention reasons and the `escalation` contract; next in the [order of work](README.md#order-of-work) |
+| [E06 – Incident artifacts](#phase-e06--incident-artifacts) | Not started | Nothing; the design and ADR-024 are written | Not scheduled: waits for a user who starts incidents from screenshots and for the multimodal-input assumption to be confirmed |
+| [E07 – Visual synthetic monitor](#phase-e07--visual-synthetic-monitor) | Not started | Nothing; the design and ADR-024 are written | Not scheduled: waits for a hosted environment and the segmentation assumption, after E05 and E04 slice 1 |
 
 ## Recorded runs
 
@@ -377,7 +377,7 @@ Open:
 
 ## Phase E04 – Judge mode
 
-Status: **Not started**. The fourth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e04-judge-mode.md)). Its design source is the [Judge mode design](../architecture/judge-mode.md), Proposed on 2026-10-31 and scoped the same day to a Sentinel.Web view over the incident detail, the agent executions and the run record the Gateway already serves; no service, contract, projection or storage changes.
+Status: **Not started**; second in the [order of work](README.md#order-of-work), after E05. The fourth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e04-judge-mode.md)). Its design source is the [Judge mode design](../architecture/judge-mode.md), Proposed on 2026-10-31 and scoped the same day to a Sentinel.Web view over the incident detail, the agent executions and the run record the Gateway already serves; no service, contract, projection or storage changes.
 
 Open:
 
@@ -387,7 +387,7 @@ Open:
 
 ## Phase E05 – Escalation investigator
 
-Status: **Not started**. The fifth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e05-escalation-investigator.md)). Its design source is role 1 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md), accepted on 2026-10-31.
+Status: **Not started**; next in the [order of work](README.md#order-of-work). The fifth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e05-escalation-investigator.md)). Its design source is role 1 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md), accepted on 2026-10-31.
 
 Open:
 
@@ -397,7 +397,7 @@ Open:
 
 ## Phase E06 – Incident artifacts
 
-Status: **Not started**. The sixth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e06-incident-artifacts.md)). Its design source is role 2 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
+Status: **Not started** and not scheduled; it waits for a user who starts incidents from screenshots and for the multimodal-input assumption in the design to be confirmed ([order of work](README.md#order-of-work)). The sixth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e06-incident-artifacts.md)). Its design source is role 2 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
 
 Open:
 
@@ -407,7 +407,7 @@ Open:
 
 ## Phase E07 – Visual synthetic monitor
 
-Status: **Not started**. The seventh enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e07-visual-synthetic-monitor.md)). Its design source is role 3 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
+Status: **Not started** and not scheduled; it waits for a hosted environment and the segmentation assumption in the design, after E05 and E04 slice 1 ([order of work](README.md#order-of-work)). The seventh enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e07-visual-synthetic-monitor.md)). Its design source is role 3 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md).
 
 Open:
 
