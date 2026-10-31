@@ -54,7 +54,7 @@ AgentWorker runs the proposed tool call through the existing tools, which are re
 
 ### Why Muse Wonder
 
-Meta positions Muse Wonder for long-horizon reasoning and Muse Spark for fast tool loops. The escalation role is small in volume and large in reasoning: one call per ambiguous cycle, on a compact structured summary, asked to find the smallest experiment. That is where the `meta-wonder` profile's cost is justified, under its existing daily cap. The deterministic test double gets an escalation behaviour too, so the suite covers the path without a live model.
+The `meta-wonder` profile is configured for high reasoning effort with a large reasoning allowance and costs several times the `meta` profile per token, which is why it has its own daily cap. The escalation role is small in volume and large in reasoning: one call per ambiguous cycle, on a compact structured summary, asked to find the smallest experiment. That is the shape of work the profile is configured for, and the only place its cost is justified. The deterministic test double gets an escalation behaviour too, so the suite covers the path without a live model.
 
 ### What it must not do
 
@@ -156,6 +156,12 @@ Each role is a new investigator group in the evaluation harness, scored against 
 
 - **Escalation yield**: the share of escalations whose discriminating query changed the decision from abstention to a correct diagnosis, and the share that produced a wrong one; the role is kept only if the first is high and the second is zero on the scenarios.
 - **Corroboration rate**: the share of artifact claims Ingestion confirmed, refuted or could not check; an uncorroborated claim that reached evidence is a defect, not a score.
+
+## Assumptions to confirm before building
+
+- The configured Muse Spark model accepts image and document input through the same completion interface; confirmed against the provider's current documentation before slice 2 of Phase E06, otherwise the artifact investigator starts from extracted text only.
+- A segmentation and tracking model is reachable behind an Ingestion provider interface with usable latency and cost for a recorded journey; confirmed before slice 2 of Phase E07, otherwise the probe measures state from deterministic page markers and defers segmentation.
+- Consensus can tell ambiguity from absence of evidence with the information it already has; confirmed by Phase E05's first slice before the role is built.
 
 ## Open questions
 
