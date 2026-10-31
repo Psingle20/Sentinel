@@ -9,6 +9,8 @@
 - Consensus accuracy is judged only when some investigator proposed the true
   cause, so it measures the decision rather than the investigation.
 - Cost and latency are measured beside accuracy.
+- An escalation (Phase E05) is judged by its yield: how often the cycle it ran
+  in ended in a correct diagnosis, and whether it led to a wrong one.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from .records import Run, parse_time
 
 SENTINEL = "sentinel"
 BASELINE = "deploy-blame"
+ESCALATION = "escalation"
 
 
 @dataclass
@@ -60,6 +63,12 @@ class Score:
     confidence: float | None = None
     # Per provider: accepted evidence citing it, and how much of that matched the ground truth.
     provider_evidence: dict[str, tuple[int, int]] = field(default_factory=dict)
+    # The escalation investigator (Phase E05): whether it ran, with which model, whether its query separated the
+    # explanations, and what it cost.
+    escalated: bool = False
+    escalation_model: str | None = None
+    escalation_separated: bool | None = None
+    escalation_cost: float = 0.0
     notes: list[str] = field(default_factory=list)
 
 
@@ -135,8 +144,16 @@ def sentinel_label(run: Run) -> str:
     if not models:
         investigations = (run.incident or {}).get("investigations") or []
         models = [investigation.get("model") for investigation in investigations if investigation.get("model")]
-    names = sorted({f"{model.get('provider')}/{model.get('model')}@{str(model.get('promptVersion', '')).split('/')[0]}" for model in models if model.get("provider") != "sentinel"})
-    return f"sentinel {', '.join(names)}" if names else "sentinel (no investigation ran)"
+    # The escalation role is scored in its own group (escalation_label), so a run it joined stays with its peers.
+    names = sorted({f"{model.get('provider')}/{model.get('model')}@{str(model.get('promptVersion', '')).split('/')[0]}" for model in models
+                    if model.get("provider") != "sentinel" and not str(model.get("promptVersion", "")).startswith(f"{ESCALATION}-")})
+    label = f"sentinel {', '.join(names)}" if names else "sentinel (no investigation ran)"
+    return f"{label} [{run.variant}]" if run.variant else label
+
+
+def escalation_label(score: Score) -> str:
+    """The escalation group a run belongs to, named by the model that proposed the query."""
+    return f"{ESCALATION} {score.escalation_model}"
 
 
 def labeller(runs: list[Run]):
@@ -167,6 +184,11 @@ def score_sentinel(run: Run, package: Package, pricing: dict, label=sentinel_lab
     score.cost = round(sum(_price(execution, pricing) for execution in primary), 6)
     if run.legacy:
         score.notes.append("schema-1 record: no agent executions, tokens or versions")
+    escalations = [execution for execution in primary if execution.get("investigator") == ESCALATION]
+    if escalations:
+        score.escalated = True
+        score.escalation_model = f"{escalations[0].get('modelProvider')}/{escalations[0].get('model')}@{escalations[0].get('promptVersion')}"
+        score.escalation_cost = round(sum(_price(execution, pricing) for execution in escalations), 6)
 
     if incident is None:
         score.acceptable = not package.expect_incident
@@ -202,6 +224,12 @@ def score_sentinel(run: Run, package: Package, pricing: dict, label=sentinel_lab
             score.evidence_precision = round(precise / len(accepted), 3)
         else:
             score.evidence_precision = 0.0
+    if score.escalated:
+        # Separated: the query's result supported one explanation, which the harness then contradicted the other with.
+        score.escalation_separated = any(
+            str(item["finding"].get("independenceGroup") or "").startswith(f"{ESCALATION}:") and item["finding"].get("direction") == "supports"
+            for item in accepted
+        )
     if package.evidence:
         covered = sum(1 for spec in package.evidence if any(matches(spec, observation) for observations in cited for observation in observations))
         score.evidence_recall = round(covered / len(package.evidence), 3)
@@ -247,6 +275,8 @@ def score_sentinel(run: Run, package: Package, pricing: dict, label=sentinel_lab
             score.consensus_correct = bool(score.root_cause_correct)
     if score.hallucinated_evidence:
         score.notes.append(f"{score.hallucinated_evidence} accepted evidence item(s) cite observations no tool returned")
+    if score.escalated:
+        score.notes.append("escalated: the query " + ("separated the explanations" if score.escalation_separated else "separated nothing"))
 
     action = _action(incident.get("plan"))
     if action:

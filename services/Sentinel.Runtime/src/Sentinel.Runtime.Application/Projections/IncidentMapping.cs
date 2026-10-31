@@ -81,8 +81,13 @@ public static class IncidentMapping
             },
             challenge.EvidenceIds,
             challenge.Detail))],
-        Unknowns = completed.Unknowns ?? []
+        Unknowns = completed.Unknowns ?? [],
+        Query = completed.Query is { } query ? Describe(query) : null
     };
+
+    /// <summary>The escalation's query as a sentence: what it read and what each explanation predicted (Phase E05).</summary>
+    private static string Describe(DiscriminatingQuery query) =>
+        $"{query.Tool} of {(query.Expectations.Count > 0 ? query.Expectations[0].Metric : "a metric")}. {string.Join(" ", query.Expectations.Select(expectation => expectation.Statement))}";
 
     public static ChallengeView ToView(this Challenge challenge, InvestigationId investigationId)
     {
@@ -189,7 +194,15 @@ public static class IncidentMapping
         MissingEvidence = decision.MissingEvidence,
         AlgorithmVersion = decision.AlgorithmVersion,
         InputsHash = decision.InputsHash,
-        SupersededBy = decision.SupersededBy
+        SupersededBy = decision.SupersededBy,
+        AbstainedFor = decision.AbstainedFor switch
+        {
+            AbstentionReason.Ambiguous => "ambiguous",
+            AbstentionReason.InsufficientEvidence => "insufficient-evidence",
+            AbstentionReason.Falsified => "falsified",
+            _ => null
+        },
+        Contenders = decision.Contenders
     };
 
     public static PolicyDecision ToContract(this PolicyVerdict verdict) => verdict switch

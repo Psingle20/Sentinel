@@ -101,8 +101,11 @@ public sealed class IncidentSteps(
         return [.. specs.Select(spec => spec.InvestigationId)];
     }
 
-    /// <summary>Assigns the adversarial verifier to every hypothesis of the cycle (Phase 05). Null when there is nothing to challenge.</summary>
-    public async Task<InvestigationId?> RequestChallengeAsync(IncidentId incidentId, CancellationToken cancellationToken)
+    /// <summary>
+    /// Assigns the adversarial verifier to every hypothesis of the cycle (Phase 05). Null when there is nothing to challenge.
+    /// <paramref name="afterEscalation"/> is the second challenge, over the evidence the escalation investigation added (Phase E05).
+    /// </summary>
+    public async Task<InvestigationId?> RequestChallengeAsync(IncidentId incidentId, CancellationToken cancellationToken, bool afterEscalation = false)
     {
         IncidentSnapshot incident = await RequireAsync(incidentId, cancellationToken);
         if (incident.HypothesisIds.Count == 0 || incident.Decision is not null || incident.State != IncidentState.Investigating)
@@ -111,7 +114,7 @@ public sealed class IncidentSteps(
         }
 
         RuntimeOptions settings = options.Value;
-        InvestigationId challengeId = StepInvestigationId(incidentId, incident.Cycle, "challenge");
+        InvestigationId challengeId = StepInvestigationId(incidentId, incident.Cycle, afterEscalation ? "challenge:escalation" : "challenge");
         await SendAsync(incidentId, new RequestInvestigationsCommand(
         [
             new InvestigationSpec(
@@ -153,9 +156,18 @@ public sealed class IncidentSteps(
         }
 
         RuntimeOptions settings = options.Value;
+        EscalationOptions escalation = settings.Investigation.Escalation;
+        EscalationSpec? spec = escalation.Enabled && settings.Consensus.Enabled
+            ? new EscalationSpec(
+                StepInvestigationId(incidentId, incident.Cycle, "escalate"),
+                $"Two explanations of {incident.Title} stand too close for Sentinel to decide between them. Propose the one observation, as a single call to a catalogue tool, that would separate them, and what each predicts it will show.",
+                incident.SymptomOnset - settings.InvestigationWindow,
+                time.GetUtcNow(),
+                escalation.MinimumCompleteness)
+            : null;
         CommandReply decided = await SendAsync(
             incidentId,
-            new DecideCommand(DecisionId.From(StepInvestigationId(incidentId, incident.Cycle, "decide").Value), settings.Consensus.Enabled, settings.ConsensusSettings()),
+            new DecideCommand(DecisionId.From(StepInvestigationId(incidentId, incident.Cycle, "decide").Value), settings.Consensus.Enabled, settings.ConsensusSettings(), spec),
             cancellationToken);
         IncidentSnapshot result = decided.Snapshot;
         logger.LogInformation(

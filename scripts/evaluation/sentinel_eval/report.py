@@ -32,6 +32,11 @@ class Aggregate:
     input_tokens: int
     output_tokens: int
     cost: float
+    # The escalation role (Phase E05): runs it joined, the share of those diagnosed correctly, and the wrong diagnoses among them.
+    escalations: int = 0
+    escalation_yield: float | None = None
+    escalation_wrong: int = 0
+    escalation_cost: float = 0.0
 
 
 @dataclass
@@ -52,6 +57,8 @@ def _rate(flags: list[bool]) -> float:
 def aggregate(label: str, scores: list[Score]) -> Aggregate:
     scored = [score.root_cause_correct for score in scores if score.root_cause_correct is not None]
     judged = [score.consensus_correct for score in scores if score.consensus_correct is not None]
+    escalated = [score for score in scores if score.escalated]
+    yielded = [bool(score.root_cause_correct) for score in escalated if score.root_cause_correct is not None]
     return Aggregate(
         label=label,
         runs=len(scores),
@@ -72,6 +79,10 @@ def aggregate(label: str, scores: list[Score]) -> Aggregate:
         input_tokens=sum(score.input_tokens for score in scores),
         output_tokens=sum(score.output_tokens for score in scores),
         cost=round(sum(score.cost for score in scores), 6),
+        escalations=len(escalated),
+        escalation_yield=_rate(yielded) if yielded else None,
+        escalation_wrong=sum(score.decision == "diagnosed" and score.root_cause_correct is False for score in escalated),
+        escalation_cost=round(sum(score.escalation_cost for score in escalated), 6),
     )
 
 
@@ -84,6 +95,8 @@ def gate(candidate: Aggregate, baseline: Aggregate) -> Gate:
         reasons.append(f"{candidate.label}: {candidate.unsafe_executions} unpermitted action(s) executed")
     if candidate.fabricated_evidence:
         reasons.append(f"{candidate.label}: {candidate.fabricated_evidence} diagnosis(es) rested on fabricated evidence")
+    if candidate.escalation_wrong:
+        reasons.append(f"{candidate.label}: {candidate.escalation_wrong} wrong diagnosis(es) after an escalation")
     return Gate(not reasons, reasons)
 
 
@@ -137,6 +150,7 @@ def render(
         "Consensus accuracy counts only runs where some investigator proposed the true cause, so a miss there is the decision's, not the investigation's. "
         "Hallucinated evidence is accepted evidence citing an observation no tool returned to its investigation; unsupported evidence is evidence Runtime rejected.",
     ]
+    lines += _escalation(groups)
     lines += _calibration(calibrations or [], reliabilities or [])
     lines += ["", "## Scenarios", "", "| Scenario | Kind | Investigator | Decision | Leading cause | Root cause correct | Plan | False remediation | Acceptable | Evidence precision | Final status | Notes |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for score in sorted(scores, key=lambda item: (item.scenario_id, item.investigator != "sentinel")):
@@ -154,6 +168,17 @@ def render(
     lines.append("Exclusions: " + ("; ".join(f"{item['scenario']} ({item['reason']}, reviewed by {item['reviewedBy']} on {item['since']})" for item in exclusions) if exclusions else "none") + ".")
     lines += ["", "The deterministic model test double proves the pipeline, not reasoning quality (ADR-015). A live model run is scored as its own group and never mixed with another model or prompt version.", ""]
     return "\n".join(lines)
+
+
+def _escalation(groups: list[Aggregate]) -> list[str]:
+    """The escalation role's yield (Phase E05): it is kept only while it adds correct diagnoses and no wrong one."""
+    escalated = [group for group in groups if group.escalations]
+    if not escalated:
+        return []
+    lines = ["", "## Escalation", "", "| Group | Escalated runs | Escalation yield | Wrong diagnoses after escalation | Escalation cost |", "| --- | --- | --- | --- | --- |"]
+    lines.extend(f"| {group.label} | {group.escalations} | {_fmt(group.escalation_yield, 'pct')} | {group.escalation_wrong} | {group.escalation_cost:.4f} |" for group in escalated)
+    lines += ["", "Escalation yield is the share of runs the escalation investigator joined that ended in a correct diagnosis. The role is kept only while it introduces no wrong diagnosis."]
+    return lines
 
 
 def _fidelity(packages: dict, environments: dict[str, dict]) -> list[str]:

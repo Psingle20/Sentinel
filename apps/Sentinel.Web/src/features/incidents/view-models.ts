@@ -3,7 +3,7 @@ import type { AgentRun } from "@/design-system/patterns/agent-activity";
 import type { GraphEdge, GraphNode } from "@/design-system/patterns/evidence-graph";
 import type { ReviewedPlan } from "@/design-system/patterns/remediation-review";
 import type { SourcedFact } from "@/design-system/patterns/fact-list";
-import type { AgentExecution, HypothesisFinding, HypothesisView, IncidentDetail, PlanView, PostmortemFact, SimilarIncident } from "@/lib/api/contracts";
+import type { AgentExecution, HypothesisFinding, HypothesisView, IncidentDetail, InvestigationView, PlanView, PostmortemFact, SimilarIncident } from "@/lib/api/contracts";
 
 import { approvalStatus, describeAction, describeCriterion, formatTime, policyVerdict } from "./presentation";
 
@@ -19,6 +19,20 @@ function hypothesisFor(incident: IncidentDetail, id: string | undefined): Hypoth
 
 export function leadingHypothesis(incident: IncidentDetail): HypothesisView | undefined {
   return hypothesisFor(incident, incident.decision?.leadingHypothesisId);
+}
+
+// Phase E05: the latest escalation investigation, when consensus asked one more question before deciding.
+export function escalationOf(incident: IncidentDetail): InvestigationView | undefined {
+  return (incident.investigations ?? [])
+    .filter((investigation) => investigation.role === "escalation")
+    .sort((left, right) => right.requestedAt.localeCompare(left.requestedAt))[0];
+}
+
+// Phase E05: the statements of the two explanations an ambiguous abstention could not choose between, the leader first.
+export function contenders(incident: IncidentDetail): string[] {
+  return (incident.decision?.contenders ?? [])
+    .map((id) => hypothesisFor(incident, id)?.finding.statement)
+    .filter((statement): statement is string => Boolean(statement));
 }
 
 export function graphOf(incident: IncidentDetail): { nodes: GraphNode[]; edges: GraphEdge[]; leadingIds: string[] } {

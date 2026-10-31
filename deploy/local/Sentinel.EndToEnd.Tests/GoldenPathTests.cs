@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Reference.Scenarios.Api.Contracts;
@@ -394,6 +395,144 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
     }
 
     /// <summary>
+    /// S11, the escalation investigator (Phase E05): checkout v2.4.1 leaks Redis connections and order-service v1.7.2 widens
+    /// its pool five seconds later. Both deployments served before onset and both services' connections rose, so consensus
+    /// cannot choose between them. Sentinel asks once for the observation that separates them, how many connections each
+    /// service holds at onset, and with it blames checkout, rolls it back after approval and sees recovery.
+    /// </summary>
+    [Fact]
+    public async Task S11_an_ambiguous_decision_is_settled_by_one_discriminating_query_and_the_leak_rolled_back()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S11");
+        try
+        {
+            IncidentDetail decided = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "S11 is decided");
+            Log(decided);
+
+            InvestigationView escalation = decided.Investigations.Single(investigation => investigation.Role == InvestigationRoles.Escalation);
+            escalation.Outcome.ShouldBe(InvestigationOutcome.Completed);
+            escalation.Query.ShouldNotBeNull().ShouldContain("redis_connections");
+            decided.Evidence.ShouldContain(
+                evidence => evidence.InvestigationId == escalation.InvestigationId && evidence.Status == EvidenceStatus.Accepted && evidence.Finding.Direction == EvidenceDirection.Supports,
+                "the query's result supported one explanation");
+            decided.Decision!.Outcome.ShouldBe(DecisionOutcome.Diagnosed, decided.Decision.Rationale);
+            decided.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
+            RollbackAction rollback = decided.Plan!.Plan.Actions.OfType<RollbackAction>().Single();
+            rollback.TargetServiceId.Value.ShouldBe("checkout-service", "the leak, not the wider pool");
+            rollback.FromRevision.ShouldBe("v2.4.1");
+
+            await ApproveAsync(decided);
+
+            IncidentDetail resolved = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == decided.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
+                RecoveryTimeout,
+                "S11's recovery is judged");
+            Log(resolved);
+            resolved.Summary.Status.ShouldBe(IncidentStatus.Resolved);
+            (await system.SentinelRollbacksAsync("order-service")).ShouldBe(0, "the innocent wider pool is left alone");
+
+            await system.RecordOutcomeAsync("S11", resolved, approved: true);
+            await EvaluationRun.WriteAsync(system, "S11", resolved, approved: true);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
+    /// <summary>
+    /// S11 with the escalation role switched off through Runtime's configuration: the same ambiguity is recorded, Sentinel
+    /// abstains naming both explanations and escalates to responders without proposing a rollback.
+    /// </summary>
+    [Fact]
+    public async Task S11_without_the_escalation_role_the_ambiguity_is_recorded_and_Sentinel_abstains()
+    {
+        await system.WaitUntilQuietAsync(output);
+        Func<Task> restore = await SwitchEscalationAsync(enabled: false);
+        ScenarioRunView run = await system.StartScenarioAsync("S11");
+        try
+        {
+            IncidentDetail escalated = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "S11 is decided without the escalation role");
+            Log(escalated);
+
+            escalated.Investigations.ShouldNotContain(investigation => investigation.Role == InvestigationRoles.Escalation);
+            escalated.Decision!.Outcome.ShouldBe(DecisionOutcome.Abstained);
+            escalated.Decision.AbstainedFor.ShouldBe("ambiguous", escalated.Decision.Rationale);
+            escalated.Decision.Contenders.Count.ShouldBe(2);
+            escalated.Summary.Status.ShouldBe(IncidentStatus.Escalated);
+            escalated.Plan.ShouldBeNull();
+
+            await system.RecordOutcomeAsync("S11", escalated, approved: false);
+            await EvaluationRun.WriteAsync(system, "S11", escalated, approved: false, variant: "without-escalation");
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+            await restore();
+        }
+    }
+
+    /// <summary>
+    /// Publishes Runtime's configuration with the escalation role on or off, as an operator would from the control plane,
+    /// and returns what publishes the previous document again.
+    /// </summary>
+    private async Task<Func<Task>> SwitchEscalationAsync(bool enabled)
+    {
+        const string Area = "/api/v1/admin/configuration/runtime";
+        const string Operator = "operator@example.test";
+        using var read = new HttpRequestMessage(HttpMethod.Get, Area);
+        read.Headers.Add("X-Sentinel-User", Operator);
+        using HttpResponseMessage reading = await system.Api.SendAsync(read);
+        reading.EnsureSuccessStatusCode();
+        JsonObject current = (await reading.Content.ReadFromJsonAsync<JsonObject>())!;
+        JsonNode original = current["document"]!.DeepClone();
+        JsonNode changed = original.DeepClone();
+        changed["investigation"]!["escalation"] = enabled;
+        string published = await PublishAsync(changed, current["version"]!["version"]!.GetValue<string>(), enabled ? "escalation-on" : "escalation-off");
+        output.WriteLine($"Published Runtime configuration {published} with the escalation role {(enabled ? "on" : "off")}.");
+        return async () =>
+        {
+            string restored = await PublishAsync(original, published, "restored");
+            output.WriteLine($"Restored Runtime configuration as {restored}.");
+        };
+
+        // Every publish names a version never used before, so the switch and the restore each get their own.
+        async Task<string> PublishAsync(JsonNode document, string expected, string purpose)
+        {
+            document = document.DeepClone();
+            string stamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", System.Globalization.CultureInfo.InvariantCulture);
+            document["version"] = $"{original["version"]!.GetValue<string>()}+e2e-{purpose}-{stamp}";
+            using var publish = new HttpRequestMessage(HttpMethod.Put, Area) { Content = JsonContent.Create(new { document, expectedVersion = expected }) };
+            publish.Headers.Add("X-Sentinel-User", Operator);
+            publish.Headers.Add("Idempotency-Key", $"runtime-configuration-{purpose}-{stamp}");
+            using HttpResponseMessage response = await system.Api.SendAsync(publish);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Publishing Runtime's configuration answered {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+            }
+
+            return (await response.Content.ReadFromJsonAsync<JsonObject>())!["version"]!.GetValue<string>();
+        }
+    }
+
+    /// <summary>
     /// Recurrence (Phase E03): the leak a second time is recognised as one seen before. The earlier resolved incident is
     /// cited on the repeat's page with what resolved it, as a hint, and the repeat is remedied the same way. An earlier
     /// test's resolved leak serves as the first occurrence when there is one; otherwise S1 runs to recovery first.
@@ -419,7 +558,14 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
             seen.ActionSummary.ShouldBe("roll checkout-service back from v2.4.1 to v2.4.0");
             repeat.Plan!.Plan.Actions.OfType<RollbackAction>().Single().TargetServiceId.Value.ShouldBe("checkout-service");
 
-            await ShouldShowSeenBeforeInBrowserAsync(repeat, earlier);
+            // The page cites the closest resolved match. After a full suite several resolved leaks are equally alike, so it
+            // may cite another than this test's earlier one; each was resolved the same way.
+            SimilarIncident cited = similar
+                .Where(match => match.IncidentId != repeat.Summary.IncidentId && match.Outcome == "resolved" && match.Similarity >= 0.6)
+                .OrderByDescending(match => match.Similarity)
+                .First();
+            cited.ActionSummary.ShouldBe("roll checkout-service back from v2.4.1 to v2.4.0");
+            await ShouldShowSeenBeforeInBrowserAsync(repeat, cited);
             await ApproveAsync(repeat);
             IncidentDetail resolved = await system.WaitForIncidentAsync(
                 detail => detail.Summary.IncidentId == repeat.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
@@ -589,7 +735,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
     }
 
     // The repeat's page leads with the earlier incident, what resolved it and a link to it.
-    private async Task ShouldShowSeenBeforeInBrowserAsync(IncidentDetail repeat, IncidentSummary earlier)
+    private async Task ShouldShowSeenBeforeInBrowserAsync(IncidentDetail repeat, SimilarIncident earlier)
     {
         using IPlaywright playwright = await Playwright.CreateAsync();
         await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });

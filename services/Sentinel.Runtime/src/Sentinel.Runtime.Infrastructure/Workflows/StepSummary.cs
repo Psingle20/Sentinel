@@ -13,7 +13,8 @@ public sealed record StepSummary(
     string? Execution,
     DateTime? RecoveryWindowTo,
     IReadOnlyList<Guid> PendingInvestigationIds,
-    IReadOnlyList<Guid> ReportedInvestigationIds)
+    IReadOnlyList<Guid> ReportedInvestigationIds,
+    Guid? EscalationId = null)
 {
     public bool IsOpen => State != "Resolved";
 }

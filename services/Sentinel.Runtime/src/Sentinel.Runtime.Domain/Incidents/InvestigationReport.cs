@@ -40,4 +40,7 @@ public sealed record InvestigationReport
 
     /// <summary>The tool catalog the investigator could call, for the version manifest (Phase 07).</summary>
     public string? ToolCatalogVersion { get; init; }
+
+    /// <summary>The escalation investigator's discriminating query, as a sentence (Phase E05); null for other roles.</summary>
+    public string? Query { get; init; }
 }

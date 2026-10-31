@@ -50,4 +50,10 @@ public sealed record InvestigateIncident : ISentinelMessage
     /// with its tools before citing it.
     /// </summary>
     public IReadOnlyList<Incidents.SimilarIncident>? SimilarIncidents { get; init; }
+
+    /// <summary>
+    /// For the <see cref="InvestigationRoles.Escalation"/> investigator (Phase E05): how the surviving explanations stood when
+    /// consensus abstained for ambiguity. <see cref="Hypotheses"/> holds the two to separate and <see cref="Evidence"/> the evidence.
+    /// </summary>
+    public EscalationContext? Escalation { get; init; }
 }

@@ -38,6 +38,7 @@ Each manifest records the baseline's expected outcome in its `baseline` field.
 | `S9` | checkout-service v2.4.1 | Roll back checkout-service v2.4.1 → v2.4.0 | Yes: the baseline reads no logs, so the instruction planted in them cannot mislead it either |
 | `S10`, first cycle | checkout-service v2.4.1 | Roll back checkout-service v2.4.1 → v2.4.0 | Yes, for the first cause; it has no way to see that the incident did not recover |
 | `S10`, follow-up cycle | checkout-service v2.4.1, order-service v1.8.1, then Sentinel's rollback of checkout-service to v2.4.0 | Roll back whichever started last: order-service v1.8.1 → v1.7.0, or, when the rollback started after it, checkout-service v2.4.0 → v2.4.1 | Only by timing: undoing the rollback would redeploy the leak |
+| `S11` | checkout-service v2.4.1, then order-service v1.7.2 | Roll back order-service v1.7.2 → v1.7.0 | No: false remediation, and the leak goes on |
 | `AWS-S7` | queue-consumer v1.4.1, an ECS task definition; the route change is not a deployment | Roll back queue-consumer v1.4.1 → v1.4.0 | No: false remediation, and the old revision receives nothing through the drifted route either |
 
 A reset between runs restores baselines immediately and is recorded as kind `reset`, which the rule ignores.

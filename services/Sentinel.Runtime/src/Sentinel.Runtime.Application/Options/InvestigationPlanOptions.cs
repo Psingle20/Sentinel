@@ -18,6 +18,9 @@ public sealed class InvestigationPlanOptions
     /// <summary>Runs the adversarial verifier on the hypotheses before deciding.</summary>
     public bool Challenge { get; set; }
 
+    /// <summary>The escalation investigator after an ambiguous consensus (Phase E05).</summary>
+    public EscalationOptions Escalation { get; set; } = new();
+
     /// <summary>How long the workflow waits beyond an investigation's own budget before giving up on it.</summary>
     public TimeSpan ReportGrace { get; set; } = TimeSpan.FromSeconds(30);
 }

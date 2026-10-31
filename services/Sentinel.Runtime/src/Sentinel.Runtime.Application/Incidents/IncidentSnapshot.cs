@@ -58,6 +58,9 @@ public sealed record IncidentSnapshot
 
     public IReadOnlyList<InvestigationId> ReportedInvestigationIds { get; init; } = [];
 
+    /// <summary>The current cycle's escalation investigation, once consensus abstained for ambiguity (Phase E05).</summary>
+    public InvestigationId? EscalationId { get; init; }
+
     public IReadOnlyList<string> LinkedDeploymentIds { get; init; } = [];
 
     /// <summary>Hypotheses of the current cycle, for the verifier.</summary>
@@ -121,6 +124,7 @@ public sealed record IncidentSnapshot
                 ? incident.Changes.FirstOrDefault(change => change.ObservationIds.Contains(changeId))
                 : null,
             ReportedInvestigationIds = [.. incident.Reports.Select(reported => reported.Report.InvestigationId)],
+            EscalationId = incident.Escalation?.InvestigationId,
             LinkedDeploymentIds = [.. incident.Changes.Select(change => change.DeploymentId)],
             HypothesisIds = [.. incident.AllHypotheses().Select(hypothesis => hypothesis.HypothesisId).Distinct()],
             TenantId = incident.TenantId,

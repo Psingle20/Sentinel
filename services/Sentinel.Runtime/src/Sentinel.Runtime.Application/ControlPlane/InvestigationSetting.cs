@@ -12,6 +12,9 @@ public sealed record InvestigationSetting
     /// <summary>Runs the adversarial verifier before deciding (Phase 05).</summary>
     public bool Challenge { get; init; }
 
+    /// <summary>Whether an ambiguous consensus asks the escalation investigator for one discriminating observation (Phase E05).</summary>
+    public bool Escalation { get; init; } = true;
+
     public TimeSpan Window { get; init; } = TimeSpan.FromMinutes(15);
 
     public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(2);

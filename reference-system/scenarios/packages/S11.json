@@ -1,0 +1,40 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S11",
+  "version": 1,
+  "kind": "counterfactual",
+  "manifest": "S11",
+  "title": "Ambiguous connection growth",
+  "description": "checkout-service v2.4.1 leaks pooled Redis connections while order-service v1.7.2, deployed five seconds later, widens its pool to a steady 40. Both changes served before checkout's SLO burns and both services' connections rose, so only how many connections each holds at onset separates them. Rolling order-service back is the false remediation, and the latest-deploy baseline makes it.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "resolved",
+    "rootCause": {
+      "service": "checkout-service",
+      "hypothesisKeys": ["change:"],
+      "change": { "service": "checkout-service", "version": "v2.4.1" }
+    },
+    "rejectedCauses": [
+      { "service": "order-service", "description": "order-service v1.7.2 widened its Redis pool" },
+      { "service": "reporting-worker", "description": "another Redis client saturated Redis" }
+    ],
+    "abstentionAcceptable": true,
+    "evidence": [
+      { "kind": "deployment", "service": "checkout-service", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "metric", "service": "order-service", "metric": "redis_connections", "role": "discriminating" },
+      { "kind": "deployment", "service": "order-service", "role": "confounder" },
+      { "kind": "metric", "service": "checkout-service", "metric": "redis_errors", "role": "symptom" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "rollback", "service": "checkout-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": [
+      { "action": "rollback", "service": "order-service" }
+    ]
+  }
+}

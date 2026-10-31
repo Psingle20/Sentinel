@@ -1,0 +1,68 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+  "affectedServiceId": "checkout-service",
+  "relatedServiceIds": [
+    "order-service"
+  ],
+  "objective": "Two explanations stand too close to decide between. Propose the one observation that would separate them.",
+  "observationWindow": {
+    "from": "2026-10-28T08:50:00+00:00",
+    "to": "2026-10-28T09:05:00+00:00"
+  },
+  "budget": {
+    "maxToolCalls": 20,
+    "maxModelTokens": 40000,
+    "timeout": "00:02:00"
+  },
+  "symptomOnset": "2026-10-28T09:01:00+00:00",
+  "role": "escalation",
+  "hypotheses": [
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+      "statement": "checkout-service v2.4.1 introduced a Redis connection leak.",
+      "causalChain": [
+        "deployment v2.4.1",
+        "connection leak",
+        "Redis saturation",
+        "SLO burn"
+      ],
+      "suspectedServiceId": "checkout-service",
+      "suspectedChangeObservationId": "deploy-controller:checkout-service:v2.4.1",
+      "supportingEvidenceIds": [],
+      "contradictingEvidenceIds": []
+    },
+    {
+      "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+      "statement": "order-service v1.7.2 leaks Redis connections.",
+      "causalChain": [
+        "deployment v1.7.2",
+        "Redis saturation",
+        "SLO burn"
+      ],
+      "suspectedServiceId": "order-service",
+      "supportingEvidenceIds": [],
+      "contradictingEvidenceIds": []
+    }
+  ],
+  "escalation": {
+    "standing": [
+      {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+        "score": 1.12,
+        "independentSupport": 2,
+        "independentContradiction": 0
+      },
+      {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+        "score": 1.05,
+        "independentSupport": 2,
+        "independentContradiction": 0
+      }
+    ],
+    "evidenceCompleteness": 0.95,
+    "rationale": "The leading explanation is not established: confidence 0.44."
+  }
+}

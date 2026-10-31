@@ -37,6 +37,7 @@ public static class RuntimeConfigurationMapping
             {
                 Roles = [.. options.Investigation.Roles],
                 Challenge = options.Investigation.Challenge,
+                Escalation = options.Investigation.Escalation.Enabled,
                 Window = options.InvestigationWindow,
                 Timeout = options.InvestigationTimeout,
                 ReportGrace = options.Investigation.ReportGrace,
@@ -117,6 +118,7 @@ public static class RuntimeConfigurationMapping
 
         Replace(options.Investigation.Roles, document.Investigation.Roles);
         options.Investigation.Challenge = document.Investigation.Challenge;
+        options.Investigation.Escalation.Enabled = document.Investigation.Escalation;
         options.Investigation.ReportGrace = document.Investigation.ReportGrace;
         options.InvestigationWindow = document.Investigation.Window;
         options.InvestigationTimeout = document.Investigation.Timeout;

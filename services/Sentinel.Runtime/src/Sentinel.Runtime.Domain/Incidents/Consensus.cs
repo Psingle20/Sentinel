@@ -16,6 +16,7 @@ public static class Consensus
     private const string ChangeKey = "change:";
     private const string RedisSaturationKey = "redis-saturation";
     private const string DependencyRegressionKey = "dependency-regression";
+    private const string ConfidenceCheck = "confidence-above-threshold";
 
     private static readonly string[] Versions = [ConsensusSettings.AlgorithmV1, ConsensusSettings.AlgorithmV2, ConsensusSettings.AlgorithmV3, ConsensusSettings.AlgorithmV4];
 
@@ -63,7 +64,7 @@ public static class Consensus
         if (standing.Length == 0)
         {
             checks.Add(new CheckResult("hypothesis-survives-challenge", false, "Every hypothesis was falsified or none was proposed."));
-            return Abstain(decisionId, falsified, completeness, "No explanation survived challenge.", checks, inputsHash, now, algorithm) with { Assessments = assessments };
+            return Abstain(decisionId, falsified, completeness, "No explanation survived challenge.", checks, inputsHash, now, algorithm) with { Assessments = assessments, AbstainedFor = AbstentionReason.Falsified };
         }
 
         HypothesisAssessment leader = standing[0];
@@ -87,14 +88,24 @@ public static class Consensus
         double confidence = Math.Clamp(leader.Score / (leader.Score + Math.Max(runnerUp?.Score ?? 0, 0) + ConsensusSettings.Smoothing), 0, 0.95) * completeness;
         HypothesisId[] dissent = [.. competitors.Where(other => leader.Score - other.Score < settings.DissentMargin).Select(other => other.HypothesisId)];
         checks.Add(new CheckResult(
-            "confidence-above-threshold",
+            ConfidenceCheck,
             confidence >= settings.AbstainBelowConfidence,
             string.Create(CultureInfo.InvariantCulture, $"Confidence {confidence:F2} with evidence completeness {completeness:F2}; Sentinel abstains below {settings.AbstainBelowConfidence:F2}. Margin over the runner-up {margin:F2}.")));
 
         if (!checks.TrueForAll(check => check.Passed) || leader.Score <= 0)
         {
             string failed = string.Join("; ", checks.Where(check => !check.Passed).Select(check => check.Detail));
-            return Abstain(decisionId, falsified, completeness, $"The leading explanation is not established: {failed}", checks, inputsHash, now, algorithm) with { DissentingHypothesisIds = dissent, Assessments = assessments, Confidence = Math.Round(confidence, 4) };
+
+            // Ambiguous: everything held but confidence, because a surviving rival scored close to the leader.
+            bool ambiguous = leader.Score > 0 && runnerUp is { Score: > 0 } && checks.Where(check => !check.Passed).All(check => check.Name == ConfidenceCheck);
+            return Abstain(decisionId, falsified, completeness, $"The leading explanation is not established: {failed}", checks, inputsHash, now, algorithm) with
+            {
+                DissentingHypothesisIds = dissent,
+                Assessments = assessments,
+                Confidence = Math.Round(confidence, 4),
+                AbstainedFor = ambiguous ? AbstentionReason.Ambiguous : AbstentionReason.InsufficientEvidence,
+                Contenders = ambiguous ? [leader.HypothesisId, runnerUp!.HypothesisId] : []
+            };
         }
 
         return new Decision

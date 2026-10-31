@@ -29,6 +29,16 @@ dotnet user-secrets set Model:Routing:changes meta-wonder --project services/Sen
 3. Run the golden scenario once as a rehearsal. Its executions, each with its estimated cost, are listed by `GET $GATEWAY/api/v1/incidents/<incident id>/agent-executions`.
 4. After the demonstration, route `changes` back to `meta-deep`.
 
+## The escalation role
+
+When consensus would abstain because two explanations stand too close to choose between, Runtime asks the `escalation` investigator for the one observation that would separate them ([Phase E05](../implementation/phase-e05-escalation-investigator.md)). It runs at most once per incident cycle, only for that kind of abstention and only on evidence at least 80% complete. It makes one model call, or two when its first proposal is refused, over a short structured prompt with no telemetry in it, and AgentWorker runs the one read-only query it proposes. An incident that never reaches an ambiguous decision costs nothing more.
+
+- It runs on whatever `Model:Provider` names unless routed. For a demonstration, route it to the strongest model: `Model:Routing:escalation` = `meta-wonder`. Its calls count against `meta-wonder`'s own daily cap like any other role's.
+- To keep it running without spending, route it to the test double: `Model:Routing:escalation` = `test-double`.
+- To switch it off, set `investigation.escalation` to `false` in Runtime's configuration from the control plane, or `Runtime:Investigation:Escalation:Enabled` to `false` in Runtime's configuration. An ambiguous consensus is then recorded as an abstention and escalates to responders at once, as before the role existed.
+
+The evaluation report's Escalation section shows how often an escalation led to a correct diagnosis and whether it ever led to a wrong one. The role stays enabled only while it has led to none.
+
 ## Check spend
 
 Every execution records its estimated cost. Sum it from AgentWorker's database:

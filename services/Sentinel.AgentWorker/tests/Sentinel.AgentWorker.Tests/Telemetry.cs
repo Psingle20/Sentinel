@@ -268,6 +268,22 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         return this;
     }
 
+    /// <summary>
+    /// S11: checkout v2.4.1 serves from 20 s and leaks connections; order-service v1.7.2 serves from 25 s and widens its
+    /// pool to a steady 40. Both deployments precede the connection surge, so only how many each holds at onset separates them.
+    /// </summary>
+    public static Telemetry AmbiguousConnectionGrowth()
+    {
+        var telemetry = new Telemetry();
+        telemetry.Deployment("checkout-service", "v2.4.1", "v2.4.0", "d1", 0, 20);
+        telemetry.Deployment("order-service", "v1.7.2", "v1.7.0", "d16", 5, 25);
+        telemetry.Burn(onset: 60, until: 90);
+        telemetry.Connections("checkout-service", second => second < 20 ? 4 : Math.Min(150, 4 + (second - 20) * 4));
+        telemetry.Connections("order-service", second => second < 25 ? 4 : 40);
+        telemetry.Signature("checkout-service", "Checkout cart-<n> failed on Redis: ERR max number of clients reached", 140, 55, 90);
+        return telemetry;
+    }
+
     /// <summary>S2: a reporting batch saturates Redis from 0 s; a benign checkout deployment starts at 55 s.</summary>
     public static Telemetry ReportingSurge()
     {

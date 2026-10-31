@@ -22,7 +22,9 @@ import { describeAction, describeCriterion, executionLabel, formatDateTime, form
 import {
   agentRuns,
   comparedHypotheses,
+  contenders,
   counterfactual,
+  escalationOf,
   graphOf,
   investigationProgress,
   leadingHypothesis,
@@ -339,6 +341,8 @@ function InjectionSection({ incident }: { incident: IncidentDetail }) {
 function DecisionSection({ incident }: { incident: IncidentDetail }) {
   const decision = incident.decision;
   const leading = leadingHypothesis(incident);
+  const escalation = escalationOf(incident);
+  const undecided = contenders(incident);
   return (
     <Card aria-labelledby="decision-title">
       <CardHeader>
@@ -363,6 +367,16 @@ function DecisionSection({ incident }: { incident: IncidentDetail }) {
             </div>
             {leading ? <p className="text-label text-text-primary">{leading.finding.statement}</p> : null}
             <p className="text-body text-text-primary">{decision.rationale}</p>
+            {decision.abstainedFor === "ambiguous" && undecided.length === 2 ? (
+              <p className="text-body text-text-primary">
+                Sentinel could not choose between “{undecided[0]}” and “{undecided[1]}”, so it escalated rather than guess.
+              </p>
+            ) : null}
+            {escalation?.query ? (
+              <p className="text-body text-text-muted" aria-label="Escalation">
+                Two explanations stood too close, so before deciding Sentinel asked for the one observation that separates them: {escalation.query}
+              </p>
+            ) : null}
             <ul className="flex flex-col gap-2" aria-label="Decision checks">
               {(decision.checks ?? []).map((check) => (
                 <li key={check.name} className="flex items-start gap-2 text-body">

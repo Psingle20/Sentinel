@@ -23,6 +23,9 @@ public sealed class IncidentWorkflow
     /// <summary>Versioning marker (ADR-005): runs that reached the execution result before it escalate an unknown outcome at once.</summary>
     public const string AwaitReconciliationPatch = "await-reconciliation-after-unknown-outcome";
 
+    /// <summary>Versioning marker (ADR-005): runs that decided before it never wait for an escalation investigation (Phase E05).</summary>
+    public const string EscalationPatch = "escalate-after-ambiguous-consensus";
+
     private static readonly ActivityOptions Step = new()
     {
         StartToCloseTimeout = TimeSpan.FromMinutes(1),
@@ -120,6 +123,32 @@ public sealed class IncidentWorkflow
 
         CurrentStep = "deciding";
         StepSummary decided = await Workflow.ExecuteActivityAsync((IncidentActivities activities) => activities.DecideAsync(incidentId), Step);
+
+        // Phase E05: instead of abstaining for ambiguity, the decision asked for one discriminating observation. Once it reports,
+        // the verifier challenges the revised evidence and consensus decides again; a second ambiguity is recorded as before.
+        if (decided.Decision is null && decided.EscalationId is { } escalation && Workflow.Patched(EscalationPatch))
+        {
+            CurrentStep = "escalating";
+            await WaitForReportsAsync(incidentId, [escalation], timings.InvestigationTimeout);
+            if (_closed)
+            {
+                return "closed";
+            }
+
+            if (timings.Challenge)
+            {
+                CurrentStep = "challenging";
+                Guid? second = await Workflow.ExecuteActivityAsync((IncidentActivities activities) => activities.RequestChallengeAfterEscalationAsync(incidentId), Step);
+                if (second is { } secondId)
+                {
+                    await WaitForReportsAsync(incidentId, [secondId], timings.InvestigationTimeout);
+                }
+            }
+
+            CurrentStep = "deciding";
+            decided = await Workflow.ExecuteActivityAsync((IncidentActivities activities) => activities.DecideAsync(incidentId), Step);
+        }
+
         if (decided.Decision != "Diagnosed")
         {
             return "abstained";

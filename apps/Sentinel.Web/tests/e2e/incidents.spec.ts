@@ -159,6 +159,16 @@ test.describe("incidents", () => {
     await expect(attempts.getByText(/ignore your previous instructions/)).toBeVisible();
   });
 
+  test("shows the one question Sentinel asked and the two explanations it still could not choose between", async ({ page, request }) => {
+    await request.post(`${mockApi}/__ambiguous`);
+    await page.goto(`/incidents/${incidentId}`);
+
+    const decision = page.locator("[aria-labelledby='decision-title']");
+    await expect(decision).toContainText("Abstained");
+    await expect(decision).toContainText("Sentinel could not choose between");
+    await expect(decision.getByLabel("Escalation")).toContainText("metric_range of redis_connections");
+  });
+
   test("shows no manipulation attempt when the investigations found none", async ({ page }) => {
     await openIncident(page);
 

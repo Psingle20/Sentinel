@@ -62,6 +62,21 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task An_earlier_leak_that_subsided_in_the_window_is_not_taken_for_the_start_of_the_current_one()
+    {
+        // S5 after S4: the earlier leak rose from -100 s and was released at -50 s; the surge in effect at onset began at 20 s.
+        var telemetry = Telemetry.RepeatedLeak();
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 70);
+
+        HypothesisFinding current = metrics.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d1:started")));
+        EvidenceFinding surge = metrics.Completed.Evidence.Single(evidence => evidence.IndependenceGroup == "redis-connections:checkout-service");
+        surge.HypothesisIds.ShouldBe([current.HypothesisId], "the current deployment explains the surge in effect at onset");
+        surge.EventTimeRange.From.ShouldBeGreaterThanOrEqualTo(Telemetry.Start.AddSeconds(20));
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == "redis-saturation:checkout-service");
+    }
+
+    [Fact]
     public async Task In_a_follow_up_cycle_the_rolled_back_leak_drops_out_and_the_second_cause_is_blamed()
     {
         // S10: the leak was rolled back before the follow-up's onset; order-service v1.8.1 is what still burns the SLO.

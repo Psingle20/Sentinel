@@ -68,7 +68,8 @@ internal sealed class Investigation
         DateTimeOffset now,
         string? role,
         IReadOnlyList<HypothesisId>? challengedHypothesisIds,
-        IReadOnlyList<PriorIncident>? similarIncidents)
+        IReadOnlyList<PriorIncident>? similarIncidents,
+        EscalationState? escalation = null)
     {
         if (challengedHypothesisIds is { Count: > 0 } challenged && challenged.Any(id => !AllHypotheses().Any(hypothesis => hypothesis.HypothesisId == id)))
         {
@@ -76,7 +77,7 @@ internal sealed class Investigation
         }
 
         Require(InvestigationState.Pending);
-        return Result.Success(new InvestigationRequested(investigationId, objective, windowFrom, windowTo, now, role, challengedHypothesisIds, similarIncidents is { Count: > 0 } ? similarIncidents : null));
+        return Result.Success(new InvestigationRequested(investigationId, objective, windowFrom, windowTo, now, role, challengedHypothesisIds, similarIncidents is { Count: > 0 } ? similarIncidents : null, escalation));
     }
 
     /// <summary>

@@ -20,7 +20,7 @@ from sentinel_eval.packages import load_packages  # noqa: E402
 from sentinel_eval.calibration import calibrate, reliability  # noqa: E402
 from sentinel_eval.records import latest_per_scenario, latest_runs, load_runs  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render, to_json  # noqa: E402
-from sentinel_eval.scoring import BASELINE, labeller, score_baseline, score_sentinel  # noqa: E402
+from sentinel_eval.scoring import BASELINE, escalation_label, labeller, score_baseline, score_sentinel  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -56,6 +56,9 @@ def main(argv: list[str] | None = None) -> int:
 
     labels = sorted({score.label for score in scores if score.investigator != BASELINE})
     candidates = [aggregate(label, [score for score in scores if score.label == label]) for label in labels]
+    # The escalation role is its own group (Phase E05), over every run it joined, and is gated like any candidate.
+    escalations = sorted({escalation_label(score) for score in scores if score.escalated})
+    candidates += [aggregate(name, [score for score in scores if score.escalated and escalation_label(score) == name]) for name in escalations]
     baseline = aggregate(BASELINE, [score for score in scores if score.investigator == BASELINE])
     groups = [*candidates, baseline]
     gates = [gate(candidate, baseline) for candidate in candidates]

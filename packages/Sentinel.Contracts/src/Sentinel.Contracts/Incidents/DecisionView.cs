@@ -42,4 +42,13 @@ public sealed record DecisionView
 
     /// <summary>Set when a later decision superseded this one.</summary>
     public DecisionId? SupersededBy { get; init; }
+
+    /// <summary>
+    /// Why an abstention abstained (Phase E05): <c>ambiguous</c> when two explanations stood too close to choose between,
+    /// <c>insufficient-evidence</c> or <c>falsified</c>. Null for a diagnosis and for decisions made before it was kept.
+    /// </summary>
+    public string? AbstainedFor { get; init; }
+
+    /// <summary>The two explanations an ambiguous abstention could not choose between, the leader first.</summary>
+    public IReadOnlyList<HypothesisId> Contenders { get; init; } = [];
 }

@@ -15,6 +15,7 @@
 //   POST /__followup                  open a follow-up cycle after a rollback that took effect without recovery, as in S10
 //   POST /__investigating             put the incident back to its six specialists investigating, none reported yet
 //   POST /__report { role }           record that specialist's report and publish it live
+//   POST /__ambiguous                 abstain between the two leading explanations after the escalation's one query, as in S11
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
@@ -125,6 +126,27 @@ function recordInjection() {
     excerpt,
     pattern,
   }));
+}
+
+// Phase E05: two explanations stood too close; the escalation investigator's query separated nothing, so Sentinel abstained.
+function abstainAmbiguous() {
+  const { incident } = state;
+  const [first, second] = incident.hypotheses.map((hypothesis) => hypothesis.finding.hypothesisId);
+  const at = "2026-10-28T09:03:30+00:00";
+  incident.investigations = [
+    ...incident.investigations,
+    {
+      investigationId: "0192f0c4-0000-7000-8000-0000000000e5",
+      requestedAt: at,
+      outcome: "completed",
+      completedAt: at,
+      role: "escalation",
+      query: "metric_range of redis_connections. If checkout-service caused the symptoms, it holds more than 100 Redis connections at onset.",
+    },
+  ];
+  incident.decision = { ...incident.decision, outcome: "abstained", leadingHypothesisId: undefined, abstainedFor: "ambiguous", contenders: [first, second] };
+  delete incident.plan;
+  incident.summary = { ...incident.summary, status: "escalated" };
 }
 
 // The baseline blames an innocent order-service deployment that served after onset; Sentinel proposed it and eliminated it.
@@ -665,6 +687,11 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && url.pathname === "/__advance") {
     const body = await readBody(request);
     append("note.recorded", body.summary ?? "Runtime recorded a change.");
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__ambiguous") {
+    abstainAmbiguous();
     return send(response, 204);
   }
 

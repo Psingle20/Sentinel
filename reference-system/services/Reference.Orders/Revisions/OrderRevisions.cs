@@ -18,5 +18,8 @@ public static class OrderRevisions
     /// <summary>S10's second cause: an order cache that misses two lookups in five, each miss slower than checkout's attempt timeout.</summary>
     public const string ColdCache = "v1.8.1";
 
-    public static readonly IReadOnlyCollection<string> All = [Baseline, "v1.7.1", SlowQuery, ColdCache];
+    /// <summary>S11's confounder: a configuration that widens the Redis pool from 4 to 40 connections, which then hold steady.</summary>
+    public const string WidePool = "v1.7.2";
+
+    public static readonly IReadOnlyCollection<string> All = [Baseline, "v1.7.1", WidePool, SlowQuery, ColdCache];
 }

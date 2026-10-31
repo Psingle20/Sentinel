@@ -1,0 +1,17 @@
+{
+  "scenarioId": "S11",
+  "kind": "confounder",
+  "recordedAt": "2026-10-31T19:04:25.1072808+00:00",
+  "investigator": "sentinel-test-double/deterministic-analyst",
+  "expectedCause": "checkout-service v2.4.1 introduced a Redis connection leak",
+  "expectedRemediation": "rollback checkout-service (approval-required)",
+  "sentinelDecision": "abstained",
+  "sentinelIncidentStatus": "Escalated",
+  "sentinelCorrect": false,
+  "sentinelFalseRemediation": false,
+  "baselineDecision": "blame order-service",
+  "baselinePlan": "rollback order-service",
+  "baselineCorrect": false,
+  "baselineFalseRemediation": true,
+  "approved": false
+}

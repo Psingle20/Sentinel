@@ -31,6 +31,16 @@ internal static class Harness
             TimeProvider.System,
             NullLogger<ModelInvestigator>.Instance);
 
+    /// <summary>The escalation investigator over the synthetic telemetry, with the test double unless a model is given.</summary>
+    public static EscalationInvestigator Escalation(Telemetry telemetry, IModelProvider? model = null) =>
+        new(
+            new FixedRouter(model ?? new DeterministicModelProvider(Options.Create(new TestDoubleOptions()))),
+            AllTools(telemetry),
+            Catalog,
+            Options.Create(new ModelPricingOptions { InputPerMillionTokens = 1, OutputPerMillionTokens = 2 }),
+            new AgentWorkerTelemetry(),
+            TimeProvider.System);
+
     /// <summary>Every tool AgentWorker registers, over the synthetic telemetry.</summary>
     public static IInvestigationTool[] AllTools(Telemetry telemetry) =>
     [

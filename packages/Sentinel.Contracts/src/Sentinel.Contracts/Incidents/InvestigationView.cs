@@ -4,7 +4,10 @@ using Sentinel.Contracts.Remediation;
 
 namespace Sentinel.Contracts.Incidents;
 
-/// <summary>Which investigator ran, with which model, and how it ended.</summary>
+/// <summary>
+/// Which investigator ran, with which model, and how it ended; for the escalation investigator, the one query it
+/// proposed (Phase E05).
+/// </summary>
 public sealed record InvestigationView(
     InvestigationId InvestigationId,
     DateTimeOffset RequestedAt,
@@ -14,4 +17,5 @@ public sealed record InvestigationView(
     string? AbstentionReason,
     DateTimeOffset? CompletedAt,
     string? Role = null,
-    bool TimedOut = false);
+    bool TimedOut = false,
+    string? Query = null);

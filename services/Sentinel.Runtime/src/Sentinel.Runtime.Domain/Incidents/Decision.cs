@@ -27,6 +27,12 @@ public sealed record Decision
 
     public string AlgorithmVersion { get; init; } = "falsification-v1";
 
+    /// <summary>Why consensus abstained, when it did (Phase E05); null for a diagnosis, the falsification check and decisions recorded before.</summary>
+    public AbstentionReason? AbstainedFor { get; init; }
+
+    /// <summary>For an abstention for ambiguity: the leader and its closest rival, the two explanations one observation should separate.</summary>
+    public IReadOnlyList<HypothesisId> Contenders { get; init; } = [];
+
     /// <summary>What the investigators could not determine and the decision lacked.</summary>
     public IReadOnlyList<string> MissingEvidence { get; init; } = [];
 

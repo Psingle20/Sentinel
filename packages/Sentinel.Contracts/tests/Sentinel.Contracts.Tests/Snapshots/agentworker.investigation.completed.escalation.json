@@ -1,0 +1,63 @@
+{
+  "tenantId": "acme",
+  "environmentId": "reference",
+  "incidentId": "0192f0c4-0000-7000-8000-000000000001",
+  "investigationId": "0192f0c4-0000-7000-8000-000000000002",
+  "agentExecutionId": "0192f0c4-0000-7000-8000-000000000009",
+  "outcome": "completed",
+  "evidence": [
+    {
+      "evidenceId": "0192f0c4-0000-7000-8000-000000000005",
+      "statement": "checkout-service redis_connections was 150 at onset: the prediction held.",
+      "direction": "supports",
+      "strength": 0.7,
+      "sourceObservationIds": [
+        "prometheus:redis:connected-clients:checkout:1793093100"
+      ],
+      "hypothesisIds": [
+        "0192f0c4-0000-7000-8000-000000000003"
+      ],
+      "eventTimeRange": {
+        "from": "2026-10-28T09:01:00+00:00",
+        "to": "2026-10-28T09:01:00+00:00"
+      },
+      "toolCallId": "call_escalation_query",
+      "independenceGroup": "escalation:redis_connections"
+    }
+  ],
+  "hypotheses": [],
+  "model": {
+    "provider": "meta-wonder",
+    "model": "muse-wonder-1.0",
+    "promptVersion": "escalation-v1"
+  },
+  "completedAt": "2026-10-28T09:08:00+00:00",
+  "role": "escalation",
+  "query": {
+    "hypothesisIds": [
+      "0192f0c4-0000-7000-8000-000000000003",
+      "0192f0c4-0000-7000-8000-000000000004"
+    ],
+    "tool": "metric_range",
+    "arguments": "{\u0022metric\u0022:\u0022redis_connections\u0022}",
+    "expectations": [
+      {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000003",
+        "serviceId": "checkout-service",
+        "metric": "redis_connections",
+        "comparison": "above",
+        "threshold": 100,
+        "statement": "If checkout-service caused the symptoms, it holds more than 100 Redis connections at onset."
+      },
+      {
+        "hypothesisId": "0192f0c4-0000-7000-8000-000000000004",
+        "serviceId": "order-service",
+        "metric": "redis_connections",
+        "comparison": "above",
+        "threshold": 100,
+        "statement": "If order-service caused the symptoms, it holds more than 100 Redis connections at onset."
+      }
+    ],
+    "rationale": "Only the cause holds most of Redis\u0027s clients."
+  }
+}

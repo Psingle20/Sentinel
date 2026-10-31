@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Sentinel.AgentWorker.Application.Abstractions.Providers;
+using Sentinel.AgentWorker.Application.Investigations;
 
 namespace Sentinel.AgentWorker.Infrastructure.Models;
 
@@ -22,7 +23,8 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
 
     public string Model => "deterministic-analyst";
 
-    public string? ModelVersion => "3";
+    // 4: a shift starts where the series last rose and stayed up before onset, not at an earlier shift in the window.
+    public string? ModelVersion => "4";
 
     /// <summary>The double answers from the conversation alone, so a replay of it is deterministic.</summary>
     public bool Deterministic => true;
@@ -43,6 +45,13 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         }
 
         var usage = new ModelUsage(request.Messages.Sum(message => message.Content.Length) / 4, 400);
+
+        // Phase E05: the escalation role asks for one discriminating query over structured state, not for findings.
+        if (request.OutputSchemaName == EscalationPrompt.OutputSchemaName)
+        {
+            return new ModelResponse(ModelFinish.Final, [], Escalation.Propose(request), usage);
+        }
+
         var conversation = Conversation.Read(request);
         if (conversation.ToolResults.Count == 0)
         {
@@ -59,6 +68,53 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         };
 
         return new ModelResponse(ModelFinish.Final, [], content, usage);
+    }
+
+    /// <summary>
+    /// The double's escalation rule (Phase E05): two explanations that each rest on a connection surge are separated by how
+    /// many Redis connections each service holds at onset, since a cause of saturation holds most of Redis's 200 clients;
+    /// two that rest on latency, by each service's own p95 latency. Anything else gets no query, which the role refuses.
+    /// </summary>
+    internal static class Escalation
+    {
+        private const double ConnectionsThreshold = 100;
+        private const double LatencyThreshold = 0.5;
+
+        public static string Propose(ModelRequest request)
+        {
+            string task = request.Messages.FirstOrDefault(message => message.Role == ModelRole.User)?.Content ?? string.Empty;
+            var state = JsonNode.Parse(task[(task.IndexOf('{', StringComparison.Ordinal) is var start and >= 0 ? start : 0)..]);
+            JsonObject[] hypotheses = [.. (state?["hypotheses"] as JsonArray ?? []).OfType<JsonObject>()];
+            JsonObject[] evidence = [.. (state?["evidence"] as JsonArray ?? []).OfType<JsonObject>()];
+            if (hypotheses.Length != 2 || hypotheses.Any(hypothesis => hypothesis["suspectedService"] is null))
+            {
+                return new JsonObject { ["hypothesisIds"] = new JsonArray(), ["tool"] = "none", ["arguments"] = new JsonObject(), ["expectations"] = new JsonArray(), ["rationale"] = "No two services to compare." }.ToJsonString();
+            }
+
+            bool RestsOn(JsonObject hypothesis, string group) => evidence.Any(item =>
+                item["group"]?.GetValue<string>() is { } name && name.StartsWith(group, StringComparison.Ordinal)
+                && (item["hypothesisIds"] as JsonArray ?? []).Any(id => id?.GetValue<string>() == hypothesis["id"]!.GetValue<string>()));
+
+            (string metric, double threshold, string reading) = hypotheses.All(hypothesis => RestsOn(hypothesis, "redis-connections:"))
+                ? ("redis_connections", ConnectionsThreshold, "holds more than 100 Redis connections")
+                : ("latency_p95", LatencyThreshold, "is slower than 0.5 s at p95");
+            return new JsonObject
+            {
+                ["hypothesisIds"] = new JsonArray([.. hypotheses.Select(hypothesis => (JsonNode)hypothesis["id"]!.GetValue<string>())]),
+                ["tool"] = "metric_range",
+                ["arguments"] = new JsonObject { ["metric"] = metric },
+                ["expectations"] = new JsonArray([.. hypotheses.Select(hypothesis => (JsonNode)new JsonObject
+                {
+                    ["hypothesisId"] = hypothesis["id"]!.GetValue<string>(),
+                    ["service"] = hypothesis["suspectedService"]!.GetValue<string>(),
+                    ["metric"] = metric,
+                    ["comparison"] = "above",
+                    ["threshold"] = threshold,
+                    ["statement"] = $"If {hypothesis["suspectedService"]!.GetValue<string>()} caused the symptoms, it {reading} at onset."
+                })]),
+                ["rationale"] = $"Only the cause {reading}; the other explanation's service does not."
+            }.ToJsonString();
+        }
     }
 
     /// <summary>What the double can see: the task, its tools, the metric catalog and the tool results so far.</summary>
@@ -1013,7 +1069,21 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                     return null;
                 }
 
-                Sample start = considered.First(sample => sample.Value >= baseline + rise * 0.2);
+                // The shift in effect at onset starts where the series last rose past the threshold and stayed above it, so
+                // an earlier shift in the window that had subsided, such as a previous incident's, is not taken for its start.
+                Sample first = considered.First(sample => sample.Value >= baseline + rise * 0.2);
+                Sample[] untilOnset = [.. considered.Where(sample => sample.At <= onset + TimeSpan.FromSeconds(10))];
+                int below = Array.FindLastIndex(untilOnset, sample => sample.Value < baseline + rise * 0.2);
+                Sample start = below >= 0 && below + 1 < untilOnset.Length ? untilOnset[below + 1] : first;
+                if (start != first)
+                {
+                    peak = considered.Where(sample => sample.At >= start.At).MaxBy(sample => sample.Value)!;
+                    rise = peak.Value - baseline;
+                    if (rise < minimumRise || peak.Value < minimumRatio * Math.Max(baseline, minimumRise / 10))
+                    {
+                        return null;
+                    }
+                }
 
                 // A shift that had already subsided by onset cannot explain symptoms at onset.
                 Sample atOnset = considered.Where(sample => sample.At <= onset + TimeSpan.FromSeconds(10)).MaxBy(sample => sample.At) ?? peak;

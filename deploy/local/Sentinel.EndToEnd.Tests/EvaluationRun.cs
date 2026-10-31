@@ -15,11 +15,12 @@ namespace Sentinel.EndToEnd.Tests;
 /// </summary>
 public static class EvaluationRun
 {
-    public const string Dataset = "scenarios-v5";
+    public const string Dataset = "scenarios-v6";
 
     private static readonly JsonSerializerOptions Indented = new(SentinelJson.Options) { WriteIndented = true };
 
-    public static async Task WriteAsync(SentinelSystem system, string packageId, IncidentDetail? incident, bool approved)
+    /// <param name="variant">Names a run made with part of Sentinel switched off on purpose; it is kept and scored beside the full run.</param>
+    public static async Task WriteAsync(SentinelSystem system, string packageId, IncidentDetail? incident, bool approved, string? variant = null)
     {
         ArgumentNullException.ThrowIfNull(system);
 
@@ -42,6 +43,7 @@ public static class EvaluationRun
             ["approved"] = approved,
             // Which investigator the system was configured with, so a run in which none ran is scored with its peers.
             ["configuredProvider"] = SentinelSystem.ModelProvider,
+            ["variant"] = variant,
             ["environment"] = await system.ScenarioRunner.GetFromJsonAsync<JsonNode>("/api/environment"),
             ["fidelity"] = Package(packageId)["fidelity"]?.DeepClone(),
             ["runRecord"] = runRecord,
@@ -52,7 +54,7 @@ public static class EvaluationRun
         Directory.CreateDirectory(directory);
         // A live model's run sits beside the test double's instead of replacing it; the harness scores each model as its own group.
         string name = SentinelSystem.ModelProvider == SentinelSystem.TestDouble ? packageId : $"{packageId}.{SentinelSystem.ModelProvider}";
-        await File.WriteAllTextAsync(Path.Combine(directory, $"{name}.json"), record.ToJsonString(Indented) + "\n");
+        await File.WriteAllTextAsync(Path.Combine(directory, variant is null ? $"{name}.json" : $"{name}.{variant}.json"), record.ToJsonString(Indented) + "\n");
     }
 
     /// <summary>A scenario package from reference-system/scenarios/packages.</summary>

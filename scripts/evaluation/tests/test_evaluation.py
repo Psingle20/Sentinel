@@ -19,7 +19,7 @@ from sentinel_eval.calibration import MINIMUM_DECISIONS, calibrate, reliability 
 from sentinel_eval.packages import PackageError, load_package, load_packages  # noqa: E402
 from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, load_v2, parse_time  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render  # noqa: E402
-from sentinel_eval.scoring import Score, classify_observation, labeller, score_baseline, score_sentinel, sentinel_label  # noqa: E402
+from sentinel_eval.scoring import Score, classify_observation, escalation_label, labeller, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
 PACKAGES = HERE.parents[2] / "reference-system" / "scenarios" / "packages"
 PRICING = {"models": {"meta/muse-spark": {"inputPerMillion": 1.0, "outputPerMillion": 4.0}}, "default": {"inputPerMillion": 0, "outputPerMillion": 0}}
@@ -67,7 +67,7 @@ def baseline_execution(blamed: str | None) -> dict:
 class PackageTests(unittest.TestCase):
     def test_every_package_in_the_repository_loads(self):
         packages = load_packages(PACKAGES)
-        self.assertEqual(sorted(packages), ["AWS-S1", "AWS-S7", "S0", "S1", "S10", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"])
+        self.assertEqual(sorted(packages), ["AWS-S1", "AWS-S7", "S0", "S1", "S10", "S11", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"])
         self.assertEqual(packages["S1"].root_cause.change_version, "v2.4.1")
         self.assertTrue(packages["S3"].is_false_remediation("rollback", "checkout-service"))
         self.assertEqual(packages["S4"].expected_missing, ("logs",))
@@ -368,7 +368,7 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(evaluate.main([*arguments, "--check"]), 1)
             report = (root / "out" / "report.md").read_text(encoding="utf-8")
             self.assertIn("## Gate", report)
-            self.assertIn("Packages without a recorded run: AWS-S1, AWS-S7, S0, S1, S10, S2, S4, S5, S6, S7, S8, S9.", report)
+            self.assertIn("Packages without a recorded run: AWS-S1, AWS-S7, S0, S1, S10, S11, S2, S4, S5, S6, S7, S8, S9.", report)
             self.assertFalse(json.loads((root / "out" / "report.json").read_text(encoding="utf-8"))["gatePassed"])
 
 
@@ -401,6 +401,58 @@ class FidelityTests(unittest.TestCase):
         self.assertIn("| AWS-S1 | aws | floci/floci:2.3.0 (sha256:0123), provisioning v2 |", report)
         self.assertIn("it is not evidence of how AWS itself behaves", report)
         self.assertNotIn("| S1 | local", report, "a local scenario declares no fidelity of its own")
+
+
+def escalation_execution() -> dict:
+    return {"investigator": "escalation", "shadow": False, "investigationId": "inv2", "modelProvider": "sentinel-test-double", "model": "deterministic-analyst",
+            "promptVersion": "escalation-v1", "inputTokens": 100, "outputTokens": 50, "estimatedCost": 0.25,
+            "toolCalls": [{"toolName": "metric_range", "observationIds": ["prometheus:redis_connections:checkout-service:160"]}]}
+
+
+def escalated(detail: dict) -> dict:
+    """The incident with the escalation investigator's finding: the query supported the leak."""
+    query = evidence("e3", "h1", ["prometheus:redis_connections:checkout-service:160"])
+    query["finding"]["independenceGroup"] = "escalation:redis_connections"
+    query["investigationId"] = "inv2"
+    detail["evidence"].append(query)
+    detail["investigations"].append({"role": "escalation", "model": {"provider": "sentinel-test-double", "model": "deterministic-analyst", "promptVersion": "escalation-v1"}})
+    return detail
+
+
+class EscalationTests(unittest.TestCase):
+    def setUp(self):
+        self.packages = load_packages(PACKAGES)
+
+    def test_an_escalation_that_led_to_the_right_diagnosis_yields_and_its_run_stays_with_its_peers(self):
+        detail = escalated(incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))
+        score = score_sentinel(run("S1", detail, [model_execution(["prometheus:redis_connections:checkout-service:100", "prometheus:redis_connections:checkout-service:160", DEPLOY]), escalation_execution()]), self.packages["S1"], PRICING)
+        group = aggregate(escalation_label(score), [score])
+
+        self.assertTrue(score.escalated)
+        self.assertTrue(score.escalation_separated)
+        self.assertEqual(score.escalation_cost, 0.25)
+        self.assertEqual(escalation_label(score), "escalation sentinel-test-double/deterministic-analyst@escalation-v1")
+        self.assertEqual(sentinel_label(run("S1", detail)), sentinel_label(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))))
+        self.assertEqual((group.escalations, group.escalation_yield, group.escalation_wrong), (1, 1.0, 0))
+        self.assertIn("## Escalation", render({"version": "scenarios-v6"}, self.packages, [score], [group], [], []))
+
+    def test_a_wrong_diagnosis_after_an_escalation_fails_the_gate(self):
+        detail = escalated(incident(leader_service="order-service", key=f"change:{DEPLOY}", changed_service="order-service", plan=None))
+        score = score_sentinel(run("S1", detail, [escalation_execution()]), self.packages["S1"], PRICING)
+        blamed = score_baseline(run("S1", incident(leader_service="x", key="x"), [baseline_execution("checkout-service")]), self.packages["S1"])
+
+        result = gate(aggregate(escalation_label(score), [score]), aggregate("deploy-blame", [blamed]))
+
+        self.assertFalse(result.passed)
+        self.assertIn("wrong diagnosis(es) after an escalation", " ".join(result.reasons))
+
+    def test_a_run_without_escalation_is_scored_as_its_own_variant(self):
+        enabled = run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))
+        disabled = run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}", outcome="abstained", plan=None))
+        disabled.variant = "without-escalation"
+
+        self.assertEqual(sentinel_label(disabled), f"{sentinel_label(enabled)} [without-escalation]")
+        self.assertEqual(len(latest_runs([enabled, disabled], sentinel_label)), 2)
 
 
 if __name__ == "__main__":

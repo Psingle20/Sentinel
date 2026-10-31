@@ -46,6 +46,9 @@ public sealed record InvestigationCompleted : ISentinelMessage
     /// <summary>Text in the investigation's untrusted tool results that read as an instruction to an AI agent; reported, never obeyed.</summary>
     public IReadOnlyList<SuspectedInjection>? SuspectedInjections { get; init; }
 
+    /// <summary>For the escalation investigator (Phase E05): the observation it proposed, which AgentWorker ran and measured.</summary>
+    public DiscriminatingQuery? Query { get; init; }
+
     /// <summary>The version of the tool catalog the investigator could call, for the run's version manifest (Phase 07).</summary>
     public string? ToolCatalogVersion { get; init; }
 }

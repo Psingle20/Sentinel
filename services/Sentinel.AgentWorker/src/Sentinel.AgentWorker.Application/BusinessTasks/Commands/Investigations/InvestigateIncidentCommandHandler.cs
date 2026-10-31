@@ -37,8 +37,14 @@ public sealed class InvestigateIncidentCommandHandler(
         InvestigateIncident message = command.Message;
         InvestigationOptions settings = options.Value;
 
-        // The verifier challenges what the investigators proposed; it is never the configured investigator (Phase 05).
-        IInvestigator primary = message.Role == InvestigationRoles.Verifier ? Find(AdversarialVerifier.InvestigatorName) : Find(settings.Investigator);
+        // The verifier challenges what the investigators proposed (Phase 05) and the escalation investigator proposes one
+        // discriminating query (Phase E05); neither is the configured investigator.
+        IInvestigator primary = message.Role switch
+        {
+            InvestigationRoles.Verifier => Find(AdversarialVerifier.InvestigatorName),
+            InvestigationRoles.Escalation => Find(EscalationInvestigator.InvestigatorName),
+            _ => Find(settings.Investigator)
+        };
         InvestigationRun run = await RunAndRecordAsync(primary, message, shadow: false, cancellationToken);
 
         // One baseline per incident: alongside the generalist, or the changes specialist when specialists run.

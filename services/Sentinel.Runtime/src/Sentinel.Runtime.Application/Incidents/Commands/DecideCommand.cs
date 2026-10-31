@@ -9,4 +9,5 @@ namespace Sentinel.Runtime.Application.Incidents.Commands;
 /// function of the stream and the versioned settings: consensus with the verifier's challenges
 /// (Phase 05), or the walking skeleton's falsification check. Repeating it changes nothing.
 /// </summary>
-public sealed record DecideCommand(DecisionId DecisionId, bool UseConsensus, ConsensusSettings Settings) : IncidentCommand;
+/// With <paramref name="Escalation"/>, an abstention for ambiguity requests one escalation investigation instead (Phase E05).
+public sealed record DecideCommand(DecisionId DecisionId, bool UseConsensus, ConsensusSettings Settings, EscalationSpec? Escalation = null) : IncidentCommand;

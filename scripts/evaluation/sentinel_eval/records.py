@@ -38,6 +38,8 @@ class Run:
     environment: dict | None = None
     # The investigator the system was configured with: the test double or a model profile; absent before the field existed.
     configured_provider: str | None = None
+    # A run made with part of Sentinel switched off on purpose, such as the escalation role (Phase E05); scored as its own group.
+    variant: str | None = None
 
     @property
     def legacy(self) -> bool:
@@ -76,6 +78,7 @@ def load_v2(path: Path) -> Run:
         scenario_started_at=parse_time(data.get("scenarioStartedAt")),
         environment=data.get("environment"),
         configured_provider=data.get("configuredProvider"),
+        variant=data.get("variant"),
     )
 
 

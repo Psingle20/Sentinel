@@ -107,6 +107,9 @@ export type DecisionView = {
   algorithmVersion?: string;
   inputsHash?: string;
   supersededBy?: string;
+  // Phase E05: why an abstention abstained, and the two explanations an ambiguous one could not choose between.
+  abstainedFor?: "ambiguous" | "insufficient-evidence" | "falsified";
+  contenders?: string[];
 };
 
 export type RollbackAction = {
@@ -258,6 +261,8 @@ export type InvestigationView = {
   completedAt?: string;
   role?: string;
   timedOut?: boolean;
+  // Phase E05: the escalation investigator's one discriminating query, as a sentence.
+  query?: string;
 };
 
 export type LinkedChangeView = {

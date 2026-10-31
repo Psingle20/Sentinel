@@ -1,29 +1,8 @@
 {
-  "dataset": "scenarios-v1",
+  "dataset": "scenarios-v6",
   "gatePassed": true,
   "gateReasons": [],
   "groups": [
-    {
-      "label": "sentinel (unknown model)",
-      "runs": 1,
-      "root_cause_accuracy": null,
-      "consensus_accuracy": null,
-      "acceptable_rate": 1.0,
-      "false_remediation_rate": 0.0,
-      "unsafe_executions": 0,
-      "fabricated_evidence": 0,
-      "hallucinated_evidence": 0,
-      "hallucination_rate": null,
-      "evidence_precision": null,
-      "evidence_recall": null,
-      "unsupported_rate": null,
-      "schema_failures": 0,
-      "mean_decision_seconds": null,
-      "mean_recovery_seconds": null,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cost": 0
-    },
     {
       "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
       "runs": 3,
@@ -43,7 +22,11 @@
       "mean_recovery_seconds": 261.2,
       "input_tokens": 292348,
       "output_tokens": 115672,
-      "cost": 0.986289
+      "cost": 0.986289,
+      "escalations": 0,
+      "escalation_yield": null,
+      "escalation_wrong": 0,
+      "escalation_cost": 0
     },
     {
       "label": "sentinel meta/muse-spark-1.3@investigator-v4",
@@ -64,11 +47,15 @@
       "mean_recovery_seconds": 261.0,
       "input_tokens": 81640,
       "output_tokens": 35046,
-      "cost": 0.24374
+      "cost": 0.24374,
+      "escalations": 0,
+      "escalation_yield": null,
+      "escalation_wrong": 0,
+      "escalation_cost": 0
     },
     {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
-      "runs": 5,
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "runs": 13,
       "root_cause_accuracy": 1.0,
       "consensus_accuracy": 1.0,
       "acceptable_rate": 1.0,
@@ -77,23 +64,77 @@
       "fabricated_evidence": 0,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_precision": 0.472,
-      "evidence_recall": 0.494,
+      "evidence_precision": 0.605,
+      "evidence_recall": 0.629,
       "unsupported_rate": 0.0,
       "schema_failures": 0,
-      "mean_decision_seconds": 63.7,
-      "mean_recovery_seconds": 206.5,
-      "input_tokens": 176408,
-      "output_tokens": 24000,
-      "cost": 0.0
+      "mean_decision_seconds": 76.408,
+      "mean_recovery_seconds": 229.9,
+      "input_tokens": 601478,
+      "output_tokens": 67600,
+      "cost": 0.0,
+      "escalations": 1,
+      "escalation_yield": 1.0,
+      "escalation_wrong": 0,
+      "escalation_cost": 0.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "runs": 2,
+      "root_cause_accuracy": 0.0,
+      "consensus_accuracy": 0.0,
+      "acceptable_rate": 1.0,
+      "false_remediation_rate": 0.0,
+      "unsafe_executions": 0,
+      "fabricated_evidence": 0,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_precision": 0.727,
+      "evidence_recall": 0.714,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "mean_decision_seconds": 66.2,
+      "mean_recovery_seconds": null,
+      "input_tokens": 36397,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "escalations": 0,
+      "escalation_yield": null,
+      "escalation_wrong": 0,
+      "escalation_cost": 0
+    },
+    {
+      "label": "escalation sentinel-test-double/deterministic-analyst@escalation-v1",
+      "runs": 1,
+      "root_cause_accuracy": 1.0,
+      "consensus_accuracy": 1.0,
+      "acceptable_rate": 1.0,
+      "false_remediation_rate": 0.0,
+      "unsafe_executions": 0,
+      "fabricated_evidence": 0,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_precision": 0.7,
+      "evidence_recall": 0.714,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "mean_decision_seconds": 78.2,
+      "mean_recovery_seconds": 219.4,
+      "input_tokens": 45391,
+      "output_tokens": 5200,
+      "cost": 0.0,
+      "escalations": 1,
+      "escalation_yield": 1.0,
+      "escalation_wrong": 0,
+      "escalation_cost": 0.0
     },
     {
       "label": "deploy-blame",
-      "runs": 6,
-      "root_cause_accuracy": 0.6,
+      "runs": 14,
+      "root_cause_accuracy": 0.615,
       "consensus_accuracy": null,
-      "acceptable_rate": 0.667,
-      "false_remediation_rate": 0.333,
+      "acceptable_rate": 0.357,
+      "false_remediation_rate": 0.571,
       "unsafe_executions": 0,
       "fabricated_evidence": 0,
       "hallucinated_evidence": 0,
@@ -106,14 +147,150 @@
       "mean_recovery_seconds": null,
       "input_tokens": 0,
       "output_tokens": 0,
-      "cost": 0.0
+      "cost": 0.0,
+      "escalations": 0,
+      "escalation_yield": null,
+      "escalation_wrong": 0,
+      "escalation_cost": 0
     }
   ],
   "scores": [
     {
+      "scenario_id": "AWS-S1",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": "poison-message:queue-consumer",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 17,
+      "evidence_precision": 0.647,
+      "evidence_recall": 0.8,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "quarantine-message queue-consumer (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 190.2,
+      "decision_seconds": 62.0,
+      "recovery_seconds": 184.3,
+      "input_tokens": 40617,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.7323212962962962,
+      "provider_evidence": {
+        "ecs": [
+          7,
+          5
+        ],
+        "eventbridge": [
+          5,
+          5
+        ],
+        "loki": [
+          2,
+          2
+        ],
+        "prometheus": [
+          4,
+          3
+        ],
+        "jaeger": [
+          3,
+          0
+        ],
+        "aws": [
+          2,
+          0
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "AWS-S7",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": "change:eventbridge:deployment:default/orders-route/1793457626660:completed",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 10,
+      "evidence_precision": 0.6,
+      "evidence_recall": 1.0,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "restore-route queue-consumer (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 196.0,
+      "decision_seconds": 66.4,
+      "recovery_seconds": 181.8,
+      "input_tokens": 36354,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.6615730337078651,
+      "provider_evidence": {
+        "jaeger": [
+          2,
+          0
+        ],
+        "aws": [
+          2,
+          0
+        ],
+        "ecs": [
+          3,
+          3
+        ],
+        "eventbridge": [
+          3,
+          3
+        ],
+        "prometheus": [
+          2,
+          1
+        ],
+        "sqs": [
+          2,
+          2
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
       "scenario_id": "S0",
       "investigator": "sentinel",
-      "label": "sentinel (unknown model)",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
       "legacy": false,
       "incident_opened": false,
       "decision": "none",
@@ -145,6 +322,10 @@
       "cost": 0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -199,6 +380,10 @@
           6
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -253,17 +438,21 @@
           0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
       "scenario_id": "S1",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": true,
       "decision": "diagnosed",
       "leading_service": "checkout-service",
-      "leading_key": "change:deploy-controller:deployment:01a18b81-d3b5-72e4-ac44-5e49da21fc71:started",
+      "leading_key": "change:deploy-controller:deployment:01a19293-21d9-7fa6-81c0-48080b81a202:started",
       "root_cause_correct": true,
       "correct_hypothesis_proposed": true,
       "consensus_correct": true,
@@ -271,8 +460,8 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 16,
-      "evidence_precision": 0.562,
+      "evidence_count": 14,
+      "evidence_precision": 0.5,
       "evidence_recall": 0.5,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
@@ -282,31 +471,211 @@
       "unsafe_execution": false,
       "missing_evidence_reported": null,
       "final_status": "resolved",
-      "detection_seconds": 167.6,
-      "decision_seconds": 64.7,
-      "recovery_seconds": 206.5,
-      "input_tokens": 33323,
+      "detection_seconds": 112.3,
+      "decision_seconds": 53.8,
+      "recovery_seconds": 194.0,
+      "input_tokens": 45228,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.6970638540478906,
+      "confidence": 0.7808339979374355,
       "provider_evidence": {
         "deploy-controller": [
           5,
-          5
+          2
         ],
         "prometheus": [
-          5,
-          2
+          4,
+          3
         ],
         "loki": [
           3,
           2
         ],
         "jaeger": [
-          3,
+          2,
           0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S10",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "order-service",
+      "leading_key": "change:deploy-controller:deployment:01a192a7-8234-799f-9185-938207c6dd4d:started",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 16,
+      "evidence_precision": 1.0,
+      "evidence_recall": 0.857,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "rollback order-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 114.6,
+      "decision_seconds": 320.2,
+      "recovery_seconds": 461.3,
+      "input_tokens": 91225,
+      "output_tokens": 9600,
+      "cost": 0.0,
+      "confidence": 0.673841738417384,
+      "provider_evidence": {
+        "deploy-controller": [
+          8,
+          8
+        ],
+        "prometheus": [
+          5,
+          5
+        ],
+        "loki": [
+          1,
+          1
+        ],
+        "jaeger": [
+          2,
+          2
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S11",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": "change:deploy-controller:deployment:01a1933f-7f5c-7417-b1f7-89510a465ef0:started",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 30,
+      "evidence_precision": 0.7,
+      "evidence_recall": 0.714,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 108.1,
+      "decision_seconds": 78.2,
+      "recovery_seconds": 219.4,
+      "input_tokens": 45391,
+      "output_tokens": 5200,
+      "cost": 0.0,
+      "confidence": 0.5884851494696239,
+      "provider_evidence": {
+        "jaeger": [
+          3,
+          0
+        ],
+        "deploy-controller": [
+          14,
+          11
+        ],
+        "prometheus": [
+          10,
+          8
+        ],
+        "loki": [
+          3,
+          2
+        ]
+      },
+      "escalated": true,
+      "escalation_model": "sentinel-test-double/deterministic-analyst@escalation-v1",
+      "escalation_separated": true,
+      "escalation_cost": 0.0,
+      "notes": [
+        "escalated: the query separated the explanations"
+      ]
+    },
+    {
+      "scenario_id": "S11",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "abstained",
+      "leading_service": null,
+      "leading_key": null,
+      "root_cause_correct": false,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": false,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 11,
+      "evidence_precision": 0.727,
+      "evidence_recall": 0.714,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": null,
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "escalated",
+      "detection_seconds": 109.0,
+      "decision_seconds": 66.2,
+      "recovery_seconds": null,
+      "input_tokens": 36397,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.4484,
+      "provider_evidence": {
+        "prometheus": [
+          4,
+          4
+        ],
+        "loki": [
+          3,
+          2
+        ],
+        "deploy-controller": [
+          2,
+          2
+        ],
+        "jaeger": [
+          2,
+          0
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -361,12 +730,16 @@
           0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
       "scenario_id": "S2",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": true,
       "decision": "diagnosed",
@@ -379,8 +752,8 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 19,
-      "evidence_precision": 0.684,
+      "evidence_count": 20,
+      "evidence_precision": 0.7,
       "evidence_recall": 0.571,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
@@ -390,31 +763,35 @@
       "unsafe_execution": false,
       "missing_evidence_reported": null,
       "final_status": "escalated",
-      "detection_seconds": 186.9,
-      "decision_seconds": 58.6,
+      "detection_seconds": 130.5,
+      "decision_seconds": 41.4,
       "recovery_seconds": null,
-      "input_tokens": 32871,
+      "input_tokens": 44089,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.7569272108843538,
+      "confidence": 0.7423129251700681,
       "provider_evidence": {
+        "jaeger": [
+          2,
+          0
+        ],
         "deploy-controller": [
-          5,
-          5
+          9,
+          7
         ],
         "prometheus": [
-          9,
-          6
+          6,
+          5
         ],
         "loki": [
           3,
           2
-        ],
-        "jaeger": [
-          2,
-          0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -469,17 +846,21 @@
           6
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
       "scenario_id": "S3",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": true,
       "decision": "diagnosed",
       "leading_service": "order-service",
-      "leading_key": "change:deploy-controller:deployment:01a18b2d-fd3b-763e-8770-2c71fa9c6d28:started",
+      "leading_key": "change:deploy-controller:deployment:01a19284-e7da-7da7-bb4e-cade82d0d6f8:started",
       "root_cause_correct": true,
       "correct_hypothesis_proposed": true,
       "consensus_correct": true,
@@ -487,8 +868,8 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 20,
-      "evidence_precision": 0.6,
+      "evidence_count": 17,
+      "evidence_precision": 0.882,
       "evidence_recall": 0.667,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
@@ -498,42 +879,46 @@
       "unsafe_execution": false,
       "missing_evidence_reported": null,
       "final_status": "awaitingApproval",
-      "detection_seconds": 261.8,
-      "decision_seconds": 55.7,
+      "detection_seconds": 205.9,
+      "decision_seconds": 48.5,
       "recovery_seconds": null,
-      "input_tokens": 35716,
+      "input_tokens": 45707,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.5988235294117646,
+      "confidence": 0.7409560498220639,
       "provider_evidence": {
         "deploy-controller": [
-          6,
-          2
+          8,
+          6
         ],
         "prometheus": [
-          8,
-          5
+          6,
+          6
         ],
         "loki": [
-          3,
-          2
+          1,
+          1
         ],
         "jaeger": [
-          3,
-          3
+          2,
+          2
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
       "scenario_id": "S4",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": true,
       "decision": "diagnosed",
       "leading_service": "checkout-service",
-      "leading_key": "change:deploy-controller:deployment:01a18b40-c3a6-7c1d-a3ad-bf7998af3a13:started",
+      "leading_key": "change:deploy-controller:deployment:01a192b8-282f-7e6b-9236-929ff8db2e76:started",
       "root_cause_correct": true,
       "correct_hypothesis_proposed": true,
       "consensus_correct": true,
@@ -541,8 +926,8 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 18,
-      "evidence_precision": 0.222,
+      "evidence_count": 8,
+      "evidence_precision": 0.375,
       "evidence_recall": 0.4,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
@@ -552,24 +937,20 @@
       "unsafe_execution": false,
       "missing_evidence_reported": false,
       "final_status": "awaitingApproval",
-      "detection_seconds": 176.3,
-      "decision_seconds": 61.9,
+      "detection_seconds": 124.1,
+      "decision_seconds": 51.2,
       "recovery_seconds": null,
-      "input_tokens": 37320,
+      "input_tokens": 43288,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.6355077537058154,
+      "confidence": 0.7204204929917835,
       "provider_evidence": {
         "deploy-controller": [
-          7,
-          2
-        ],
-        "loki": [
-          3,
-          0
+          2,
+          1
         ],
         "prometheus": [
-          6,
+          4,
           2
         ],
         "jaeger": [
@@ -577,17 +958,21 @@
           0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
       "scenario_id": "S5",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": true,
       "decision": "diagnosed",
       "leading_service": "checkout-service",
-      "leading_key": "change:deploy-controller:deployment:01a18b47-dd8e-70c3-8b9d-5d7c30ed6f26:started",
+      "leading_key": "change:deploy-controller:deployment:01a192be-69fb-7a21-972f-2c11af64a072:started",
       "root_cause_correct": true,
       "correct_hypothesis_proposed": true,
       "consensus_correct": true,
@@ -595,9 +980,9 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 17,
-      "evidence_precision": 0.294,
-      "evidence_recall": 0.333,
+      "evidence_count": 12,
+      "evidence_precision": 0.667,
+      "evidence_recall": 0.5,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
       "schema_failures": 0,
@@ -606,31 +991,349 @@
       "unsafe_execution": false,
       "missing_evidence_reported": null,
       "final_status": "escalated",
-      "detection_seconds": 123.0,
-      "decision_seconds": 77.6,
+      "detection_seconds": 116.3,
+      "decision_seconds": 63.3,
       "recovery_seconds": null,
-      "input_tokens": 37178,
+      "input_tokens": 43771,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.5633251839738348,
+      "confidence": 0.7728840495015469,
+      "provider_evidence": {
+        "deploy-controller": [
+          3,
+          3
+        ],
+        "prometheus": [
+          4,
+          3
+        ],
+        "loki": [
+          3,
+          2
+        ],
+        "jaeger": [
+          2,
+          0
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S6",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": "poison-message:queue-consumer",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 11,
+      "evidence_precision": 0.455,
+      "evidence_recall": 0.5,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "quarantine-message queue-consumer (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 109.0,
+      "decision_seconds": 40.6,
+      "recovery_seconds": 159.3,
+      "input_tokens": 39125,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.7405444444444443,
+      "provider_evidence": {
+        "jaeger": [
+          2,
+          0
+        ],
+        "deploy-controller": [
+          6,
+          2
+        ],
+        "prometheus": [
+          3,
+          3
+        ],
+        "loki": [
+          2,
+          2
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S7",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "order-service",
+      "leading_key": "dependency-regression:order-service",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 17,
+      "evidence_precision": 0.471,
+      "evidence_recall": 0.571,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": null,
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "escalated",
+      "detection_seconds": 146.2,
+      "decision_seconds": 64.7,
+      "recovery_seconds": null,
+      "input_tokens": 41552,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.6668576271186442,
+      "provider_evidence": {
+        "deploy-controller": [
+          7,
+          2
+        ],
+        "prometheus": [
+          6,
+          5
+        ],
+        "jaeger": [
+          3,
+          0
+        ],
+        "loki": [
+          1,
+          1
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S8",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": "duplicate-delivery:queue-consumer",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 12,
+      "evidence_precision": 0.333,
+      "evidence_recall": 0.6,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": null,
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "escalated",
+      "detection_seconds": 59.3,
+      "decision_seconds": 38.6,
+      "recovery_seconds": null,
+      "input_tokens": 39991,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.6816673622704509,
       "provider_evidence": {
         "loki": [
           2,
           2
         ],
         "prometheus": [
-          7,
+          3,
+          2
+        ],
+        "deploy-controller": [
+          5,
           0
         ],
+        "jaeger": [
+          2,
+          0
+        ]
+      },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S9",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": "change:deploy-controller:deployment:01a192a0-2a10-705e-a2d6-84b7f8d252a7:started",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 15,
+      "evidence_precision": 0.533,
+      "evidence_recall": 0.5,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 114.0,
+      "decision_seconds": 64.4,
+      "recovery_seconds": 209.2,
+      "input_tokens": 45140,
+      "output_tokens": 4800,
+      "cost": 0.0,
+      "confidence": 0.7839808525266414,
+      "provider_evidence": {
         "deploy-controller": [
           5,
           3
         ],
-        "jaeger": [
+        "prometheus": [
+          5,
+          3
+        ],
+        "loki": [
           3,
+          2
+        ],
+        "jaeger": [
+          2,
           0
         ]
       },
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "AWS-S1",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": null,
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback queue-consumer (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "AWS-S7",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": null,
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback queue-consumer (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -668,6 +1371,10 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -705,6 +1412,92 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S10",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": null,
+      "root_cause_correct": false,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S11",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "order-service",
+      "leading_key": null,
+      "root_cause_correct": false,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback order-service (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -742,6 +1535,10 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -779,6 +1576,10 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -816,6 +1617,10 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     },
     {
@@ -853,20 +1658,179 @@
       "cost": 0.0,
       "confidence": null,
       "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S6",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": null,
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback queue-consumer (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S7",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": null,
+      "root_cause_correct": false,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback queue-consumer (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S8",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "queue-consumer",
+      "leading_key": null,
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": false,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback queue-consumer (approvalRequired)",
+      "false_remediation": true,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
+      "notes": []
+    },
+    {
+      "scenario_id": "S9",
+      "investigator": "deploy-blame",
+      "label": "deploy-blame",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": null,
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": null,
+      "consensus_correct": null,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": null,
+      "evidence_count": 1,
+      "evidence_precision": null,
+      "evidence_recall": null,
+      "rejected_evidence": 0,
+      "unsupported_rate": null,
+      "schema_failures": 0,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": null,
+      "detection_seconds": null,
+      "decision_seconds": null,
+      "recovery_seconds": null,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0,
+      "confidence": null,
+      "provider_evidence": {},
+      "escalated": false,
+      "escalation_model": null,
+      "escalation_separated": null,
+      "escalation_cost": 0.0,
       "notes": []
     }
   ],
   "missingRuns": [],
   "calibration": [
-    {
-      "label": "sentinel (unknown model)",
-      "decisions": 0,
-      "brier_score": null,
-      "expected_calibration_error": null,
-      "status": "uncalibrated",
-      "reason": "No diagnosis with a stated confidence was scored.",
-      "buckets": []
-    },
     {
       "label": "sentinel meta-deep/muse-spark-1.3@investigator-v4, meta-wonder/muse-wonder-1.0@investigator-v4, meta/muse-spark-1.3@investigator-v4",
       "decisions": 3,
@@ -958,32 +1922,32 @@
       ]
     },
     {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
-      "decisions": 5,
-      "brier_score": 0.127,
-      "expected_calibration_error": 0.35,
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "decisions": 13,
+      "brier_score": 0.085,
+      "expected_calibration_error": 0.286,
       "status": "uncalibrated",
-      "reason": "5 scored diagnoses; at least 30 are needed to call confidence calibrated.",
+      "reason": "13 scored diagnoses; at least 30 are needed to call confidence calibrated.",
       "buckets": [
         {
           "low": 0.5,
           "high": 0.6,
-          "decisions": 2,
-          "mean_confidence": 0.581,
+          "decisions": 1,
+          "mean_confidence": 0.588,
           "accuracy": 1.0
         },
         {
           "low": 0.6,
           "high": 0.7,
-          "decisions": 2,
-          "mean_confidence": 0.666,
+          "decisions": 4,
+          "mean_confidence": 0.671,
           "accuracy": 1.0
         },
         {
           "low": 0.7,
           "high": 0.8,
-          "decisions": 1,
-          "mean_confidence": 0.757,
+          "decisions": 8,
+          "mean_confidence": 0.752,
           "accuracy": 1.0
         },
         {
@@ -1001,6 +1965,15 @@
           "accuracy": null
         }
       ]
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "decisions": 0,
+      "brier_score": null,
+      "expected_calibration_error": null,
+      "status": "uncalibrated",
+      "reason": "No diagnosis with a stated confidence was scored.",
+      "buckets": []
     }
   ],
   "sourceReliability": [
@@ -1061,32 +2034,268 @@
       "precision": 0.462
     },
     {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "aws",
+      "evidence": 4,
+      "matching": 0,
+      "precision": 0.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "provider": "deploy-controller",
-      "evidence": 28,
-      "matching": 17,
-      "precision": 0.607
+      "evidence": 72,
+      "matching": 45,
+      "precision": 0.625
     },
     {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
-      "provider": "jaeger",
-      "evidence": 13,
-      "matching": 3,
-      "precision": 0.231
-    },
-    {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
-      "provider": "loki",
-      "evidence": 14,
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "ecs",
+      "evidence": 10,
       "matching": 8,
-      "precision": 0.571
+      "precision": 0.8
     },
     {
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v4",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "eventbridge",
+      "evidence": 8,
+      "matching": 8,
+      "precision": 1.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "jaeger",
+      "evidence": 29,
+      "matching": 4,
+      "precision": 0.138
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "loki",
+      "evidence": 24,
+      "matching": 19,
+      "precision": 0.792
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "provider": "prometheus",
-      "evidence": 35,
-      "matching": 15,
-      "precision": 0.429
+      "evidence": 62,
+      "matching": 49,
+      "precision": 0.79
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
+      "provider": "sqs",
+      "evidence": 2,
+      "matching": 2,
+      "precision": 1.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "provider": "deploy-controller",
+      "evidence": 2,
+      "matching": 2,
+      "precision": 1.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "provider": "jaeger",
+      "evidence": 2,
+      "matching": 0,
+      "precision": 0.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "provider": "loki",
+      "evidence": 3,
+      "matching": 2,
+      "precision": 0.667
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "provider": "prometheus",
+      "evidence": 4,
+      "matching": 4,
+      "precision": 1.0
     }
-  ]
+  ],
+  "environments": {
+    "AWS-S1": {
+      "environment": "aws",
+      "ready": true,
+      "problems": [],
+      "provider": "floci 2.3.0",
+      "imageDigest": "sha256:09b72c45f333019adecb302e79c6b746e290135f528016c8514618bc7ab02344",
+      "provisioningVersion": "3"
+    },
+    "AWS-S7": {
+      "environment": "aws",
+      "ready": true,
+      "problems": [],
+      "provider": "floci 2.3.0",
+      "imageDigest": "sha256:09b72c45f333019adecb302e79c6b746e290135f528016c8514618bc7ab02344",
+      "provisioningVersion": "3"
+    },
+    "S0": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S1": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S10": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S11": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S2": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S3": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S4": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S5": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S6": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S7": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S8": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    },
+    "S9": {
+      "environment": "local",
+      "ready": true,
+      "problems": [],
+      "provider": null,
+      "imageDigest": null,
+      "provisioningVersion": null
+    }
+  },
+  "fidelity": {
+    "AWS-S1": {
+      "environment": "aws",
+      "statement": "SQS, its dead-letter queue and ECS run on local AWS; the consumer, its telemetry, which reaches Sentinel through OpenTelemetry rather than CloudWatch, and the AWS SDK calls on both sides are real; the poison message and the v1.4.1 rollout are injected by the scenario runner. The result shows Sentinel's diagnosis and its ECS, SQS and quarantine adapters against AWS-shaped APIs, not AWS's own timing, throttling or redrive behaviour, which differs: local AWS never changes a redrive policy a queue was created with (ADR-021).",
+      "labels": [
+        {
+          "element": "AWS SDK calls from Sentinel's ECS, SQS and quarantine adapters",
+          "level": "contract-real"
+        },
+        {
+          "element": "queue-consumer process, its OpenTelemetry signals and its ECS task container",
+          "level": "data-plane-real"
+        },
+        {
+          "element": "SQS queue, dead-letter queue and redrive",
+          "level": "locally-modelled"
+        },
+        {
+          "element": "ECS service, task definitions and rollout state",
+          "level": "locally-modelled"
+        },
+        {
+          "element": "poison message",
+          "level": "injected"
+        },
+        {
+          "element": "queue-consumer v1.4.1 rollout",
+          "level": "injected"
+        }
+      ]
+    },
+    "AWS-S7": {
+      "environment": "aws",
+      "statement": "EventBridge routing, the orders queue and ECS run on local AWS; the producer, the consumer, their telemetry, which reaches Sentinel through OpenTelemetry rather than CloudWatch, and the AWS SDK calls on both sides are real; the drift and the v1.4.1 rollout are injected by the scenario runner. The result shows Sentinel's diagnosis and its EventBridge, ECS and SQS adapters against AWS-shaped APIs, not AWS's own event-delivery timing or throttling.",
+      "labels": [
+        {
+          "element": "AWS SDK calls from Sentinel's EventBridge, ECS and SQS adapters",
+          "level": "contract-real"
+        },
+        {
+          "element": "producer and queue-consumer processes, their OpenTelemetry signals and the ECS task container",
+          "level": "data-plane-real"
+        },
+        {
+          "element": "EventBridge rule matching and delivery to the queue",
+          "level": "locally-modelled"
+        },
+        {
+          "element": "SQS queue and its attributes",
+          "level": "locally-modelled"
+        },
+        {
+          "element": "ECS service, task definitions and rollout state",
+          "level": "locally-modelled"
+        },
+        {
+          "element": "orders-route pattern drift",
+          "level": "injected"
+        },
+        {
+          "element": "queue-consumer v1.4.1 rollout",
+          "level": "injected"
+        }
+      ]
+    }
+  }
 }

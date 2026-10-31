@@ -211,6 +211,12 @@ public class SentinelSystem : IAsyncLifetime
                 output.WriteLine($"  hypothesis {hypothesis.Finding.HypothesisId} {hypothesis.Finding.Key} ({hypothesis.Status}): {hypothesis.Finding.Statement}");
             }
 
+            // Each accepted finding's family, so a close decision shows what each explanation rests on.
+            foreach (Sentinel.Contracts.Incidents.EvidenceView evidence in detail.Evidence.Where(evidence => evidence.Status == Sentinel.Contracts.Incidents.EvidenceStatus.Accepted))
+            {
+                output.WriteLine($"  evidence {evidence.Finding.IndependenceGroup} {evidence.Finding.Direction} {evidence.Finding.Strength:F2} for {string.Join(", ", evidence.Finding.HypothesisIds)}");
+            }
+
             if (detail.Decision is { } decision)
             {
                 output.WriteLine($"  decision {decision.Outcome} ({decision.AlgorithmVersion}) confidence {decision.Confidence:F2}, completeness {decision.EvidenceCompleteness:F2}, leading {decision.LeadingHypothesisId}: {decision.Rationale}");

@@ -25,6 +25,10 @@ public sealed class IncidentActivities(IServiceScopeFactory scopes)
     public Task<Guid?> RequestChallengeAsync(Guid incidentId) =>
         RunAsync(async (steps, token) => (await steps.RequestChallengeAsync(IncidentId.From(incidentId), token))?.Value);
 
+    [Activity("incident.request-challenge-after-escalation")]
+    public Task<Guid?> RequestChallengeAfterEscalationAsync(Guid incidentId) =>
+        RunAsync(async (steps, token) => (await steps.RequestChallengeAsync(IncidentId.From(incidentId), token, afterEscalation: true))?.Value);
+
     [Activity("incident.time-out-investigations")]
     public Task TimeOutInvestigationsAsync(Guid incidentId, IReadOnlyList<Guid> investigationIds) =>
         RunAsync(async (steps, token) =>
@@ -69,7 +73,8 @@ public sealed class IncidentActivities(IServiceScopeFactory scopes)
             snapshot.Execution?.ToString(),
             snapshot.RecoveryWindowTo?.UtcDateTime,
             [.. snapshot.PendingInvestigationIds.Select(id => id.Value)],
-            [.. snapshot.ReportedInvestigationIds.Select(id => id.Value)]);
+            [.. snapshot.ReportedInvestigationIds.Select(id => id.Value)],
+            snapshot.EscalationId?.Value);
     }
 
     private async Task<T> RunAsync<T>(Func<IncidentSteps, CancellationToken, Task<T>> step)

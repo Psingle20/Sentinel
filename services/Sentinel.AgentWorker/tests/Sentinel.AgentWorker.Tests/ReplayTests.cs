@@ -129,6 +129,36 @@ public sealed class ReplayTests
     }
 
     [Fact]
+    public async Task The_escalation_investigator_replays_its_one_query_from_the_captured_inputs()
+    {
+        // Phase E05: the query's result is served from what was captured, and the double proposes the same query again.
+        var telemetry = Telemetry.AmbiguousConnectionGrowth();
+        var store = new InMemoryExecutionStore();
+        (InvestigateIncident command, _, _) = EscalationTests.Ambiguous(telemetry);
+        var capture = new InvestigationCapture();
+        capture.BeginRecording();
+        InvestigationRun run = await Escalation(new CapturingObservationQueries(telemetry, capture)).InvestigateAsync(command, false, CancellationToken.None);
+        await SaveRunAsync(store, run, command, capture.EndRecording());
+
+        var replayCapture = new InvestigationCapture();
+        var offline = new OfflineProviders();
+        var replayer = new ReplayInvestigationCommandHandler(
+            store,
+            [Escalation(new CapturingObservationQueries(offline, replayCapture))],
+            [],
+            new FixedRouter(new DeterministicModelProvider(Options.Create(new TestDoubleOptions()))),
+            replayCapture,
+            TimeProvider.System,
+            NullLogger<ReplayInvestigationCommandHandler>.Instance);
+        InvestigationReplayResult replay = (await replayer.Handle(new ReplayInvestigationCommand(run.Execution.AgentExecutionId, new InvestigationReplayRequest()), CancellationToken.None)).Value!;
+
+        run.Completed.Evidence.ShouldNotBeEmpty();
+        replay.FindingsMatch.ShouldBe(true, string.Join("; ", replay.Differences));
+        replay.Deterministic.ShouldBeTrue();
+        offline.Calls.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task An_execution_recorded_without_inputs_says_it_cannot_be_replayed()
     {
         var telemetry = Telemetry.ConnectionLeak();
@@ -169,6 +199,15 @@ public sealed class ReplayTests
         run.Execution.ToolCalls.ShouldNotBeEmpty();
         return run.Execution;
     }
+
+    private static EscalationInvestigator Escalation(IObservationQueries queries) =>
+        new(
+            new FixedRouter(new DeterministicModelProvider(Options.Create(new TestDoubleOptions()))),
+            [new MetricRangeTool(queries, Harness.Catalog)],
+            Harness.Catalog,
+            Options.Create(new ModelPricingOptions { InputPerMillionTokens = 1, OutputPerMillionTokens = 2 }),
+            new AgentWorkerTelemetry(),
+            TimeProvider.System);
 
     private static async Task SaveRunAsync(InMemoryExecutionStore store, InvestigationRun run, InvestigateIncident command, IReadOnlyList<CapturedResponse> responses)
     {

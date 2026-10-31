@@ -97,6 +97,36 @@ public sealed class ConsensusTests
     }
 
     [Fact]
+    public void An_abstention_names_its_reason_and_only_ambiguity_names_the_two_contenders()
+    {
+        (Incident close, HypothesisId lead, HypothesisId other) = Recorded(
+        [
+            .. Corroborated(),
+            Supporting(Other, 0.8, 0, 50, "b-1") with { IndependenceGroup = "redis-connections:reporting-worker" },
+            Supporting(Other, 0.5, 0, 50, "b-2") with { IndependenceGroup = "deployment:other" }
+        ]);
+        (Incident thin, _, _) = Recorded(Supporting(Lead, 0.95, 0, 50, "surge-1") with { IndependenceGroup = "redis-connections:checkout-service" });
+        (Incident refuted, _, _) = Recorded(Corroborated());
+        Challenge[] both =
+        [
+            new(Lead, "change-served-before-onset", ChallengeVerdict.Falsified, [], "Served after onset."),
+            new(Other, "load-rose-before-onset", ChallengeVerdict.Falsified, [], "No load rose.")
+        ];
+
+        Decision ambiguous = Consensus.Decide(close, [], Settings, DecisionId.New(), Now);
+        Decision insufficient = Consensus.Decide(thin, [], Settings, DecisionId.New(), Now);
+        Decision lowered = Consensus.Decide(refuted, [], Settings with { AbstainBelowConfidence = 0.99 }, DecisionId.New(), Now);
+
+        ambiguous.AbstainedFor.ShouldBe(AbstentionReason.Ambiguous);
+        ambiguous.Contenders.ShouldBe([lead, other]);
+        insufficient.AbstainedFor.ShouldBe(AbstentionReason.InsufficientEvidence);
+        insufficient.Contenders.ShouldBeEmpty();
+        lowered.AbstainedFor.ShouldBe(AbstentionReason.InsufficientEvidence);
+        Consensus.Decide(refuted, both, Settings, DecisionId.New(), Now).AbstainedFor.ShouldBe(AbstentionReason.Falsified);
+        Consensus.Decide(refuted, [], Settings, DecisionId.New(), Now).AbstainedFor.ShouldBeNull();
+    }
+
+    [Fact]
     public void Evidence_from_partial_data_lowers_completeness_and_with_it_confidence()
     {
         (Incident complete, _, _) = Recorded(Corroborated());

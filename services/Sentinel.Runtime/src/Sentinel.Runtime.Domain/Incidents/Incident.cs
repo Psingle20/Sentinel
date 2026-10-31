@@ -16,6 +16,9 @@ public sealed class Incident : Entity
     /// <summary>Follow-up cycles an incident may have after an unrecovered remedy (Phase E03); a second unrecovered remedy escalates.</summary>
     public const int MaxFollowUps = 1;
 
+    /// <summary>The investigation role that proposes one discriminating observation after an ambiguous consensus (Phase E05).</summary>
+    public const string EscalationRole = "escalation";
+
     private readonly List<LinkedChange> _changes = [];
     private readonly List<TriedRemedy> _tried = [];
     private readonly List<Decision> _decisions = [];
@@ -67,6 +70,10 @@ public sealed class Incident : Entity
 
     /// <summary>Reports of the current cycle; earlier cycles of a reopened incident stay in the stream.</summary>
     public IReadOnlyList<InvestigationReported> Reports => _investigation.Reports;
+
+    /// <summary>The current cycle's escalation investigation, once consensus abstained for ambiguity (Phase E05); at most one per cycle.</summary>
+    public InvestigationRequested? Escalation =>
+        _investigation.Requested.Where(requested => requested.Role == EscalationRole && requested.OccurredAt >= CycleStartedAt).MaxBy(requested => requested.OccurredAt);
 
     /// <summary>Requested investigations that have neither reported nor timed out.</summary>
     public IReadOnlyList<InvestigationRequested> PendingInvestigations => _investigation.Pending;
@@ -175,6 +182,42 @@ public sealed class Incident : Entity
         }
 
         Result<InvestigationRequested> requested = _investigation.Request(investigationId, objective, windowFrom, windowTo, now, role, challengedHypothesisIds, similarIncidents);
+        if (requested.IsFailure)
+        {
+            return Result.Failure(requested.Error);
+        }
+
+        Append(requested.Value);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Instead of recording an abstention for ambiguity, asks the escalation investigator for the one observation that would
+    /// separate the leader from its closest rival (Phase E05). Once per cycle: a second ambiguous consensus is recorded and
+    /// escalates to responders as before. Repeating the request with the same ID changes nothing.
+    /// </summary>
+    public Result RequestEscalation(InvestigationId investigationId, string objective, DateTimeOffset windowFrom, DateTimeOffset windowTo, DateTimeOffset now, Decision ambiguous)
+    {
+        ArgumentNullException.ThrowIfNull(ambiguous);
+
+        if (_investigation.Has(investigationId))
+        {
+            return Result.Success();
+        }
+
+        if (ambiguous.AbstainedFor != AbstentionReason.Ambiguous || Escalation is not null || Decision is not null || !IncidentStateMachine.Allows(State, IncidentOperation.RequestInvestigation))
+        {
+            return Result.Failure(IncidentErrors.InvalidState(State, "request an escalation"));
+        }
+
+        HypothesisAssessment[] standing = [.. ambiguous.Contenders.Select(id => ambiguous.Assessments.FirstOrDefault(assessment => assessment.HypothesisId == id)).OfType<HypothesisAssessment>()];
+        if (standing.Length < 2)
+        {
+            return Result.Failure(IncidentErrors.InvalidState(State, "request an escalation without two surviving explanations"));
+        }
+
+        Result<InvestigationRequested> requested = _investigation.Request(
+            investigationId, objective, windowFrom, windowTo, now, EscalationRole, [.. standing.Select(assessment => assessment.HypothesisId)], null, new EscalationState(standing, ambiguous.EvidenceCompleteness, ambiguous.Rationale));
         if (requested.IsFailure)
         {
             return Result.Failure(requested.Error);

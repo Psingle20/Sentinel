@@ -151,7 +151,8 @@ public static class IncidentMessages
 
     private static InvestigateIncident Investigate(Incident incident, InvestigationRequested requested, InvestigationBudget budget, IReadOnlyList<ServiceId> dependencies)
     {
-        bool verifier = requested.Role == InvestigationRoles.Verifier;
+        // The verifier challenges every hypothesis it is given; the escalation investigator separates the two it is given (Phase E05).
+        bool reviewing = requested.Role is InvestigationRoles.Verifier or InvestigationRoles.Escalation;
         HashSet<HypothesisId> challenged = [.. requested.ChallengedHypothesisIds ?? []];
         return new InvestigateIncident
         {
@@ -171,10 +172,18 @@ public static class IncidentMessages
             Budget = budget,
             SymptomOnset = incident.SymptomOnset,
             Role = requested.Role,
-            Hypotheses = verifier ? [.. incident.AllHypotheses().Where(hypothesis => challenged.Contains(hypothesis.HypothesisId)).Select(hypothesis => hypothesis.ToContract())] : null,
-            Evidence = verifier ? [.. incident.AcceptedEvidence().Select(evidence => evidence.ToContract())] : null,
+            Hypotheses = reviewing ? [.. incident.AllHypotheses().Where(hypothesis => challenged.Contains(hypothesis.HypothesisId)).Select(hypothesis => hypothesis.ToContract())] : null,
+            Evidence = reviewing ? [.. incident.AcceptedEvidence().Select(evidence => evidence.ToContract())] : null,
             SimilarIncidents = requested.SimilarIncidents is { Count: > 0 } similar
                 ? [.. similar.Select(prior => new SimilarIncident(prior.IncidentId, prior.Similarity, prior.SharedFeatures, prior.CauseKey, prior.CauseStatement, prior.Outcome, prior.RecordedAt))]
+                : null,
+            Escalation = requested.Escalation is { } escalation
+                ? new EscalationContext
+                {
+                    Standing = [.. escalation.Standing.Select(standing => new HypothesisStanding(standing.HypothesisId, standing.Score, standing.IndependentSupport, standing.IndependentContradiction))],
+                    EvidenceCompleteness = escalation.EvidenceCompleteness,
+                    Rationale = escalation.Rationale
+                }
                 : null
         };
     }

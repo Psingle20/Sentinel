@@ -181,7 +181,8 @@ public static class IncidentProjector
             report?.AbstentionReason,
             report?.CompletedAt,
             requested.Role,
-            report is null && incident.TimedOutInvestigationIds.Contains(requested.InvestigationId));
+            report is null && incident.TimedOutInvestigationIds.Contains(requested.InvestigationId),
+            report?.Query);
     }
 
     private static HypothesisStatus HypothesisState(Hypothesis hypothesis, DomainDecision? decision, Incident incident)

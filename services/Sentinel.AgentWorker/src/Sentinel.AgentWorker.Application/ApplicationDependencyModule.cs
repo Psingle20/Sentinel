@@ -36,6 +36,7 @@ public sealed class ApplicationDependencyModule : IDependencyModule
         services.AddScoped<IInvestigator, ModelInvestigator>();
         services.AddScoped<IInvestigator, DeployBlameInvestigator>();
         services.AddScoped<IInvestigator, AdversarialVerifier>();
+        services.AddScoped<IInvestigator, EscalationInvestigator>();
         services.AddSingleton<AgentWorkerTelemetry>();
 
         // The control-plane document: published versions over the deployment configuration alone.

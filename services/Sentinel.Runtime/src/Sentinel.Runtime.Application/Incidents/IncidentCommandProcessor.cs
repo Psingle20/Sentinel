@@ -88,10 +88,24 @@ public static class IncidentCommandProcessor
     }
 
     /// <summary>Decides once per cycle; a decision already made stands, so a retried step is a no-op.</summary>
-    private static Result Decide(Incident incident, DecideCommand decide, DateTimeOffset now) =>
-        incident.Decision is not null
-            ? Result.Success()
-            : incident.RecordDecision(Evaluate(incident, decide.UseConsensus, decide.Settings, decide.DecisionId, now));
+    private static Result Decide(Incident incident, DecideCommand decide, DateTimeOffset now)
+    {
+        // Already decided, or waiting for the escalation investigation this cycle requested: nothing to do yet.
+        if (incident.Decision is not null || incident.Escalation is { } pending && incident.PendingInvestigations.Any(investigation => investigation.InvestigationId == pending.InvestigationId))
+        {
+            return Result.Success();
+        }
+
+        Decision decision = Evaluate(incident, decide.UseConsensus, decide.Settings, decide.DecisionId, now);
+
+        // Phase E05: an abstention for ambiguity on adequate evidence asks for one discriminating observation, once per cycle.
+        return decide.Escalation is { } escalation
+            && decision.AbstainedFor == AbstentionReason.Ambiguous
+            && decision.EvidenceCompleteness >= escalation.MinimumCompleteness
+            && incident.Escalation is null
+                ? incident.RequestEscalation(escalation.InvestigationId, escalation.Objective, escalation.WindowFrom, escalation.WindowTo, now, decision)
+                : incident.RecordDecision(decision);
+    }
 
     private static Result RequestAll(Incident incident, RequestInvestigationsCommand request, DateTimeOffset now) =>
         All(request.Investigations, spec => incident.RequestInvestigation(spec.InvestigationId, spec.Objective, spec.WindowFrom, spec.WindowTo, now, spec.Role, spec.ChallengedHypothesisIds, spec.SimilarIncidents));

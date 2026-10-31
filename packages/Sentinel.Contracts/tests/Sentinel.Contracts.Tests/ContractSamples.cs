@@ -349,12 +349,111 @@ internal static class ContractSamples
                 ProviderHealth = [new ProviderHealth("loki", ProviderStatus.Healthy), new ProviderHealth("jaeger", ProviderStatus.Degraded)],
                 RedactionPolicyVersion = "redaction-v1",
                 ContinuationToken = "1793093100.prometheus:checkout:slo-burn-rate:1793093100"
-            })
+            }),
+        [EscalationRequest] = new InvestigateIncident
+        {
+            TenantId = Tenant,
+            EnvironmentId = Environment,
+            IncidentId = Incident,
+            InvestigationId = Investigation,
+            AffectedServiceId = Checkout,
+            RelatedServiceIds = [ServiceId.From("order-service")],
+            Objective = "Two explanations stand too close to decide between. Propose the one observation that would separate them.",
+            ObservationWindow = new TimeRange(Opened.AddMinutes(-15), Opened),
+            Budget = new InvestigationBudget(20, 40_000, TimeSpan.FromMinutes(2)),
+            Role = InvestigationRoles.Escalation,
+            SymptomOnset = Opened.AddMinutes(-4),
+            Hypotheses =
+            [
+                new HypothesisFinding
+                {
+                    HypothesisId = LeakHypothesis,
+                    Statement = "checkout-service v2.4.1 introduced a Redis connection leak.",
+                    CausalChain = ["deployment v2.4.1", "connection leak", "Redis saturation", "SLO burn"],
+                    SuspectedServiceId = Checkout,
+                    SuspectedChangeObservationId = Deployment
+                },
+                new HypothesisFinding
+                {
+                    HypothesisId = LoadHypothesis,
+                    Statement = "order-service v1.7.2 leaks Redis connections.",
+                    CausalChain = ["deployment v1.7.2", "Redis saturation", "SLO burn"],
+                    SuspectedServiceId = ServiceId.From("order-service")
+                }
+            ],
+            Escalation = new EscalationContext
+            {
+                Standing = [new HypothesisStanding(LeakHypothesis, 1.12, 2, 0), new HypothesisStanding(LoadHypothesis, 1.05, 2, 0)],
+                EvidenceCompleteness = 0.95,
+                Rationale = "The leading explanation is not established: confidence 0.44."
+            }
+        },
+        [EscalationAnswer] = new InvestigationCompleted
+        {
+            TenantId = Tenant,
+            EnvironmentId = Environment,
+            IncidentId = Incident,
+            InvestigationId = Investigation,
+            AgentExecutionId = Execution,
+            Outcome = InvestigationOutcome.Completed,
+            Evidence =
+            [
+                new EvidenceFinding
+                {
+                    EvidenceId = ConnectionsEvidence,
+                    Statement = "checkout-service redis_connections was 150 at onset: the prediction held.",
+                    Direction = EvidenceDirection.Supports,
+                    Strength = 0.7,
+                    SourceObservationIds = [ObservationId.From("prometheus:redis:connected-clients:checkout:1793093100")],
+                    HypothesisIds = [LeakHypothesis],
+                    EventTimeRange = new TimeRange(Opened.AddMinutes(-4), Opened.AddMinutes(-4)),
+                    ToolCallId = "call_escalation_query",
+                    IndependenceGroup = "escalation:redis_connections"
+                }
+            ],
+            Hypotheses = [],
+            Model = new ModelMetadata("meta-wonder", "muse-wonder-1.0", null, "escalation-v1"),
+            CompletedAt = Opened.AddMinutes(3),
+            Role = InvestigationRoles.Escalation,
+            Query = new DiscriminatingQuery
+            {
+                HypothesisIds = [LeakHypothesis, LoadHypothesis],
+                Tool = "metric_range",
+                Arguments = "{\"metric\":\"redis_connections\"}",
+                Expectations =
+                [
+                    new QueryExpectation
+                    {
+                        HypothesisId = LeakHypothesis,
+                        ServiceId = Checkout,
+                        Metric = "redis_connections",
+                        Comparison = "above",
+                        Threshold = 100,
+                        Statement = "If checkout-service caused the symptoms, it holds more than 100 Redis connections at onset."
+                    },
+                    new QueryExpectation
+                    {
+                        HypothesisId = LoadHypothesis,
+                        ServiceId = ServiceId.From("order-service"),
+                        Metric = "redis_connections",
+                        Comparison = "above",
+                        Threshold = 100,
+                        Statement = "If order-service caused the symptoms, it holds more than 100 Redis connections at onset."
+                    }
+                ],
+                Rationale = "Only the cause holds most of Redis's clients."
+            }
+        }
     };
 
     /// <summary>The snapshot name of Ingestion's observation query answer, which is a contract but not a message.</summary>
     internal const string QueryAnswer = "ingestion.query.observations.result";
 
+    /// <summary>The snapshot names of the escalation investigator's request and answer (Phase E05), variants of messages above.</summary>
+    internal const string EscalationRequest = "agentworker.investigate-incident.escalation";
+
+    internal const string EscalationAnswer = "agentworker.investigation.completed.escalation";
+
     /// <summary>Samples of contracts that are not messages, which the message rules leave out.</summary>
-    internal static readonly IReadOnlyList<string> NonMessageContracts = [QueryAnswer];
+    internal static readonly IReadOnlyList<string> NonMessageContracts = [QueryAnswer, EscalationRequest, EscalationAnswer];
 }
