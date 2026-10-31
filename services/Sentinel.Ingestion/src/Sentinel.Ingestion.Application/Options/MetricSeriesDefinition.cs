@@ -31,7 +31,7 @@ public sealed record MetricSeriesDefinition
 
     /// <summary>
     /// The metrics provider that serves the series, by name: Prometheus when unset, or <c>sqs</c> for SQS queue attributes in
-    /// the AWS-emulated environment (Phase E01). <see cref="Expression"/> is in that provider's own language.
+    /// the AWS environment (Phase E01). <see cref="Expression"/> is in that provider's own language.
     /// </summary>
     public string? Provider { get; init; }
 }

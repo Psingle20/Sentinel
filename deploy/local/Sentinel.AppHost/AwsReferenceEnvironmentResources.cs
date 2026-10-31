@@ -3,8 +3,8 @@ using Aspire.Hosting.ApplicationModel;
 
 namespace Sentinel.AppHost;
 
-/// <summary>The AWS-emulated reference environment's resources (Phase E01): the emulator and the step that publishes the consumer's image.</summary>
+/// <summary>The AWS reference environment's resources (Phase E01): local AWS and the step that publishes the consumer's image.</summary>
 internal sealed record AwsReferenceEnvironmentResources(
-    IResourceBuilder<ContainerResource> Emulator,
+    IResourceBuilder<ContainerResource> LocalAws,
     IResourceBuilder<ExecutableResource> ConsumerImage,
-    AwsEmulatorPin Pin);
+    LocalAwsPin Pin);

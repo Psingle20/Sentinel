@@ -40,7 +40,7 @@
 
     <ItemGroup>
         <Content Include="..\..\scenarios\manifests\*.json" LinkBase="manifests" CopyToOutputDirectory="PreserveNewest" />
-        <Content Include="..\..\deploy\aws\emulator.json" Link="Aws\emulator.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="..\..\deploy\aws\local-aws.json" Link="Aws\local-aws.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

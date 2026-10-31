@@ -1,7 +1,7 @@
 namespace Reference.Common.Revisions;
 
 /// <summary>
-/// The revision a reference service is serving. The deploy controller switches it to emulate a
+/// The revision a reference service is serving. The deploy controller switches it to stand for a
 /// deployment; each revision selects a healthy or faulty behaviour inside the service.
 /// </summary>
 public sealed class RevisionState

@@ -4,11 +4,11 @@ using Microsoft.Extensions.Configuration;
 namespace Reference.Scenarios.Infrastructure.Environments.Aws;
 
 /// <summary>
-/// The AWS-emulated environment as the AppHost describes it under <c>Reference:Aws</c>: the emulator's endpoint as the
+/// The AWS environment as the AppHost describes it under <c>Reference:Aws</c>: local AWS's endpoint as the
 /// runner reaches it, the account and region the scenarios run in, the consumer's ECS service and image, the EventBridge
-/// rule that routes the producer's orders to its queue, and the emulator and digest a run record names. Containers the emulator starts reach the host's endpoints through
+/// rule that routes the producer's orders to its queue, and local AWS and digest a run record names. Containers local AWS starts reach the host's endpoints through
 /// <see cref="ContainerHost"/>, so every address handed to a task is rewritten from localhost to it. The secret is
-/// synthetic: the emulator does not check signatures, and the access key only selects the account.
+/// synthetic: local AWS does not check signatures, and the access key only selects the account.
 /// </summary>
 public sealed class AwsEnvironmentOptions
 {
@@ -50,7 +50,7 @@ public sealed class AwsEnvironmentOptions
 
     public string ContainerHost { get; init; } = "host.docker.internal";
 
-    public string? Emulator { get; init; }
+    public string? Provider { get; init; }
 
     public string? ImageDigest { get; init; }
 
@@ -69,7 +69,7 @@ public sealed class AwsEnvironmentOptions
         ArgumentNullException.ThrowIfNull(configuration);
 
         IConfigurationSection section = configuration.GetSection(Section);
-        Uri endpoint = new(section["ServiceUrl"] ?? throw new InvalidOperationException($"{Section}:ServiceUrl must name the emulator's endpoint."));
+        Uri endpoint = new(section["ServiceUrl"] ?? throw new InvalidOperationException($"{Section}:ServiceUrl must name local AWS's endpoint."));
         string host = section["ContainerHost"] ?? "host.docker.internal";
         string account = section["Account"] ?? "000000000000";
         string region = section["Region"] ?? "us-east-1";
@@ -97,7 +97,7 @@ public sealed class AwsEnvironmentOptions
             Account = account,
             Image = section["Image"] ?? "reference-queue-consumer:{revision}",
             ContainerHost = host,
-            Emulator = section["Emulator"],
+            Provider = section["Provider"],
             ImageDigest = section["ImageDigest"],
             TaskEnvironment = task
         };

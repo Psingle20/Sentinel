@@ -46,7 +46,7 @@ internal static class ProviderRegistration
             services.AddTransient<ITopologyProvider>(provider => provider.GetRequiredService<JaegerProvider>());
         }
 
-        // The AWS-emulated environment is optional (Phase E01, Stages 2 and 4): its ECS deployments, its event routes, the
+        // The AWS environment is optional (Phase E01, Stages 2 and 4): its ECS deployments, its event routes, the
         // topology its ECS services declare and its queues' attributes are read only where it is configured. The change
         // providers remember what they saw, so they live as long as the process, and the clients are shared.
         if (AwsProviderOptions.Configured(configuration))

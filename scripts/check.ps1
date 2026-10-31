@@ -40,8 +40,8 @@ switch ($Task) {
         Invoke-Step 'next build (Sentinel.Web)' { npm --prefix $web run build }
     }
     'test' {
-        # The AWS emulator's conformance tests need its pinned image and the Docker socket (Phase E01); run them on their own.
-        Invoke-Step 'dotnet test' { dotnet test $solution --filter 'Category!=Emulator' }
+        # Local AWS's conformance tests need its pinned image and the Docker socket (Phase E01); run them on their own.
+        Invoke-Step 'dotnet test' { dotnet test $solution --filter 'Category!=Aws' }
         Invoke-Step 'playwright (Sentinel.Web)' { npm --prefix $web test }
         # The Phase 07 evaluation harness is Python standard library only; Linux and macOS often name it python3.
         $python = if (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { 'python3' }

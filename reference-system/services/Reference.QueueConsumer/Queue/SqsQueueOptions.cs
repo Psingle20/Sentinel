@@ -1,8 +1,8 @@
 namespace Reference.QueueConsumer.Queue;
 
 /// <summary>
-/// Where the SQS orders queue lives, from <c>Reference:Queue:Sqs</c>: the emulator's endpoint, never AWS's own, the
-/// region, and the 12-digit access key that selects the account. The secret is synthetic; the emulator does not check it.
+/// Where the SQS orders queue lives, from <c>Reference:Queue:Sqs</c>: local AWS's endpoint, never AWS's own, the
+/// region, and the 12-digit access key that selects the account. The secret is synthetic; local AWS does not check it.
 /// </summary>
 public sealed class SqsQueueOptions
 {

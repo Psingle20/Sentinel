@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <Description>Reference scenario runner: loads the scenario manifests, generates seeded traffic and drives each scenario's timeline from a clean reset, in the local reference environment or the AWS-emulated one.</Description>
+        <Description>Reference scenario runner: loads the scenario manifests, generates seeded traffic and drives each scenario's timeline from a clean reset, in the local reference environment or the AWS one.</Description>
     </PropertyGroup>
 
     <ItemGroup>

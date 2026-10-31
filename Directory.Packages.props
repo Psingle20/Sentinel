@@ -51,7 +51,7 @@
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.6.4" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.4" />
 
-    <!-- AWS SDK for the AWS-emulated reference environment (Phase E01, ADR-021) -->
+    <!-- AWS SDK for the AWS reference environment (Phase E01, ADR-021) -->
     <PackageVersion Include="AWSSDK.CloudWatch" Version="4.0.107.2" />
     <PackageVersion Include="AWSSDK.CloudWatchLogs" Version="4.0.106.3" />
     <PackageVersion Include="AWSSDK.Core" Version="4.0.102.15" />

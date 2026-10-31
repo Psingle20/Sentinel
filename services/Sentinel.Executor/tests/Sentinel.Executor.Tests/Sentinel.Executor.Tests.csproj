@@ -23,9 +23,9 @@
         <Using Include="Xunit" />
     </ItemGroup>
 
-    <!-- The emulator pin of ADR-021, for the SQS adapter's emulator tests; reference-system/deploy/aws is its one home. -->
+    <!-- Local AWS pin of ADR-021, for the SQS adapter's local AWS tests; reference-system/deploy/aws is its one home. -->
     <ItemGroup>
-        <Content Include="../../../../reference-system/deploy/aws/emulator.json" Link="Aws/emulator.json" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="../../../../reference-system/deploy/aws/local-aws.json" Link="Aws/local-aws.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

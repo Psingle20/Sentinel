@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 namespace Sentinel.EndToEnd.Tests;
 
 /// <summary>
-/// Phase E01, Stage 2: Sentinel against the AWS-emulated environment. <c>AWS-S1</c> is S6 on SQS and ECS: Sentinel reads
+/// Phase E01, Stage 2: Sentinel against the AWS environment. <c>AWS-S1</c> is S6 on SQS and ECS: Sentinel reads
 /// the innocent ECS revision as a change through its ECS provider, blames the poison message instead, quarantines it
 /// after approval through the queue's redrive policy, and verifies from the consumer's telemetry that the queue recovers.
 /// <c>AWS-S7</c> (Stage 4) drifts the EventBridge rule that feeds the queue after an innocent ECS revision is serving:

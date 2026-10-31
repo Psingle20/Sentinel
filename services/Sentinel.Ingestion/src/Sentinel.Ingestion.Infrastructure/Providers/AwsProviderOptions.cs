@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 namespace Sentinel.Ingestion.Infrastructure.Providers;
 
 /// <summary>
-/// Where Ingestion reads the AWS-emulated environment, from <c>Ingestion:Providers:Aws</c> (Phase E01, Stage 2): the
+/// Where Ingestion reads the AWS environment, from <c>Ingestion:Providers:Aws</c> (Phase E01, Stage 2): the
 /// endpoint, the region, the read credentials, the ECS clusters and the EventBridge buses to watch. Its ECS deployments,
 /// the topology its ECS services declare, its SQS queues' attributes and its event routes are all read with them.
 /// Ingestion is the only holder of provider credentials (ADR-007).

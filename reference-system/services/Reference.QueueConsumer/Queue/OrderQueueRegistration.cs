@@ -24,7 +24,7 @@ public static class OrderQueueRegistration
                 break;
             case "sqs":
                 SqsQueueOptions options = configuration.GetSection(SqsQueueOptions.Section).Get<SqsQueueOptions>() ?? new SqsQueueOptions();
-                Uri endpoint = options.ServiceUrl ?? throw new InvalidOperationException($"{SqsQueueOptions.Section}:ServiceUrl must name the emulator's endpoint.");
+                Uri endpoint = options.ServiceUrl ?? throw new InvalidOperationException($"{SqsQueueOptions.Section}:ServiceUrl must name local AWS's endpoint.");
                 services.AddSingleton(options);
                 services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(
                     new BasicAWSCredentials(options.AccessKey, options.SecretKey),
@@ -52,7 +52,7 @@ public static class OrderQueueRegistration
                 break;
             case "eventbridge":
                 EventBridgeOptions options = configuration.GetSection(EventBridgeOptions.Section).Get<EventBridgeOptions>() ?? new EventBridgeOptions();
-                Uri endpoint = options.ServiceUrl ?? throw new InvalidOperationException($"{EventBridgeOptions.Section}:ServiceUrl must name the emulator's endpoint.");
+                Uri endpoint = options.ServiceUrl ?? throw new InvalidOperationException($"{EventBridgeOptions.Section}:ServiceUrl must name local AWS's endpoint.");
                 services.AddSingleton(options);
                 services.AddSingleton<IAmazonEventBridge>(_ => new AmazonEventBridgeClient(
                     new BasicAWSCredentials(options.AccessKey, options.SecretKey),

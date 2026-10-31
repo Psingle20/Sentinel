@@ -9,17 +9,17 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// Gate check 6 of the compatibility gate: a scenario's reset is a restart of the emulator in memory mode, so a second
-/// emulator holds none of the first one's queues or clusters, and no task container the first one started outlives it.
+/// Gate check 6 of the compatibility gate: a scenario's reset is a restart of local AWS in memory mode, so a second
+/// local AWS holds none of the first one's queues or clusters, and no task container the first one started outlives it.
 /// </summary>
-[Trait("Category", "Emulator")]
-[Collection(EmulatorCollection.Name)]
+[Trait("Category", "Aws")]
+[Collection(LocalAwsCollection.Name)]
 public sealed class FlociResetTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task A_restarted_emulator_holds_nothing_and_no_task_container_outlives_the_first()
+    public async Task A_restarted_local_aws_holds_nothing_and_no_task_container_outlives_the_first()
     {
-        FlociEmulator first = new();
+        LocalAws first = new();
         await first.InitializeAsync();
         try
         {
@@ -33,16 +33,16 @@ public sealed class FlociResetTests(ITestOutputHelper output)
 
             await first.StopAsync();
             IReadOnlyList<string> left = await first.StartedContainersAsync();
-            output.WriteLine($"After the emulator stopped, {left.Count} container(s) it started still existed.");
+            output.WriteLine($"After local AWS stopped, {left.Count} container(s) it started still existed.");
         }
         finally
         {
             await first.DisposeAsync();
         }
 
-        (await first.StartedContainersAsync()).ShouldBeEmpty("disposal removes every container the emulator started");
+        (await first.StartedContainersAsync()).ShouldBeEmpty("disposal removes every container local AWS started");
 
-        FlociEmulator second = new();
+        LocalAws second = new();
         await second.InitializeAsync();
         try
         {

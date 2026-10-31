@@ -47,7 +47,7 @@ public class SentinelSystem : IAsyncLifetime
     {
     }
 
-    /// <summary>The system with the reference environment <paramref name="referenceEnvironment"/>, local or the AWS-emulated one (Phase E01).</summary>
+    /// <summary>The system with the reference environment <paramref name="referenceEnvironment"/>, local or the AWS one (Phase E01).</summary>
     protected SentinelSystem(bool referenceOnly, string referenceEnvironment = "local")
     {
         _referenceOnly = referenceOnly;
@@ -58,10 +58,10 @@ public class SentinelSystem : IAsyncLifetime
 
     public ResourceLogs Logs { get; } = new();
 
-    // In the AWS environment the queue-consumer runs as an ECS task in the emulator, not as a resource of its own.
+    // In the AWS environment the queue-consumer runs as an ECS task in local AWS, not as a resource of its own.
     public IReadOnlyList<string> ResourceNames =>
         [
-            .. ReferenceResources.Select(resource => _referenceEnvironment == "aws" && resource == "queue-consumer" ? "aws-emulator" : resource),
+            .. ReferenceResources.Select(resource => _referenceEnvironment == "aws" && resource == "queue-consumer" ? "local-aws" : resource),
             .. _referenceOnly ? [] : SentinelResources
         ];
 

@@ -2,9 +2,9 @@ namespace Reference.QueueConsumer.Queue;
 
 /// <summary>
 /// Where the producer publishes orders in the AWS reference environment, from <c>Reference:Queue:EventBridge</c>: the
-/// emulator's endpoint, never AWS's own, the region, the 12-digit access key that selects the account, the event bus,
+/// local AWS's endpoint, never AWS's own, the region, the 12-digit access key that selects the account, the event bus,
 /// and the source and detail type an order event carries, which the bus's rule routes to the orders queue. The secret is
-/// synthetic; the emulator does not check it.
+/// synthetic; local AWS does not check it.
 /// </summary>
 public sealed class EventBridgeOptions
 {

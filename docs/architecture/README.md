@@ -8,7 +8,7 @@
 - [Application composition and CQRS guide](application-composition-and-cqrs.md)
 - [Threat model](threat-model.md): trust boundaries, mitigations with evidence, open risks and the status of the 2026-10-29 review findings
 - [Service-level objectives](service-level-objectives.md): what Sentinel itself promises, the metric behind each promise and what to do when a budget is spent
-- [Proposed AWS-emulated reference environment](aws-emulated-reference-environment.md): current reference-system topology, two scenario tracks, hybrid telemetry path, emulator integration boundaries, scenario catalogue, fidelity model and staged adoption gates; delivered by [Phase E01](../implementation/phase-e01-aws-emulated-reference-environment.md)
+- [AWS reference environment](aws-reference-environment.md): current reference-system topology, two scenario tracks, hybrid telemetry path, local AWS integration boundaries, scenario catalogue, fidelity model and staged adoption gates; delivered by [Phase E01](../implementation/phase-e01-aws-reference-environment.md)
 - [Proposed demonstration depth](demonstration-depth.md): making Sentinel's judgement visible live, manipulation resistance, self-correction, recurrence, the damage avoided and live investigation, with their boundaries; delivered by [Phase E03](../implementation/phase-e03-demonstration-depth.md).
 - [Phase-wise implementation plan](../implementation/README.md)
 - [Architecture-to-phase coverage matrix](../implementation/coverage-matrix.md)

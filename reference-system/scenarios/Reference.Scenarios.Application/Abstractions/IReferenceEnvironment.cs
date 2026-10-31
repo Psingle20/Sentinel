@@ -4,7 +4,7 @@ namespace Reference.Scenarios.Application.Abstractions;
 
 /// <summary>
 /// The reference environment a runner drives, in lifecycle terms rather than any provider's API (Phase E01): the local
-/// one the AppHost starts, or the AWS-emulated one the runner provisions itself. Reset is idempotent, and an operation the
+/// one the AppHost starts, or the AWS one the runner provisions itself. Reset is idempotent, and an operation the
 /// environment cannot perform, a timeout or a reset that leaves something behind throws a
 /// <see cref="ReferenceEnvironmentException"/> saying which.
 /// </summary>

@@ -12,7 +12,7 @@ namespace Reference.Scenarios.Infrastructure;
 
 /// <summary>
 /// The scenario runner's infrastructure: the reference environment <c>Reference:Environment</c> names, <c>local</c> by
-/// default or <c>aws</c>. The AWS clients take the emulator's endpoint and a synthetic key from configuration and never
+/// default or <c>aws</c>. The AWS clients take local AWS's endpoint and a synthetic key from configuration and never
 /// fall back to AWS's own endpoints or the machine's credential chain.
 /// </summary>
 public sealed class InfrastructureDependencyModule : IDependencyModule

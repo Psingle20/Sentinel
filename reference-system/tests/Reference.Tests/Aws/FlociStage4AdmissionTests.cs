@@ -15,26 +15,26 @@ using Xunit.Abstractions;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// The admission checks of Phase E01's Stage 4 against the pinned emulator: what an EventBridge route-drift scenario
+/// The admission checks of Phase E01's Stage 4 against local AWS: what an EventBridge route-drift scenario
 /// (<c>AWS-S7</c>) and an IAM permission-drift scenario (<c>AWS-S4</c>) would rely on. EventBridge routes a matching event
 /// to an SQS target, a changed pattern stops it, and the rule reports its pattern and targets, so <c>AWS-S7</c> can be
 /// admitted. IAM stores and versions policies, and restores a default version, but enforces none of them, so a
 /// permission removed from a role changes nothing a workload does and <c>AWS-S4</c> is not admitted (ADR-021). No
-/// EventBridge client is pinned yet, so its calls are made over the service's JSON protocol, which the emulator accepts
+/// EventBridge client is pinned yet, so its calls are made over the service's JSON protocol, which local AWS accepts
 /// unsigned.
 /// </summary>
-[Collection(EmulatorCollection.Name)]
-[Trait("Category", "Emulator")]
-public sealed class FlociStage4AdmissionTests(FlociEmulator emulator, ITestOutputHelper output) : IClassFixture<FlociEmulator>
+[Collection(LocalAwsCollection.Name)]
+[Trait("Category", "Aws")]
+public sealed class FlociStage4AdmissionTests(LocalAws localAws, ITestOutputHelper output) : IClassFixture<LocalAws>
 {
     [Fact]
     public async Task An_eventbridge_rule_routes_matching_events_to_its_queue_until_its_pattern_changes()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localAws.Sqs();
         string queue = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = $"routed-{Guid.NewGuid():N}"[..20] })).QueueUrl;
         string queueArn = (await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = queue, AttributeNames = ["QueueArn"] })).Attributes["QueueArn"];
         string rule = $"orders-{Guid.NewGuid():N}"[..20];
-        using var http = new HttpClient { BaseAddress = emulator.Endpoint };
+        using var http = new HttpClient { BaseAddress = localAws.Endpoint };
 
         await EventsAsync(http, "PutRule", new { Name = rule, EventPattern = """{"source":["reference.checkout"]}""", State = "ENABLED" });
         await EventsAsync(http, "PutTargets", new { Rule = rule, Targets = new[] { new { Id = "orders", Arn = queueArn } } });
@@ -57,8 +57,8 @@ public sealed class FlociStage4AdmissionTests(FlociEmulator emulator, ITestOutpu
     public async Task Iam_versions_policies_and_restores_a_default_but_enforces_none_of_them()
     {
         const string account = "333333333333";
-        using AmazonIdentityManagementServiceClient iam = emulator.Iam(account);
-        using AmazonSecurityTokenServiceClient sts = emulator.Sts(account);
+        using AmazonIdentityManagementServiceClient iam = localAws.Iam(account);
+        using AmazonSecurityTokenServiceClient sts = localAws.Sts(account);
         string trust = JsonSerializer.Serialize(new { Version = "2012-10-17", Statement = new[] { new { Effect = "Allow", Principal = new { AWS = $"arn:aws:iam::{account}:root" }, Action = "sts:AssumeRole" } } });
         string name = $"consumer-{Guid.NewGuid():N}"[..20];
         string role = (await iam.CreateRoleAsync(new CreateRoleRequest { RoleName = name, AssumeRolePolicyDocument = trust })).Role.Arn;
@@ -71,9 +71,9 @@ public sealed class FlociStage4AdmissionTests(FlociEmulator emulator, ITestOutpu
         Credentials assumed = (await sts.AssumeRoleAsync(new AssumeRoleRequest { RoleArn = role, RoleSessionName = "consumer" })).Credentials;
         using var asRole = new AmazonSQSClient(
             new SessionAWSCredentials(assumed.AccessKeyId, assumed.SecretAccessKey, assumed.SessionToken),
-            new AmazonSQSConfig { ServiceURL = emulator.Endpoint.ToString(), AuthenticationRegion = FlociEmulator.Region });
+            new AmazonSQSConfig { ServiceURL = localAws.Endpoint.ToString(), AuthenticationRegion = LocalAws.Region });
 
-        await Should.NotThrowAsync(() => asRole.ListQueuesAsync(new ListQueuesRequest()), "the emulator does not enforce IAM: a role denied sqs:* still calls SQS");
+        await Should.NotThrowAsync(() => asRole.ListQueuesAsync(new ListQueuesRequest()), "local AWS does not enforce IAM: a role denied sqs:* still calls SQS");
 
         string policy = (await iam.CreatePolicyAsync(new CreatePolicyRequest { PolicyName = $"orders-{Guid.NewGuid():N}"[..20], PolicyDocument = Allow("sqs:ReceiveMessage", "sqs:DeleteMessage") })).Policy.Arn;
         await iam.CreatePolicyVersionAsync(new CreatePolicyVersionRequest { PolicyArn = policy, PolicyDocument = Allow("sqs:ReceiveMessage"), SetAsDefault = true });
@@ -87,7 +87,7 @@ public sealed class FlociStage4AdmissionTests(FlociEmulator emulator, ITestOutpu
     private static string Allow(params string[] actions) =>
         JsonSerializer.Serialize(new { Version = "2012-10-17", Statement = new[] { new { Effect = "Allow", Action = actions, Resource = "*" } } });
 
-    // One EventBridge operation over its JSON protocol; the emulator reads the account from the credential scope.
+    // One EventBridge operation over its JSON protocol; local AWS reads the account from the credential scope.
     private static async Task<JsonDocument> EventsAsync(HttpClient http, string operation, object body)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/") { Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8) };
@@ -96,7 +96,7 @@ public sealed class FlociStage4AdmissionTests(FlociEmulator emulator, ITestOutpu
         request.Headers.Add("X-Amz-Date", DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture));
         request.Headers.TryAddWithoutValidation(
             "Authorization",
-            string.Create(CultureInfo.InvariantCulture, $"AWS4-HMAC-SHA256 Credential={FlociEmulator.DefaultAccount}/{DateTime.UtcNow:yyyyMMdd}/{FlociEmulator.Region}/events/aws4_request, SignedHeaders=host;x-amz-date, Signature=0"));
+            string.Create(CultureInfo.InvariantCulture, $"AWS4-HMAC-SHA256 Credential={LocalAws.DefaultAccount}/{DateTime.UtcNow:yyyyMMdd}/{LocalAws.Region}/events/aws4_request, SignedHeaders=host;x-amz-date, Signature=0"));
         using HttpResponseMessage response = await http.SendAsync(request);
         string text = await response.Content.ReadAsStringAsync();
         response.IsSuccessStatusCode.ShouldBeTrue($"{operation} answered {(int)response.StatusCode}: {text}");

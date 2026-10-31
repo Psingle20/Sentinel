@@ -16,7 +16,7 @@ bool ephemeral = builder.Configuration.GetValue<bool>("Sentinel:EphemeralStorage
 string? modelProvider = builder.Configuration["Sentinel:ModelProvider"];
 
 // The system Sentinel observes and remediates (Phase 01, ADR-011). Sentinel:ReferenceEnvironment=aws runs the
-// queue-consumer in the AWS-emulated environment instead of locally (Phase E01, ADR-021).
+// queue-consumer in the AWS environment instead of locally (Phase E01, ADR-021).
 string referenceEnvironment = builder.Configuration["Sentinel:ReferenceEnvironment"] ?? "local";
 if (referenceEnvironment is not ("local" or "aws"))
 {
@@ -112,9 +112,9 @@ void AddSentinel()
         executor.WithReference(queueConsumer);
     }
 
-    if (reference.AwsEmulator is { } emulator)
+    if (reference.LocalAws is { } localAws)
     {
-        AwsReferenceEnvironmentExtensions.WireSentinel(emulator, ingestion, agentworker, executor);
+        AwsReferenceEnvironmentExtensions.WireSentinel(localAws, ingestion, agentworker, executor);
     }
 
     // The web app talks only to Sentinel.Gateway. Run `npm ci` in apps/Sentinel.Web once; the AppHost does not install packages.

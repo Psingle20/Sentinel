@@ -13,7 +13,7 @@ internal static class ReferenceSystemExtensions
     /// consumer with a Redis of its own for its queue (Phase E01), the deploy controller, a Redis
     /// client exporter and the scenario runner. Tokens are generated
     /// parameters kept in the AppHost's user secrets, never in source. With <paramref name="aws"/>
-    /// the queue-consumer runs as an ECS task in the AWS-emulated environment instead, and the
+    /// the queue-consumer runs as an ECS task in the AWS environment instead, and the
     /// runner drives that environment (Phase E01).
     /// </summary>
     public static ReferenceSystemResources AddReferenceSystem(this IDistributedApplicationBuilder builder, bool aws = false)
@@ -93,7 +93,7 @@ internal static class ReferenceSystemExtensions
             .WithHttpCommand("/api/reset", "Reset to healthy", commandName: "reset", commandOptions: Command(controlToken, null))
             .WithHttpCommand("/api/actions/stop-batch", "Stop reporting batch", commandName: "stop-batch", commandOptions: Command(controlToken, null));
 
-        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"), awsEnvironment?.Emulator);
+        return new ReferenceSystemResources(deployController, scenarioRunner, reporting, queueConsumer, prometheus, loki, jaeger, deployToken, readToken, controlToken, Path.Combine(root, "knowledge"), awsEnvironment?.LocalAws);
 
         // The queue-consumer's queue lives apart from the shared Redis, as a managed queue lives apart from a cache, so that
         // S1's leak and S2's batch exhausting the shared Redis never back the queue up (S6).

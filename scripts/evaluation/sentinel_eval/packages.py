@@ -17,9 +17,9 @@ OUTCOMES = {"no-incident", "resolved", "escalated"}
 EVIDENCE_KINDS = {"metric", "log", "trace", "deployment", "topology"}
 PERTURBATIONS = {"provider-outage", "action-failure"}
 MODES = {"approval-required", "suggestion-only"}
-# The AWS-emulated environment proposal's fidelity model (Phase E01).
+# The AWS environment proposal's fidelity model (Phase E01).
 ENVIRONMENTS = {"local", "aws"}
-FIDELITY_LEVELS = {"contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"}
+FIDELITY_LEVELS = {"contract-real", "data-plane-real", "locally-modelled", "injected", "unsupported"}
 
 
 class PackageError(ValueError):
@@ -57,7 +57,7 @@ class FidelityLabel:
 
 @dataclass(frozen=True)
 class Fidelity:
-    """What in a scenario is real, emulated and injected, and so which claims its result supports."""
+    """What in a scenario is real, locally modelled and injected, and so which claims its result supports."""
 
     environment: str
     statement: str

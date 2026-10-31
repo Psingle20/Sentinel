@@ -3,7 +3,7 @@
   "slug": "poison-message-innocent-ecs-revision",
   "version": 1,
   "kind": "confounder",
-  "description": "S6 in the AWS-emulated environment. One order message whose amount is not a number reaches the queue-consumer's SQS queue. No revision can process it, so it fails on every receive and keeps returning, its approximate receive count rising, while the other orders pass through. A benign queue-consumer v1.4.1 task definition rolls out through ECS 30 s later, before the queue's oldest message crosses the detection threshold. Fidelity: the queue, its dead-letter queue, the ECS service and its rollout are emulated by the pinned emulator; the consumer and its telemetry are real; the poison message is injected through the SQS API.",
+  "description": "S6 in the AWS environment. One order message whose amount is not a number reaches the queue-consumer's SQS queue. No revision can process it, so it fails on every receive and keeps returning, its approximate receive count rising, while the other orders pass through. A benign queue-consumer v1.4.1 task definition rolls out through ECS 30 s later, before the queue's oldest message crosses the detection threshold. Fidelity: the queue, its dead-letter queue, the ECS service and its rollout run on local AWS; the consumer and its telemetry are real; the poison message is injected through the SQS API.",
   "environment": "aws",
   "account": "000000000000",
   "region": "us-east-1",

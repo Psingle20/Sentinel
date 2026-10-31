@@ -34,7 +34,7 @@ class Run:
     executions: list[dict] = field(default_factory=list)
     scenario_started_at: datetime | None = None
     legacy_baseline: str | None = None
-    # The reference environment the run used, as the scenario runner reported it: name, emulator, digest, provisioning.
+    # The reference environment the run used, as the scenario runner reported it: name, provider, digest, provisioning.
     environment: dict | None = None
 
     @property

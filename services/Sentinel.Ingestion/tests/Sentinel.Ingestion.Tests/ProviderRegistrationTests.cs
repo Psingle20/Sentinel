@@ -9,7 +9,7 @@ namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
 /// Ingestion holds the provider credentials (ADR-007); without the deploy controller's token it does not start. The
-/// AWS-emulated environment adds its own deployment, topology and metrics providers beside the local ones (Phase E01).
+/// AWS environment adds its own deployment, topology and metrics providers beside the local ones (Phase E01).
 /// </summary>
 public sealed class ProviderRegistrationTests
 {
@@ -73,7 +73,7 @@ public sealed class ProviderRegistrationTests
         };
         if (aws)
         {
-            values["Ingestion:Providers:Aws:ServiceUrl"] = "http://aws-emulator.test:4566";
+            values["Ingestion:Providers:Aws:ServiceUrl"] = "http://local-aws.test:4566";
             values["Ingestion:Providers:Aws:AccessKey"] = accessKey;
             values["Ingestion:Providers:Aws:SecretKey"] = "test-not-a-secret";
             values["Ingestion:Providers:Aws:Clusters:0"] = "reference";

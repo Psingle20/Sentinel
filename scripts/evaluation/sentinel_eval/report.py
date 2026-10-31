@@ -160,22 +160,22 @@ def _fidelity(packages: dict, environments: dict[str, dict]) -> list[str]:
     labelled = [packages[key] for key in sorted(packages) if packages[key].fidelity is not None]
     if not labelled:
         return []
-    levels = ["contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"]
+    levels = ["contract-real", "data-plane-real", "locally-modelled", "injected", "unsupported"]
     lines = [
         "",
         "## Environments and fidelity",
         "",
-        "A scenario outside the local reference system says what in it is real, emulated and injected. An emulated result shows Sentinel's reasoning, and its adapters' contracts with AWS-shaped APIs; it is not evidence of how AWS itself behaves.",
+        "A scenario outside the local reference system says what in it is real, locally modelled and injected. A result on local AWS shows Sentinel's reasoning, and its adapters' contracts with AWS-shaped APIs; it is not evidence of how AWS itself behaves.",
         "",
-        "| Scenario | Environment | Emulator in the scored run | " + " | ".join(level.capitalize() for level in levels) + " |",
+        "| Scenario | Environment | Provider in the scored run | " + " | ".join(level.capitalize() for level in levels) + " |",
         "| --- | --- | --- | " + " | ".join("---" for _ in levels) + " |",
     ]
     for package in labelled:
         environment = environments.get(package.id) or {}
-        emulator = environment.get("emulator")
+        provider = environment.get("provider")
         digest = environment.get("imageDigest")
         version = environment.get("provisioningVersion")
-        identity = (emulator + (f" ({digest})" if digest else "") + (f", provisioning v{version}" if version else "")) if emulator else "not recorded"
+        identity = (provider + (f" ({digest})" if digest else "") + (f", provisioning v{version}" if version else "")) if provider else "not recorded"
         cells = ["; ".join(label.element for label in package.fidelity.labels if label.level == level) or "-" for level in levels]
         lines.append(f"| {package.id} | {package.fidelity.environment} | {identity} | " + " | ".join(cells) + " |")
     lines.append("")

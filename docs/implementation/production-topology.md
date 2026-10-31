@@ -132,7 +132,7 @@ The slice is complete only when it runs across real process boundaries, survives
 | 08 – Product experience | Web + API; all services publish status | Full responder journey works without back doors |
 | 09 – Hardening | All five services + Web | Security, resilience and operations cover every boundary |
 | 10 – Scale/evolution | Evidence-driven changes across all deployables | Cells, regions, providers and autonomy expand without weakening ownership |
-| E01 – AWS-emulated reference environment | Reference environment, outside Sentinel service count; Ingestion and Executor gain adapters, Runtime and AgentWorker gain queue rules and one tool | Sentinel diagnoses a non-deployment cause and executes a non-rollback remedy through the same contracts, against a second environment |
+| E01 – AWS reference environment | Reference environment, outside Sentinel service count; Ingestion and Executor gain adapters, Runtime and AgentWorker gain queue rules and one tool | Sentinel diagnoses a non-deployment cause and executes a non-rollback remedy through the same contracts, against a second environment |
 | E02 – Frontend design-system depth | Web only; no service or contract changes | Every responder and administrator screen composes the design system, in both themes and at tablet width |
 | E03 – Demonstration depth | AgentWorker scans untrusted results; Runtime records them and runs one follow-up cycle; Web shows them; the reference system injects the new faults | Sentinel's judgement is visible live: a planted instruction ignored, an incomplete fix corrected, a repeat recognised, the damage avoided shown |
 

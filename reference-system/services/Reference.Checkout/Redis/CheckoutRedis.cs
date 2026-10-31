@@ -47,7 +47,7 @@ public sealed class CheckoutRedis : IAsyncDisposable
         await _pool.DisposeAsync();
     }
 
-    // A revision switch emulates a new process: everything the old revision held is closed.
+    // A revision switch stands for a new process: everything the old revision held is closed.
     private Task OnRevisionChangedAsync(RevisionChange change) => ReleaseAsync();
 
     private async Task ReleaseAsync()

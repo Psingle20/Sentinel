@@ -3,7 +3,7 @@
   "slug": "healthy-aws-noise",
   "version": 1,
   "kind": "control",
-  "description": "The AWS-emulated environment at rest: the queue-consumer runs as an ECS service on an SQS queue with a dead-letter queue, processing four orders a second, and a benign queue-consumer v1.4.1 revision rolls out through ECS. No fault is injected.",
+  "description": "The AWS environment at rest: the queue-consumer runs as an ECS service on an SQS queue with a dead-letter queue, processing four orders a second, and a benign queue-consumer v1.4.1 revision rolls out through ECS. No fault is injected.",
   "environment": "aws",
   "account": "000000000000",
   "region": "us-east-1",

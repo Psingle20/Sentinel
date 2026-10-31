@@ -46,7 +46,7 @@ internal sealed class IngestionWorker(
     // Loops end when the generation ends; a pull already started runs to completion under the stopping token.
     private async Task RunAsync(IngestionOptions settings, CancellationToken generation, CancellationToken stoppingToken)
     {
-        // The AWS-emulated environment adds a second source of metrics, deployments and topology (Phase E01).
+        // The AWS environment adds a second source of metrics, deployments and topology (Phase E01).
         string[] metricSources;
         string[] deploymentSources;
         string[] topologySources;

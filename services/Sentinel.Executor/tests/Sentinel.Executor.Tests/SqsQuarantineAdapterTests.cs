@@ -13,21 +13,21 @@ using Shouldly;
 namespace Sentinel.Executor.Tests;
 
 /// <summary>
-/// The SQS quarantine adapter against the pinned emulator (Phase E01, Stage 2): beside a six-worker consumer that keeps
+/// The SQS quarantine adapter against local AWS (Phase E01, Stage 2): beside a six-worker consumer that keeps
 /// failing on one message and processes the rest, the adapter's redrive window lets SQS dead-letter that message and
 /// nothing else, and the queue is left without a redrive policy again, as it was; the queue is then verified clear and
 /// compensation releases the message. A window with nothing received often enough moves nothing, and a queue off the
 /// allow-list is never touched. Each queue is created without a redrive policy of its own, as the AWS environment's is.
 /// </summary>
-[Trait("Category", "Emulator")]
-public sealed class SqsQuarantineAdapterTests(SqsEmulator emulator) : IClassFixture<SqsEmulator>
+[Trait("Category", "Aws")]
+public sealed class SqsQuarantineAdapterTests(LocalSqs localSqs) : IClassFixture<LocalSqs>
 {
     private const string Poison = """{"id":"msg-poison-1","orderId":"ord-poison-1","amount":"NaN"}""";
 
     [Fact]
     public async Task A_message_failing_on_every_receive_of_a_busy_consumer_is_moved_to_the_dead_letter_queue_and_nothing_else()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localSqs.Sqs();
         string name = $"orders-{Guid.NewGuid().ToString("N")[..8]}";
         (string queue, string deadLetters) = await CreateAsync(sqs, name);
         await sqs.SendMessageAsync(new SendMessageRequest { QueueUrl = queue, MessageBody = Poison });
@@ -68,7 +68,7 @@ public sealed class SqsQuarantineAdapterTests(SqsEmulator emulator) : IClassFixt
     [Fact]
     public async Task A_window_without_a_message_received_often_enough_moves_nothing_and_leaves_the_queue_as_it_was()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localSqs.Sqs();
         string name = $"orders-{Guid.NewGuid().ToString("N")[..8]}";
         (string queue, string deadLetters) = await CreateAsync(sqs, name);
         await sqs.SendMessageAsync(new SendMessageRequest { QueueUrl = queue, MessageBody = """{"id":"msg-1","orderId":"ord-1","amount":"10.00"}""" });
@@ -86,7 +86,7 @@ public sealed class SqsQuarantineAdapterTests(SqsEmulator emulator) : IClassFixt
     [Fact]
     public async Task A_queue_off_the_allow_list_or_a_capability_for_another_action_moves_nothing()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localSqs.Sqs();
         string name = $"orders-{Guid.NewGuid().ToString("N")[..8]}";
         (string queue, string deadLetters) = await CreateAsync(sqs, name);
         await sqs.SendMessageAsync(new SendMessageRequest { QueueUrl = queue, MessageBody = Poison });
@@ -138,7 +138,7 @@ public sealed class SqsQuarantineAdapterTests(SqsEmulator emulator) : IClassFixt
 
     private SqsQuarantineAdapter Adapter(AmazonSQSClient sqs, string allowed, TimeSpan window) => new(
         sqs,
-        new SqsQuarantineOptions { ServiceUrl = emulator.Endpoint, AccessKey = SqsEmulator.Account, SecretKey = SqsEmulator.Secret, Queues = [allowed], Window = window },
+        new SqsQuarantineOptions { ServiceUrl = localSqs.Endpoint, AccessKey = LocalSqs.Account, SecretKey = LocalSqs.Secret, Queues = [allowed], Window = window },
         TimeProvider.System,
         NullLogger<SqsQuarantineAdapter>.Instance);
 

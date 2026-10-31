@@ -52,7 +52,7 @@ Phases 00 to 10 implement the architecture document, and the [coverage matrix](c
 
 | Phase | Outcome | Design source | Depends on |
 | --- | --- | --- | --- |
-| [E01 – AWS-emulated reference environment](phase-e01-aws-emulated-reference-environment.md) | Non-deployment causes and non-rollback remedies, first with a queue in the existing reference system, then in an AWS-compatible environment behind an emulator gate | [Proposal](../architecture/aws-emulated-reference-environment.md) | 01, 06, 07 complete; ADR-011 amendment and ADR-021 |
+| [E01 – AWS reference environment](phase-e01-aws-reference-environment.md) | Non-deployment causes and non-rollback remedies, first with a queue in the existing reference system, then in the AWS environment behind its compatibility gate | [Proposal](../architecture/aws-reference-environment.md) | 01, 06, 07 complete; ADR-011 amendment and ADR-021 |
 | [E02 – Frontend design-system depth](phase-e02-frontend-design-system-depth.md) | The design system covers every form, message and layout the product renders, with the full token model, theme selection and tablet coverage | [Design-system plan and gap assessment](../architecture/frontend-design-system.md#gap-assessment-2026-10-30) | Phase 00 design-system foundation; the responder and administrator journeys |
 | [E03 – Demonstration depth](phase-e03-demonstration-depth.md) | Sentinel's judgement shown live: an instruction planted in its data shown and ignored, an incomplete fix corrected, a repeat recognised, the damage avoided beside each incident and investigations watched as they happen | [Demonstration depth](../architecture/demonstration-depth.md) | 05, 06, 07 complete |
 

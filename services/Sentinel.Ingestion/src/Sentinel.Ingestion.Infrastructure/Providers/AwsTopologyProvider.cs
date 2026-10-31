@@ -14,7 +14,7 @@ using KeyValuePair = Amazon.ECS.Model.KeyValuePair;
 namespace Sentinel.Ingestion.Infrastructure.Providers;
 
 /// <summary>
-/// Reads the dependencies the AWS-emulated environment's workloads declare, as topology observations (Phase E01, Stage 2).
+/// Reads the dependencies the AWS environment's workloads declare, as topology observations (Phase E01, Stage 2).
 /// An ECS service in the configured clusters depends on what the task definition it serves names in its environment: a
 /// service it calls through service discovery, <c>services__{name}__{endpoint}__{index}</c>, the convention the workloads
 /// resolve their dependencies with, and an SQS queue of the account it is given by name or URL. A declared edge is what a

@@ -10,7 +10,7 @@ public sealed class AwsEnvironmentOptionsTests
     [InlineData("http://localhost:4566", "http://host.docker.internal:4566")]
     [InlineData("http://127.0.0.1:9090/api/v1/otlp/v1/metrics", "http://host.docker.internal:9090/api/v1/otlp/v1/metrics")]
     [InlineData("http://jaeger:4318/v1/traces", "http://jaeger:4318/v1/traces")]
-    public void An_address_on_this_host_is_rewritten_for_the_containers_the_emulator_starts(string address, string expected)
+    public void An_address_on_this_host_is_rewritten_for_the_containers_local_aws_starts(string address, string expected)
     {
         AwsEnvironmentOptions.ForContainers(address, "host.docker.internal").ShouldBe(expected);
     }
@@ -37,7 +37,7 @@ public sealed class AwsEnvironmentOptionsTests
     }
 
     [Fact]
-    public void Without_the_emulator_endpoint_there_is_no_aws_environment_rather_than_a_fallback_to_aws()
+    public void Without_the_aws_endpoint_there_is_no_aws_environment_rather_than_a_fallback_to_aws()
     {
         IConfiguration configuration = new ConfigurationBuilder().Build();
 

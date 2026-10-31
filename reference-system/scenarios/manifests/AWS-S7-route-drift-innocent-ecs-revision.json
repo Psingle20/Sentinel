@@ -3,7 +3,7 @@
   "slug": "route-drift-innocent-ecs-revision",
   "version": 1,
   "kind": "confounder",
-  "description": "Event route drift in the AWS-emulated environment. The queue-consumer's producer publishes four orders a second as EventBridge events, and the orders-route rule delivers them to the orders queue. A benign queue-consumer v1.4.1 task definition rolls out through ECS first and serves before anything goes wrong; 45 s in, the rule's pattern is changed to expect a source the producer does not use, so every order event is accepted by the bus and matched by nothing. The consumer's queue stays empty, it processes nothing and fails nothing, and its orders are published but never delivered. Fidelity: EventBridge routing, the queue and the ECS rollout are emulated by the pinned emulator; the producer, the consumer and their telemetry are real; the drift is injected through the EventBridge API.",
+  "description": "Event route drift in the AWS environment. The queue-consumer's producer publishes four orders a second as EventBridge events, and the orders-route rule delivers them to the orders queue. A benign queue-consumer v1.4.1 task definition rolls out through ECS first and serves before anything goes wrong; 45 s in, the rule's pattern is changed to expect a source the producer does not use, so every order event is accepted by the bus and matched by nothing. The consumer's queue stays empty, it processes nothing and fails nothing, and its orders are published but never delivered. Fidelity: EventBridge routing, the queue and the ECS rollout run on local AWS; the producer, the consumer and their telemetry are real; the drift is injected through the EventBridge API.",
   "environment": "aws",
   "account": "000000000000",
   "region": "us-east-1",

@@ -3,7 +3,7 @@ namespace Reference.Scenarios.Application.Abstractions;
 /// <summary>Why an environment operation failed.</summary>
 public enum EnvironmentFailure
 {
-    /// <summary>The environment, or the emulator behind it, did not answer or refused the call.</summary>
+    /// <summary>The environment, or local AWS behind it, did not answer or refused the call.</summary>
     Unavailable,
 
     /// <summary>The environment cannot perform the operation, such as a step for a workload it does not host.</summary>

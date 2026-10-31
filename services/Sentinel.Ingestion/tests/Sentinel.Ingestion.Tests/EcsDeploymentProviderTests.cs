@@ -14,14 +14,14 @@ using Task = System.Threading.Tasks.Task;
 namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
-/// The ECS deployment provider against the pinned emulator (Phase E01, Stage 2): a service's creation is a create, a
+/// The ECS deployment provider against local AWS (Phase E01, Stage 2): a service's creation is a create, a
 /// rollout to a new task definition a deploy and a rollout back a rollback, each named by its image's tag with the
-/// version it replaced, and each completion follows its start; an emulator that does not answer is an unavailable
+/// version it replaced, and each completion follows its start; a local AWS that does not answer is an unavailable
 /// result, never an exception.
 /// </summary>
-[Collection(AwsEmulatorCollection.Name)]
-[Trait("Category", "Emulator")]
-public sealed class EcsDeploymentProviderTests(AwsEmulator emulator)
+[Collection(LocalAwsCollection.Name)]
+[Trait("Category", "Aws")]
+public sealed class EcsDeploymentProviderTests(LocalAws localAws)
 {
     private const string Repository = "sentinel-ingestion-ecs-test";
 
@@ -31,9 +31,9 @@ public sealed class EcsDeploymentProviderTests(AwsEmulator emulator)
     [Fact]
     public async Task Creation_rollout_and_rollback_are_create_deploy_and_rollback_with_their_versions()
     {
-        await AwsEmulator.TagAsync("redis:7-alpine", $"{Repository}:v1.4.0");
-        await AwsEmulator.TagAsync("redis:7-alpine", $"{Repository}:v1.4.1");
-        using AmazonECSClient ecs = emulator.Ecs();
+        await LocalAws.TagAsync("redis:7-alpine", $"{Repository}:v1.4.0");
+        await LocalAws.TagAsync("redis:7-alpine", $"{Repository}:v1.4.1");
+        using AmazonECSClient ecs = localAws.Ecs();
         string cluster = $"ingestion-{Guid.NewGuid().ToString("N")[..8]}";
         await ecs.CreateClusterAsync(new CreateClusterRequest { ClusterName = cluster });
         string baseline = await RegisterAsync(ecs, "v1.4.0");
@@ -65,11 +65,11 @@ public sealed class EcsDeploymentProviderTests(AwsEmulator emulator)
     }
 
     [Fact]
-    public async Task An_emulator_that_does_not_answer_is_an_unavailable_result()
+    public async Task An_aws_endpoint_that_does_not_answer_is_an_unavailable_result()
     {
         using var ecs = new AmazonECSClient(
-            new Amazon.Runtime.BasicAWSCredentials(AwsEmulator.Account, AwsEmulator.Secret),
-            new AmazonECSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = AwsEmulator.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
+            new Amazon.Runtime.BasicAWSCredentials(LocalAws.Account, LocalAws.Secret),
+            new AmazonECSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = LocalAws.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
         EcsDeploymentProvider provider = Provider(ecs, "reference");
 
         ProviderResult<DeploymentObservation> result = await provider.GetDeploymentsAsync(Request(DateTimeOffset.UtcNow.AddMinutes(-1)), CancellationToken.None);
@@ -87,7 +87,7 @@ public sealed class EcsDeploymentProviderTests(AwsEmulator emulator)
 
     private EcsDeploymentProvider Provider(AmazonECSClient ecs, string cluster) => new(
         ecs,
-        new AwsProviderOptions { ServiceUrl = emulator.Endpoint, AccessKey = AwsEmulator.Account, SecretKey = AwsEmulator.Secret, Clusters = [cluster] },
+        new AwsProviderOptions { ServiceUrl = localAws.Endpoint, AccessKey = LocalAws.Account, SecretKey = LocalAws.Secret, Clusters = [cluster] },
         TimeProvider.System,
         NullLogger<EcsDeploymentProvider>.Instance);
 

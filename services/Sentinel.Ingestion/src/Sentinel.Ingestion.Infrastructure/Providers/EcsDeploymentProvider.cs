@@ -18,7 +18,7 @@ namespace Sentinel.Ingestion.Infrastructure.Providers;
 /// completed or failed, a <c>completed</c> or <c>failed</c> one. The version is the task's image tag; the previous version
 /// is the task definition the service was last seen serving, else the family's previous revision. A service's first
 /// deployment is its creation, kind <c>create</c>, which the deploy-blame rules ignore. ECS keeps only the current
-/// deployment, so this provider remembers what it saw; and the emulator never moves a deployment's update time, so a
+/// deployment, so this provider remembers what it saw; and local AWS never moves a deployment's update time, so a
 /// completion is timed when this provider first saw it.
 /// </summary>
 internal sealed class EcsDeploymentProvider(IAmazonECS ecs, AwsProviderOptions options, TimeProvider time, ILogger<EcsDeploymentProvider> logger) : IDeploymentProvider

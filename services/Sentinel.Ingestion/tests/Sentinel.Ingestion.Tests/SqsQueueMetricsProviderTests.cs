@@ -13,14 +13,14 @@ using Shouldly;
 namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
-/// The SQS queue-attribute metrics provider against the pinned emulator (Phase E01, Stage 2): a series adds up the
+/// The SQS queue-attribute metrics provider against local AWS (Phase E01, Stage 2): a series adds up the
 /// attributes its expression names, as one sample at the step of the reading, for the service the series names; a pull
 /// within the same step reads the same observation again. A malformed expression, a series without a service and a queue
 /// that does not exist are unavailable results, never an exception or a quiet queue.
 /// </summary>
-[Collection(AwsEmulatorCollection.Name)]
-[Trait("Category", "Emulator")]
-public sealed class SqsQueueMetricsProviderTests(AwsEmulator emulator)
+[Collection(LocalAwsCollection.Name)]
+[Trait("Category", "Aws")]
+public sealed class SqsQueueMetricsProviderTests(LocalAws localAws)
 {
     private static readonly TenantId Tenant = TenantId.From("acme");
     private static readonly EnvironmentId Environment = EnvironmentId.From("reference");
@@ -29,7 +29,7 @@ public sealed class SqsQueueMetricsProviderTests(AwsEmulator emulator)
     [Fact]
     public async Task A_series_adds_up_the_attributes_it_names_as_one_sample_at_the_step_of_the_reading()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localAws.Sqs();
         string queue = $"orders-{Guid.NewGuid().ToString("N")[..8]}";
         string url = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = queue })).QueueUrl;
         for (int order = 0; order < 3; order++)
@@ -68,7 +68,7 @@ public sealed class SqsQueueMetricsProviderTests(AwsEmulator emulator)
     [InlineData("queue_depth", "no-such-queue:ApproximateNumberOfMessages", "queue-consumer", "")]
     public async Task A_series_it_cannot_read_is_an_unavailable_result(string name, string expression, string? service, string reason)
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localAws.Sqs();
 
         ProviderResult<MetricObservation> result = await Provider(sqs).QueryRangeAsync(Request(Series(name, expression) with { Service = service }), CancellationToken.None);
 

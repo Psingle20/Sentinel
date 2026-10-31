@@ -1,9 +1,9 @@
 {
-  "emulator": "floci",
+  "tool": "floci",
   "image": "floci/floci",
   "version": "2.3.0",
   "platform": "linux/amd64",
   "digest": "sha256:09b72c45f333019adecb302e79c6b746e290135f528016c8514618bc7ab02344",
   "port": 4566,
-  "decision": "docs/decisions/ADR-021-aws-emulator.md"
+  "decision": "docs/decisions/ADR-021-local-aws.md"
 }

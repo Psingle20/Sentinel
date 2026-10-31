@@ -11,12 +11,12 @@ using Shouldly;
 namespace Sentinel.Executor.Tests;
 
 /// <summary>
-/// The EventBridge route adapter against the pinned emulator (Phase E01, Stage 4): a drifted rule is restored to the
+/// The EventBridge route adapter against local AWS (Phase E01, Stage 4): a drifted rule is restored to the
 /// pattern Executor holds as approved and verified intact, restoring it again changes nothing, and the restoration is not
 /// compensated. A rule without an approved pattern, or a capability for another action, leaves the rule as it is.
 /// </summary>
-[Trait("Category", "Emulator")]
-public sealed class EventBridgeRouteAdapterTests(SqsEmulator emulator) : IClassFixture<SqsEmulator>
+[Trait("Category", "Aws")]
+public sealed class EventBridgeRouteAdapterTests(LocalSqs localSqs) : IClassFixture<LocalSqs>
 {
     private const string Approved = """{"source":["reference.checkout"],"detail-type":["OrderPlaced"]}""";
     private const string Drifted = """{"source":["reference.storefront"],"detail-type":["OrderPlaced"]}""";
@@ -24,7 +24,7 @@ public sealed class EventBridgeRouteAdapterTests(SqsEmulator emulator) : IClassF
     [Fact]
     public async Task A_drifted_route_is_restored_to_its_approved_pattern_and_verified_intact()
     {
-        using AmazonEventBridgeClient events = emulator.Events();
+        using AmazonEventBridgeClient events = localSqs.Events();
         string rule = $"orders-route-{Guid.NewGuid().ToString("N")[..8]}";
         await events.PutRuleAsync(new PutRuleRequest { Name = rule, EventPattern = Drifted, State = RuleState.ENABLED });
         EventBridgeRouteAdapter adapter = Adapter(events, rule);
@@ -45,7 +45,7 @@ public sealed class EventBridgeRouteAdapterTests(SqsEmulator emulator) : IClassF
     [Fact]
     public async Task A_rule_without_an_approved_pattern_or_a_capability_for_another_action_is_left_as_it_is()
     {
-        using AmazonEventBridgeClient events = emulator.Events();
+        using AmazonEventBridgeClient events = localSqs.Events();
         string rule = $"orders-route-{Guid.NewGuid().ToString("N")[..8]}";
         await events.PutRuleAsync(new PutRuleRequest { Name = rule, EventPattern = Drifted, State = RuleState.ENABLED });
         RestoreRouteAction action = Restore(rule);
@@ -62,9 +62,9 @@ public sealed class EventBridgeRouteAdapterTests(SqsEmulator emulator) : IClassF
         events,
         new EventBridgeRouteOptions
         {
-            ServiceUrl = emulator.Endpoint,
-            AccessKey = SqsEmulator.Account,
-            SecretKey = SqsEmulator.Secret,
+            ServiceUrl = localSqs.Endpoint,
+            AccessKey = LocalSqs.Account,
+            SecretKey = LocalSqs.Secret,
             Routes = new Dictionary<string, string>(StringComparer.Ordinal) { [approvedRule] = Approved }
         },
         TimeProvider.System);

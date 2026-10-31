@@ -23,7 +23,7 @@ namespace Sentinel.Ingestion.Tests;
 /// a new vendor is added by adding a case here, not by trusting its own tests: provenance reaches
 /// the provider resource, IDs are deterministic, results are tenant-scoped and inside the requested
 /// range, and an outage, throttling, malformed or oversized response is an explicit unavailable
-/// result rather than an exception or an empty success. The AWS adapters of the AWS-emulated
+/// result rather than an exception or an empty success. The AWS adapters of the AWS
 /// environment (Phase E01) run through the AWS SDK over the same stubbed transport, answered per
 /// operation; the SDK streams its responses, which the AWS APIs bound by page size, so the
 /// buffer-size rule applies to the HTTP adapters alone.
@@ -41,11 +41,11 @@ public sealed class ProviderConformanceTests
 
     private const string Cluster = "arn:aws:ecs:us-east-1:000000000000:cluster/reference";
     private const string Definition = "arn:aws:ecs:us-east-1:000000000000:task-definition/queue-consumer";
-    private const string Queue = "http://aws-emulator:4566/000000000000/orders";
+    private const string Queue = "http://local-aws:4566/000000000000/orders";
     private const string ApprovedRoute = """{"source":["reference.checkout"],"detail-type":["OrderPlaced"]}""";
     private const string DriftedRoute = """{"source":["reference.storefront"],"detail-type":["OrderPlaced"]}""";
 
-    // One answer per AWS operation, as the emulator gives them: a queue-consumer service rolled out to revision 2, whose
+    // One answer per AWS operation, as local AWS gives them: a queue-consumer service rolled out to revision 2, whose
     // task definition calls order-service and names its queue, that queue's attributes, and the rule that routes orders to
     // it, with a drifted pattern.
     private static string Aws(HttpRequestMessage request) => Aws(request, DriftedRoute);

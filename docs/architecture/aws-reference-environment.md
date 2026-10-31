@@ -1,30 +1,30 @@
-# AWS-emulated reference environment
+# AWS reference environment
 
-- Status: Proposed
+- Status: Accepted through [ADR-021](../decisions/ADR-021-local-aws.md); Stages 0 to 2 delivered, Stages 3 and 4 in part ([ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment))
 - Scope: Local and CI reference environment only
 - Last reviewed: 2026-10-30, refined the same day after review (two tracks, hybrid telemetry, product-side work, identity mapping, widened spike), then aligned with the repository's naming conventions and linked to its delivery phase
-- Delivery: [Phase E01 – AWS-emulated reference environment](../implementation/phase-e01-aws-emulated-reference-environment.md) carries the delivery stages below as an enhancement phase and the [phase status ledger](../implementation/phase-status.md#phase-e01--aws-emulated-reference-environment) records progress; this document stays the design source
+- Delivery: [Phase E01 – AWS reference environment](../implementation/phase-e01-aws-reference-environment.md) carries the delivery stages below as an enhancement phase and the [phase status ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment) records progress; this document stays the design source
 - Related decisions: [ADR-010](../decisions/ADR-010-local-orchestration.md), [ADR-011](../decisions/ADR-011-reference-system-location.md), [ADR-014](../decisions/ADR-014-provider-abstraction.md), [ADR-020](../decisions/ADR-020-application-composition-and-cqrs.md)
 
 ## Purpose
 
-Extend Sentinel's controlled reference system with an AWS-compatible environment that can produce richer, repeatable distributed-system incidents. The environment gives Sentinel realistic AWS API shapes, resource relationships, telemetry and remediation targets without making a cloud account or a particular emulator part of Sentinel's product architecture.
+Extend Sentinel's controlled reference system with an AWS-compatible environment that can produce richer, repeatable distributed-system incidents. The environment gives Sentinel realistic AWS API shapes, resource relationships, telemetry and remediation targets without making a cloud account or a particular local AWS tool part of Sentinel's product architecture.
 
 This document describes the existing reference system, the proposed addition, the scenarios it enables, its fidelity limits, the integration boundaries, the staged adoption plan and the evidence required before the proposal becomes an accepted architecture decision.
 
 ## Executive summary
 
-Sentinel should continue to run under .NET Aspire. An AWS emulator should run **inside the reference-system boundary** as another observed environment. Sentinel must interact with it only through the same provider and remediation contracts it would use against AWS.
+Sentinel should continue to run under .NET Aspire. Local AWS should run **inside the reference-system boundary** as another observed environment. Sentinel must interact with it only through the same provider and remediation contracts it would use against AWS.
 
-The first implementation should evaluate Floci because its advertised snapshot lifecycle, real ECS containers and broad AWS surface fit deterministic scenario execution. MiniStack remains a viable alternative and should be retained behind the same environment abstraction. Neither emulator should be used merely because it exposes more service names; the choice must be based on the small set of operations Sentinel's scenarios actually exercise.
+The first implementation should evaluate Floci because its advertised snapshot lifecycle, real ECS containers and broad AWS surface fit deterministic scenario execution. MiniStack remains a viable alternative and should be retained behind the same environment abstraction. Neither tool should be used merely because it exposes more service names; the choice must be based on the small set of operations Sentinel's scenarios actually exercise.
 
 The first vertical scenario should combine an SQS poison message, retries, an innocent ECS deployment and a DLQ. It tests causal reasoning, resistance to deployment bias, safe remediation and recovery verification in one path. Only after that path is reliable should the scenario catalogue expand.
 
-Two goals meet in this proposal and are delivered on separate tracks. **Scenario diversity**, causes that are not deployments and remedies that are not rollbacks, needs only a queue and belongs in the existing reference system first, where it is cheap and strengthens the evaluation at once. **AWS realism**, AWS API shapes for adapter portability, IAM, EventBridge, account and region semantics, is what the emulator adds and what this document gates. The [scenario catalogue](#scenario-catalogue) marks which track each scenario belongs to.
+Two goals meet in this proposal and are delivered on separate tracks. **Scenario diversity**, causes that are not deployments and remedies that are not rollbacks, needs only a queue and belongs in the existing reference system first, where it is cheap and strengthens the evaluation at once. **AWS realism**, AWS API shapes for adapter portability, IAM, EventBridge, account and region semantics, is what local AWS adds and what this document gates. The [scenario catalogue](#scenario-catalogue) marks which track each scenario belongs to.
 
-Telemetry takes a hybrid path. AWS workloads keep emitting OpenTelemetry to the Prometheus, Loki and Jaeger the reference system already runs, so Sentinel's telemetry adapters and detection are unchanged; the emulator supplies changes, topology and remediation targets through ECS, SQS, IAM and EventBridge. Emulated CloudWatch is the weakest part of every AWS emulator and is adopted later, behind its own gate.
+Telemetry takes a hybrid path. AWS workloads keep emitting OpenTelemetry to the Prometheus, Loki and Jaeger the reference system already runs, so Sentinel's telemetry adapters and detection are unchanged; local AWS supplies changes, topology and remediation targets through ECS, SQS, IAM and EventBridge. CloudWatch is the weakest part of every local AWS tool and is adopted later, behind its own gate.
 
-This proposal does **not** add a sixth Sentinel backend service, replace Aspire, redefine the production deployment target or claim that a local emulator exactly reproduces AWS failure behaviour.
+This proposal does **not** add a sixth Sentinel backend service, replace Aspire, redefine the production deployment target or claim that local AWS exactly reproduces AWS failure behaviour.
 
 ## Current setup
 
@@ -81,7 +81,7 @@ The important existing invariants remain unchanged:
 4. Failure controls are enabled only in explicit development or test environments.
 5. Every scenario starts from a known state and defines discriminating evidence, permitted remediation, false remediation and recovery criteria.
 
-## Why add an AWS-emulated environment
+## Why add an AWS environment
 
 The current fixture proves Sentinel's reasoning loop, but its workload and deployment APIs are intentionally small. An AWS-compatible environment adds several kinds of evidence without requiring broad production access:
 
@@ -91,13 +91,13 @@ The current fixture proves Sentinel's reasoning loop, but its workload and deplo
 - **Action realism.** Executor can operate through typed actions such as moving a message, restoring an event rule or reverting an ECS task definition.
 - **Isolation testing.** Accounts and regions create natural tenant and environment boundaries.
 - **Repeatable evaluation.** Snapshots or deterministic provisioning make larger scenarios reproducible.
-- **Adapter portability.** The same Sentinel-owned interfaces can target an emulator locally and AWS in a later deployment without leaking AWS types downstream.
+- **Adapter portability.** The same Sentinel-owned interfaces can target local AWS on a developer machine and an AWS account in a later deployment without leaking AWS types downstream.
 
-The value is not the number of emulated services. The value is a small set of causally rich scenarios whose ground truth, evidence and safe recovery can be verified.
+The value is not the number of AWS services it runs. The value is a small set of causally rich scenarios whose ground truth, evidence and safe recovery can be verified.
 
-### What the emulator does not add
+### What local AWS does not add
 
-Most of the causal variety Sentinel needs does not require AWS. A poison message, a retry storm, connection exhaustion, duplicate delivery and missing telemetry are properties of a queue, a pool or a provider, and the existing .NET reference system can host them with a plain queue in days rather than weeks. Those scenarios go into the existing environment first (the [scenario-diversity track](#scenario-catalogue)). The emulator earns its cost only where the AWS shape itself is the point: adapter portability against real SDK clients, IAM and EventBridge drift, account and region isolation, and a demonstration an AWS operator recognizes.
+Most of the causal variety Sentinel needs does not require AWS. A poison message, a retry storm, connection exhaustion, duplicate delivery and missing telemetry are properties of a queue, a pool or a provider, and the existing .NET reference system can host them with a plain queue in days rather than weeks. Those scenarios go into the existing environment first (the [scenario-diversity track](#scenario-catalogue)). Local AWS earns its cost only where the AWS shape itself is the point: adapter portability against real SDK clients, IAM and EventBridge drift, account and region isolation, and a demonstration an AWS operator recognizes.
 
 ## Goals
 
@@ -109,19 +109,19 @@ Most of the causal variety Sentinel needs does not require AWS. A poison message
 - Execute only typed, policy-governed actions through Executor.
 - Reset or restore every scenario deterministically.
 - Support deterministic test-double investigations and separately recorded live-model evaluation.
-- Keep emulator-specific behaviour inside the reference environment and infrastructure adapters.
+- Keep tool-specific behaviour inside the reference environment and infrastructure adapters.
 - Record fidelity and known limitations per scenario.
 
 ## Non-goals
 
-- Deploying Sentinel itself into the AWS emulator.
+- Deploying Sentinel itself into local AWS.
 - Treating Aspire as a production deployment definition.
 - Reproducing AWS availability-zone, control-plane or global-network behaviour exactly.
 - Testing cloud billing, quota increases or production-scale throughput.
 - Giving a model AWS credentials or allowing arbitrary AWS commands.
-- Adding every emulator-supported service.
+- Adding every service local AWS supports.
 - Making Floci, MiniStack or AWS SDK types part of Sentinel contracts or domain models.
-- Claiming production validation from an emulator-only result.
+- Claiming production validation from a result on local AWS alone.
 
 ## Proposed topology
 
@@ -143,46 +143,46 @@ flowchart TB
             deployController["deploy-controller"]
         end
 
-        subgraph awsref["AWS-emulated reference environment"]
+        subgraph awsref["AWS reference environment"]
             runner["scenario-runner<br/>(IReferenceEnvironment: aws)"]
-            emulator["aws-emulator<br/>AWS-compatible endpoint"]
+            localAws["local-aws<br/>AWS endpoint"]
             awsWorkloads["ECS-hosted workloads<br/>(queue-consumer first)"]
             awsData["SQS / EventBridge / RDS / Redis"]
             faultControl["Development-only fault controls<br/>inside the workloads"]
         end
     end
 
-    runner --> emulator
+    runner --> localAws
     runner --> faultControl
-    emulator --> awsWorkloads
-    emulator --> awsData
+    localAws --> awsWorkloads
+    localAws --> awsData
     faultControl --> awsWorkloads
     faultControl --> awsData
 
     awsWorkloads -->|"OpenTelemetry"| observability
     ingestion -->|"metrics, logs, traces (existing adapters)"| observability
-    ingestion -->|"read-only AWS providers"| emulator
-    executor -->|"typed AWS actions"| emulator
-    emulator -->|"changes, topology and queue attributes"| ingestion
+    ingestion -->|"read-only AWS providers"| localAws
+    executor -->|"typed AWS actions"| localAws
+    localAws -->|"changes, topology and queue attributes"| ingestion
     runtime --> agents
     runtime --> executor
     web --> gateway --> runtime
 
     classDef boundary stroke-dasharray: 6 4
-    class emulator,faultControl boundary
+    class localAws,faultControl boundary
 ```
 
 ### Boundary rules
 
 - Aspire owns process/container lifecycle and service wiring.
-- The emulator is an external system from Sentinel's perspective.
+- Local AWS is an external system from Sentinel's perspective.
 - The reference-system scenario runner owns provisioning, reset, traffic and fault activation.
 - Ingestion owns all read credentials and the AWS change, topology and queue-attribute adapters, and later any CloudWatch adapters.
 - Executor owns all action credentials and AWS remediation adapters.
 - Runtime, AgentWorker, Gateway and Web remain vendor-neutral.
 - Fault controls stay inside the workloads behind the existing control-token guard, as in the current reference system; there is no separate fault-controller service.
 - Scenario manifests and ground truth stay inaccessible to Sentinel processes.
-- Emulator administration endpoints are never exposed as remediation tools.
+- Local AWS administration endpoints are never exposed as remediation tools.
 
 ## Proposed repository layout
 
@@ -192,7 +192,7 @@ The addition belongs under the existing reference-system boundary rather than un
 reference-system/
 ├── deploy/
 │   ├── loki/, prometheus/, redis-exporter/     existing
-│   └── aws/                                    emulator configuration, pinned image digest, optional network controls
+│   └── aws/                                    local AWS configuration, pinned image digest, optional network controls
 ├── services/
 │   ├── Reference.Checkout, Reference.Orders,
 │   │   Reference.ReportingWorker, Reference.Common   existing workloads, file rules only
@@ -206,7 +206,7 @@ reference-system/
 │   ├── packages/                               S0.json ... and AWS-S0.json ... evaluation packages, same schema
 │   └── baseline/deploy-blame.md                extended with the queue scenarios' expected baseline outcomes
 ├── knowledge/                                  queue-consumer.md beside the existing runbooks
-└── tests/Reference.Tests/                      existing; Environments/Aws/ conformance tests behind an emulator-required trait
+└── tests/Reference.Tests/                      existing; Environments/Aws/ conformance tests in the `Aws` test category
 
 deploy/local/Sentinel.AppHost/
 ├── ReferenceSystemExtensions.cs                existing
@@ -220,9 +220,9 @@ Conventions that follow from this:
 - The scenario runner follows the composition guide in full, so provisioning, reset and activation are requests that go through the processor seam to handlers, and the environment implementations sit in a new `Reference.Scenarios.Infrastructure` project registered by its own dependency module. The runner has no Infrastructure project today; the AWS SDK is the first dependency that justifies one.
 - The queue consumer is a workload like checkout, so it keeps the file and naming rules only: one type per file, a folder per concern, the injected fault in a clearly named file, a thin `Program.cs`, and no reference to the building blocks or to any `Sentinel.*` package.
 - Manifests use the existing scenario contract and file naming (`<id>-<slug>.json`, the same keys as `S1-redis-connection-leak.json`) and add the environment, account and region they run in. Queue-track scenarios built in the existing environment take the next free `S` numbers; AWS-track scenarios keep the `AWS-S` prefix.
-- Aspire resource names stay hyphenated and lower case (`aws-emulator`, `queue-consumer`), and generated tokens follow the `reference-*` parameter pattern.
+- Aspire resource names stay hyphenated and lower case (`local-aws`, `queue-consumer`), and generated tokens follow the `reference-*` parameter pattern.
 
-This layout extends ADR-011 and is recorded in its amendment, together with the emulator decision in ADR-021, before implementation; it introduces neither a shared domain package nor a new Sentinel deployable.
+This layout extends ADR-011 and is recorded in its amendment, together with local AWS decision in ADR-021, before implementation; it introduces neither a shared domain package nor a new Sentinel deployable.
 
 ## Environment abstraction
 
@@ -243,12 +243,12 @@ Guidelines:
 - Keep the interface in `Reference.Scenarios.Application/Abstractions/`, with `EnvironmentState`, `ScenarioStep` and the typed errors each in their own file.
 - Put AWS SDK calls in `Reference.Scenarios.Infrastructure/Environments/Aws/`, registered by that layer's dependency module and selected by configuration; the Api project stays composition, controllers and Aspire commands.
 - Expose provisioning, reset and activation as requests through the processor seam, like the runner's existing run operations.
-- Do not expose an emulator name in scenario manifests.
+- Do not name the local AWS tool in scenario manifests.
 - Make reset idempotent.
 - Return typed errors for unsupported operations, timeouts and partial resets.
-- Record the emulator, image digest, scenario version and provisioning version with every run.
+- Record local AWS, image digest, scenario version and provisioning version with every run.
 - Prefer the public AWS-compatible data/control APIs for provisioning and inspection.
-- Use emulator-specific snapshot APIs only for lifecycle acceleration, never as Sentinel-facing capabilities.
+- Use tool-specific snapshot APIs only for lifecycle acceleration, never as Sentinel-facing capabilities.
 
 ## Sentinel provider additions
 
@@ -310,7 +310,7 @@ sequenceDiagram
     participant Runner as scenario-runner
     participant Queue as SQS queue and DLQ
     participant Consumer as queue-consumer (ECS task)
-    participant Emulator as Emulator control plane (ECS, SQS)
+    participant Aws as Local AWS (ECS, SQS)
     participant Otel as Prometheus / Loki / Jaeger
     participant Ing as Sentinel.Ingestion
     participant Core as Sentinel.Runtime, AgentWorker, Gateway
@@ -320,10 +320,10 @@ sequenceDiagram
     Queue->>Consumer: Deliver message
     Consumer-->>Queue: Fail; visibility timeout expires
     Consumer->>Otel: Error and retry metrics, logs with the message fingerprint
-    Runner->>Emulator: Release benign task revision
+    Runner->>Aws: Release benign task revision
     Queue->>Consumer: Redeliver repeatedly
     Ing->>Otel: Metrics, logs and traces through the existing adapters
-    Ing->>Emulator: Task revisions, topology, queue attributes (age, receive count)
+    Ing->>Aws: Task revisions, topology, queue attributes (age, receive count)
     Ing-->>Core: Canonical observations
     Core->>Core: Compare poison-message and deployment hypotheses
     Core->>Ex: Approved typed quarantine action with attestation and fencing token
@@ -351,14 +351,14 @@ This scenario is the first gate because it exercises provisioning, traffic, the 
 
 ## Scenario catalogue
 
-The catalogue below is a roadmap. Each scenario must be accepted independently after its emulator operations and fidelity are verified.
+The catalogue below is a roadmap. Each scenario must be accepted independently after the operations it needs and its fidelity are verified.
 
-Each row names its track. **Queue** means the scenario needs only a queue and belongs in the existing reference system first; **AWS** means the AWS shape is the point and it waits for the emulator. A queue-track scenario may later get an AWS twin to prove adapter portability, but its reasoning value is captured without one.
+Each row names its track. **Queue** means the scenario needs only a queue and belongs in the existing reference system first; **AWS** means the AWS shape is the point and it waits for local AWS. A queue-track scenario may later get an AWS twin to prove adapter portability, but its reasoning value is captured without one.
 
 | ID | Scenario | Injected cause and confounder | Expected outcome | Primary capabilities | Track |
 | --- | --- | --- | --- | --- | --- |
 | `AWS-S0` | Healthy AWS noise | Benign deployments and normal queue variation | No incident | false-positive control | AWS |
-| `AWS-S1` | Poison message plus innocent deploy | One message retries; benign ECS revision follows | Quarantine/redrive the message; do not roll back | SQS, DLQ, ECS | Queue first, then AWS as the first emulator scenario |
+| `AWS-S1` | Poison message plus innocent deploy | One message retries; benign ECS revision follows | Quarantine/redrive the message; do not roll back | SQS, DLQ, ECS | Queue first, then AWS as the first AWS scenario |
 | `AWS-S2` | Consumer regression | Faulty ECS task revision slows acknowledgements | Roll back the consumer revision | ECS, SQS, deployments | AWS |
 | `AWS-S3` | Retry amplification | Downstream timeout triggers synchronized retries | Contain retries and address the downstream cause | queue, metrics | Queue |
 | `AWS-S4` | IAM permission drift | Required action removed from a workload role | Restore approved policy version or escalate | IAM, STS, audit/change evidence | AWS |
@@ -371,7 +371,7 @@ Each row names its track. **Queue** means the scenario needs only a queue and be
 | `AWS-S11` | Missing telemetry | A provider is unavailable while metrics and changes remain | Diagnose cautiously or abstain; report incompleteness | provider failure handling | Queue (the existing `S4` perturbation already covers a provider failure) |
 | `AWS-S12` | Cross-tenant collision test | Same resource names exist in two accounts | Keep observations, incidents and actions isolated | multi-account and tenant scoping | AWS |
 
-Recommended order: the Queue rows `AWS-S1`, `AWS-S3` and `AWS-S10` in the existing reference system, then `AWS-S0` and `AWS-S1` on the emulator, then `AWS-S4`, `AWS-S7` and `AWS-S12`, which are the scenarios only AWS semantics can provide.
+Recommended order: the Queue rows `AWS-S1`, `AWS-S3` and `AWS-S10` in the existing reference system, then `AWS-S0` and `AWS-S1` on local AWS, then `AWS-S4`, `AWS-S7` and `AWS-S12`, which are the scenarios only AWS semantics can provide.
 
 ### Scenario admission rules
 
@@ -385,23 +385,23 @@ Do not add a scenario unless it has:
 - named false remediations;
 - measurable recovery criteria;
 - an idempotent reset path;
-- a fidelity statement identifying what is real, emulated and artificially injected;
+- a fidelity statement identifying what is real, locally modelled and artificially injected;
 - a resource budget and maximum duration;
 - a deterministic baseline outcome.
 
 ## Fidelity model
 
-An emulator supplies API compatibility and selected data-plane behaviour. The scenario runner and the workloads' development-only fault controls supply controlled failures. Neither should be mistaken for AWS production behaviour.
+Local AWS supplies API compatibility and selected data-plane behaviour. The scenario runner and the workloads' development-only fault controls supply controlled failures. Neither should be mistaken for AWS production behaviour.
 
 | Fidelity level | Meaning | Suitable claims |
 | --- | --- | --- |
 | Contract-real | Real AWS SDK, request signing, pagination and wire shape against an endpoint override | Adapter and contract compatibility |
-| Data-plane-real | A real container/database/Redis process backs the emulated resource | Application and dependency behaviour within local limits |
-| Emulator-modelled | The emulator stores state and returns AWS-shaped responses | Control-plane reasoning and resource relationships |
+| Data-plane-real | A real container/database/Redis process backs the resource | Application and dependency behaviour within local limits |
+| Locally-modelled | Local AWS stores state and returns AWS-shaped responses | Control-plane reasoning and resource relationships |
 | Injected | The scenario controller, proxy or container runtime creates the failure | Sentinel's diagnosis and recovery logic under a declared fault |
 | Unsupported | Behaviour cannot be represented credibly | No production claim; use a real cloud test later |
 
-Examples that should not be claimed from local emulation alone:
+Examples that should not be claimed from local AWS alone:
 
 - actual availability-zone or regional failure;
 - AWS control-plane convergence and IAM propagation delays;
@@ -411,7 +411,7 @@ Examples that should not be claimed from local emulation alone:
 - AWS billing and cost allocation accuracy;
 - hyperscale throughput or noisy-neighbour behaviour.
 
-Latency, loss and partitions should be introduced with an explicit network-control component such as a proxy rather than attributed to the emulator. Every run report should identify that injection.
+Latency, loss and partitions should be introduced with an explicit network-control component such as a proxy rather than attributed to local AWS. Every run report should identify that injection.
 
 ## Floci and MiniStack evaluation
 
@@ -430,11 +430,11 @@ The comparison records vendor claims as of 2026-10-30; the compatibility spike m
 
 Primary sources:
 
-- [Floci AWS emulator and service catalogue](https://floci.io/aws/)
+- [Floci local AWS and service catalogue](https://floci.io/aws/)
 - [MiniStack documentation](https://ministack.org/docs/)
 - [MiniStack repository and internal test endpoints](https://github.com/ministackorg/ministack)
 
-The capabilities above are the vendors' own claims and have not been verified here. LocalStack is the long-established AWS emulator with widely documented SQS, ECS and CloudWatch behaviour; the spike includes it as the known baseline so that the comparison is not between two unfamiliar products.
+The capabilities above are the vendors' own claims and have not been verified here. LocalStack is the long-established local AWS with widely documented SQS, ECS and CloudWatch behaviour; the spike includes it as the known baseline so that the comparison is not between two unfamiliar products.
 
 ### Initial recommendation
 
@@ -461,7 +461,7 @@ Failure of the gate should not block Sentinel. The existing reference system rem
 
 ## Aspire integration
 
-Add the candidate as a pinned container resource named `aws-emulator` in `AwsReferenceEnvironmentExtensions.cs`, whose `AddAwsReferenceEnvironment()` returns an `AwsReferenceEnvironmentResources` record the way `AddReferenceSystem()` returns `ReferenceSystemResources`, and enable it only through explicit configuration, `Sentinel:ReferenceEnvironment=aws`, beside the existing `Sentinel:ReferenceOnly` and `Sentinel:EphemeralStorage` switches in `AppHost.cs`. The existing environment remains the default until the new path is stable.
+Add the candidate as a pinned container resource named `local-aws` in `AwsReferenceEnvironmentExtensions.cs`, whose `AddAwsReferenceEnvironment()` returns an `AwsReferenceEnvironmentResources` record the way `AddReferenceSystem()` returns `ReferenceSystemResources`, and enable it only through explicit configuration, `Sentinel:ReferenceEnvironment=aws`, beside the existing `Sentinel:ReferenceOnly` and `Sentinel:EphemeralStorage` switches in `AppHost.cs`. The existing environment remains the default until the new path is stable.
 
 The AppHost should:
 
@@ -470,22 +470,22 @@ The AppHost should:
 - add readiness checks before provisioning or scenario execution;
 - mount persistent/snapshot storage only when requested;
 - mount the Docker socket only if real ECS execution requires it;
-- place the emulator and its workloads on an isolated local network;
+- place local AWS and its workloads on an isolated local network;
 - cap CPU, memory, queue depth, traffic and scenario duration;
 - pass endpoint overrides explicitly rather than changing machine-wide AWS configuration;
 - never read a developer's default AWS credential chain;
-- label the emulator, image digest and enabled fidelity mode in run metadata.
+- label local AWS, image digest and enabled fidelity mode in run metadata.
 
 ### Docker-socket risk
 
-An emulator that launches real containers may require access to the Docker socket. That is effectively host-level container control. The mount must be limited to the local/CI fixture, documented visibly, disabled when unnecessary and never included in a production definition. CI must use an isolated runner rather than a shared privileged host.
+Local AWS launches real containers, so it may require access to the Docker socket. That is effectively host-level container control. The mount must be limited to the local/CI fixture, documented visibly, disabled when unnecessary and never included in a production definition. CI must use an isolated runner rather than a shared privileged host.
 
 ## Security and trust boundaries
 
 - Use synthetic credentials and data only.
 - Use explicit endpoint overrides and prevent fallback to real AWS endpoints.
 - Deny outbound network access where practical after images are available.
-- Keep scenario-control and emulator-administration credentials separate from Sentinel read/action credentials.
+- Keep scenario-control and local AWS administration credentials separate from Sentinel read/action credentials.
 - Give Ingestion read-only permissions for the resources it observes.
 - Give Executor only the typed action permissions required by the active scenarios.
 - Do not expose snapshot, reset, fault injection or provisioning APIs to AgentWorker.
@@ -515,13 +515,13 @@ Snapshot restoration is an optimization, not the definition of correctness. A co
 
 The environment itself needs observability distinct from the incidents it generates:
 
-- emulator readiness, operation latency and error counts;
+- local AWS readiness, operation latency and error counts;
 - provisioning/reset duration and failures;
 - workload/task state;
 - queue depth, oldest-message age, receive count and DLQ movement;
 - telemetry export lag and completeness;
 - fault activation/deactivation timestamps;
-- resource consumption by emulator and workloads;
+- resource consumption by local AWS and workloads;
 - scenario and provisioning version labels.
 
 Control-plane logs used to operate the fixture must not be handed to investigators as causal evidence unless the scenario contract explicitly declares them observable production evidence.
@@ -538,7 +538,7 @@ Control-plane logs used to operate the fixture must not be handed to investigato
 
 ### Environment conformance tests
 
-Run against the pinned emulator image:
+Run against the pinned local AWS image:
 
 - provisioning from empty state;
 - repeated reset/restore;
@@ -570,7 +570,7 @@ Live-model evaluation remains separate from deterministic CI so tests stay repro
 
 Every recorded run should include:
 
-- environment and emulator identity, version and image digest;
+- environment and provider identity, version and image digest;
 - scenario and provisioning versions;
 - seed, timeline and actual activation timestamps;
 - fidelity classification for each important signal and failure;
@@ -585,28 +585,28 @@ Every recorded run should include:
 
 ## Delivery stages
 
-[Phase E01](../implementation/phase-e01-aws-emulated-reference-environment.md) carries these stages as its workstreams, with the entry evidence, test plan and exit criteria of an implementation phase; the [phase status ledger](../implementation/phase-status.md#phase-e01--aws-emulated-reference-environment) records how far they have got.
+[Phase E01](../implementation/phase-e01-aws-reference-environment.md) carries these stages as its workstreams, with the entry evidence, test plan and exit criteria of an implementation phase; the [phase status ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment) records how far they have got.
 
 ### Stage 0: decision evidence
 
 - Amend ADR-011 with the layout and composition rules above.
-- Add ADR-021 selecting the first emulator only after the compatibility gate.
+- Add ADR-021 selecting the local AWS tool only after the compatibility gate.
 - Define resource limits and CI privilege constraints.
 
-### Stage 0b: scenario diversity without the emulator
+### Stage 0b: scenario diversity without local AWS
 
 - Add a plain queue to the existing reference system and the Queue-track scenarios `AWS-S1`, `AWS-S3` and `AWS-S10` as `S6` onward, with their manifests, baseline outcomes and evaluation packages.
 - Add the product-side work the poison-message scenario needs: the action kind, the Executor adapter, the Runtime detection rule, plan template and recovery criteria, and the AgentWorker queue tool.
-- This stage has no emulator dependency and raises the evaluation's scenario count and variety immediately; it is the fastest route to evidence.
+- This stage has no local AWS dependency and raises the evaluation's scenario count and variety immediately; it is the fastest route to evidence.
 
 ### Stage 1: healthy AWS environment
 
-- Start the pinned emulator through Aspire.
+- Start the pinned local AWS through Aspire.
 - Provision an SQS queue and DLQ and the ECS-hosted `queue-consumer`, which exports OpenTelemetry to the existing Prometheus, Loki and Jaeger.
 - Add `AWS-S0` and prove deterministic reset.
 - Do not add Sentinel AWS adapters yet; validate the fixture independently.
 - Keep Lambda out of Stages 1 and 2; ECS and SQS carry the first scenarios.
-- Fix the default developer profile budget before Stage 1 ends: the CPU, memory and wall-clock the emulator plus workloads may take on a Windows Docker Desktop machine, and the sequential-only rule for heavyweight scenarios.
+- Fix the default developer profile budget before Stage 1 ends: the CPU, memory and wall-clock local AWS plus workloads may take on a Windows Docker Desktop machine, and the sequential-only rule for heavyweight scenarios.
 
 ### Stage 2: one vertical scenario
 
@@ -618,7 +618,7 @@ Every recorded run should include:
 
 ### Stage 3: product integration quality
 
-- Gate and add the CloudWatch Metrics and Logs adapters, if the operation matrix shows the emulator implements the queries the adapters need; otherwise keep the hybrid telemetry path and say so in the fidelity statement.
+- Gate and add the CloudWatch Metrics and Logs adapters, if the operation matrix shows local AWS implements the queries the adapters need; otherwise keep the hybrid telemetry path and say so in the fidelity statement.
 - Add provider conformance suites.
 - Add real-system web journey coverage for the incident.
 - Surface environment/fidelity labels and comparison results.
@@ -626,39 +626,39 @@ Every recorded run should include:
 
 ### Stage 4: scenario expansion
 
-- Add scenarios in descending evidence value, not by emulator service count.
+- Add scenarios in descending evidence value, not by the number of AWS services.
 - Prefer IAM drift, RDS exhaustion, EventBridge drift and tenant isolation before optional Kubernetes breadth.
 - Admit each scenario only when its fidelity and reset tests pass.
 
 ### Stage 5: real-cloud validation
 
 - Run a deliberately small subset against an isolated AWS test account when production claims require it.
-- Compare emulator and AWS behaviour and record divergences.
+- Compare local AWS and AWS behaviour and record divergences.
 - Keep destructive actions constrained to scenario-owned resources.
 
 ## Risks and mitigations
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
-| Emulator implements only a shallow stub | Scenario passes without meaningful data-plane behaviour | verify each required operation and classify fidelity |
+| Local AWS implements only a shallow stub | Scenario passes without meaningful data-plane behaviour | verify each required operation and classify fidelity |
 | Broad service catalogue drives scope | Time is spent provisioning instead of improving Sentinel | one vertical scenario first; scenario admission rules |
-| Emulator-specific APIs leak into Sentinel | Local fixture becomes product coupling | isolate lifecycle APIs in reference-system infrastructure |
+| Tool-specific APIs leak into Sentinel | Local fixture becomes product coupling | isolate lifecycle APIs in reference-system infrastructure |
 | Docker socket grants excessive privilege | Local or CI host compromise | isolated runner, explicit opt-in, no production mount |
 | Tests accidentally contact AWS | Cost, data exposure or destructive action | explicit endpoint override, synthetic keys and outbound controls |
 | Reset leaves state behind | Nondeterministic diagnosis and false evidence | reset conformance, leaked-resource check and versioned snapshots |
-| Emulated timing differs from AWS | Incorrect production confidence | fidelity labels and later real-cloud comparison |
+| Local timing differs from AWS | Incorrect production confidence | fidelity labels and later real-cloud comparison |
 | Developer machine is exhausted | Unreliable local runs | resource caps, minimal services and sequential heavyweight scenarios |
-| Provider adapter grows around emulator quirks | Poor AWS portability | test canonical behaviour and document compatibility exceptions |
+| Provider adapter grows around local AWS quirks | Poor AWS portability | test canonical behaviour and document compatibility exceptions |
 | Scenario ground truth leaks to Sentinel | Invalid evaluation | process and credential separation; no shared assemblies or files |
-| Queue-track scenarios are built on the emulator anyway | Weeks of provisioning before the first new reasoning scenario exists | the track column and Stage 0b; a scenario needing only a queue is built in the existing reference system first |
-| Emulated CloudWatch queries diverge from AWS | Adapters tuned to the emulator fail against AWS | hybrid telemetry path first; CloudWatch adapters gated and compared against a real account in Stage 5 |
+| Queue-track scenarios are built on local AWS anyway | Weeks of provisioning before the first new reasoning scenario exists | the track column and Stage 0b; a scenario needing only a queue is built in the existing reference system first |
+| CloudWatch queries on local AWS diverge from AWS | Adapters tuned to local AWS fail against AWS | hybrid telemetry path first; CloudWatch adapters gated and compared against a real account in Stage 5 |
 | Continuous integration does not exist yet | Conformance and reset tests run only on developer machines | the Phase 00 CI pipeline is a prerequisite for Stage 1's isolated-runner requirement and is tracked in the phase ledger |
 
 ## Decision record required before implementation
 
 This document is a maintained proposal, not an accepted platform choice. Before implementation becomes part of the supported local topology, create ADR-021 that records:
 
-- the selected emulator and pinned version/digest;
+- the local AWS tool and its pinned version and digest;
 - the verified operation matrix;
 - why the alternative was rejected;
 - Docker-socket and CI security implications;
@@ -671,7 +671,7 @@ This document is a maintained proposal, not an accepted platform choice. Before 
 
 The addition is successful when:
 
-1. The Queue-track scenarios run in the existing reference system and appear in the evaluation report with their baseline comparison before the emulator is adopted.
+1. The Queue-track scenarios run in the existing reference system and appear in the evaluation report with their baseline comparison before local AWS is adopted.
 2. Aspire starts either the existing environment or the AWS environment with one explicit configuration choice.
 3. `AWS-S0` and `AWS-S1` run repeatedly from clean state within bounded time and resources.
 4. Sentinel diagnoses the poison-message scenario from canonical evidence and rejects the innocent deployment hypothesis.
@@ -683,7 +683,7 @@ The addition is successful when:
 
 ## Open questions
 
-- Does the selected emulator implement the exact CloudWatch Logs and Metrics queries the Stage 3 adapters would need?
+- Does the local AWS tool implement the exact CloudWatch Logs and Metrics queries the Stage 3 adapters would need?
 - Can ECS workload execution, task revisions and logs be made deterministic on Windows Docker Desktop and CI?
 - Does snapshot restoration preserve all required data-plane state, or should scenarios always re-provision queues and messages?
 - Which network-control mechanism best fits Aspire without adding unnecessary privilege?

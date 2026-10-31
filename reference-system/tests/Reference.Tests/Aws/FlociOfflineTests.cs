@@ -9,27 +9,27 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// Gate check 9 of the compatibility gate: the emulator runs and serves SQS with no way out of the machine, so it needs
+/// Gate check 9 of the compatibility gate: local AWS runs and serves SQS with no way out of the machine, so it needs
 /// no external credentials, uploads no telemetry and calls no paid service. It runs on an internal Docker network, which
 /// has no route outside, and a probe container on the same network, an image already local, drives it over the AWS JSON
-/// protocol the SDK uses. The emulator does not check signatures, so the probe sends none.
+/// protocol the SDK uses. Local AWS does not check signatures, so the probe sends none.
 /// </summary>
-[Trait("Category", "Emulator")]
-[Collection(EmulatorCollection.Name)]
+[Trait("Category", "Aws")]
+[Collection(LocalAwsCollection.Name)]
 public sealed class FlociOfflineTests(ITestOutputHelper output)
 {
     [Fact]
-    public async Task The_emulator_starts_and_serves_sqs_on_a_network_without_outbound_access()
+    public async Task Local_aws_starts_and_serves_sqs_on_a_network_without_outbound_access()
     {
         INetwork network = new NetworkBuilder()
             .WithName($"reference-aws-offline-{Guid.NewGuid().ToString("N")[..8]}")
             .WithCreateParameterModifier(parameters => parameters.Internal = true)
             .Build();
         await network.CreateAsync();
-        IContainer emulator = new ContainerBuilder($"{FlociEmulator.Pin.Image}@{FlociEmulator.Pin.Digest}")
+        IContainer localAws = new ContainerBuilder($"{LocalAws.Pin.Image}@{LocalAws.Pin.Digest}")
             .WithNetwork(network)
-            .WithNetworkAliases("aws-emulator")
-            .WithEnvironment("FLOCI_HOSTNAME", "aws-emulator")
+            .WithNetworkAliases("local-aws")
+            .WithEnvironment("FLOCI_HOSTNAME", "local-aws")
             .Build();
         IContainer probe = new ContainerBuilder("redis:7-alpine")
             .WithNetwork(network)
@@ -38,10 +38,10 @@ public sealed class FlociOfflineTests(ITestOutputHelper output)
         try
         {
             var started = Stopwatch.StartNew();
-            await emulator.StartAsync();
+            await localAws.StartAsync();
             await probe.StartAsync();
 
-            string health = await UntilAsync(() => ExecAsync(probe, "wget", "-qO-", "http://aws-emulator:4566/_localstack/health"));
+            string health = await UntilAsync(() => ExecAsync(probe, "wget", "-qO-", "http://local-aws:4566/_localstack/health"));
             output.WriteLine($"Healthy without outbound access after {started.Elapsed.TotalSeconds:F1} s: {health}");
             health.ShouldContain("sqs");
 
@@ -52,14 +52,14 @@ public sealed class FlociOfflineTests(ITestOutputHelper output)
 
             string queue = (await SqsAsync(probe, "CreateQueue", """{"QueueName":"offline"}""")).ShouldNotBeNull();
             queue.ShouldContain("offline");
-            (await SqsAsync(probe, "SendMessage", """{"QueueUrl":"http://aws-emulator:4566/000000000000/offline","MessageBody":"no way out"}""")).ShouldNotBeNull();
-            string received = (await SqsAsync(probe, "ReceiveMessage", """{"QueueUrl":"http://aws-emulator:4566/000000000000/offline","MaxNumberOfMessages":1}""")).ShouldNotBeNull();
+            (await SqsAsync(probe, "SendMessage", """{"QueueUrl":"http://local-aws:4566/000000000000/offline","MessageBody":"no way out"}""")).ShouldNotBeNull();
+            string received = (await SqsAsync(probe, "ReceiveMessage", """{"QueueUrl":"http://local-aws:4566/000000000000/offline","MaxNumberOfMessages":1}""")).ShouldNotBeNull();
             received.ShouldContain("no way out");
         }
         finally
         {
             await probe.DisposeAsync();
-            await emulator.DisposeAsync();
+            await localAws.DisposeAsync();
             await network.DisposeAsync();
         }
     }
@@ -70,7 +70,7 @@ public sealed class FlociOfflineTests(ITestOutputHelper output)
         "--header", $"X-Amz-Target: AmazonSQS.{action}",
         "--header", "Content-Type: application/x-amz-json-1.0",
         "--post-data", body,
-        "http://aws-emulator:4566/");
+        "http://local-aws:4566/");
 
     /// <summary>The command's output, or null when it failed.</summary>
     private static async Task<string?> ExecAsync(IContainer container, params string[] command)
@@ -92,6 +92,6 @@ public sealed class FlociOfflineTests(ITestOutputHelper output)
             await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
-        throw new TimeoutException("The emulator did not answer on the internal network within 60 s.");
+        throw new TimeoutException("Local AWS did not answer on the internal network within 60 s.");
     }
 }

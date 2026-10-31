@@ -12,7 +12,7 @@ using Reference.Scenarios.Domain.Scenarios;
 
 namespace Sentinel.EndToEnd.Tests;
 
-/// <summary>The reference system alone with the AWS-emulated environment (Phase E01): the queue-consumer on ECS and SQS in the pinned emulator.</summary>
+/// <summary>The reference system alone with the AWS environment (Phase E01): the queue-consumer on ECS and SQS on local AWS.</summary>
 public sealed class AwsReferenceOnlySystem : SentinelSystem
 {
     public AwsReferenceOnlySystem()

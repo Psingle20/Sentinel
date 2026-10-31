@@ -21,9 +21,9 @@ public sealed record ScenarioManifest
     public required string Description { get; init; }
 
     /// <summary>
-    /// The reference environment the scenario runs in: <c>local</c>, the default, or <c>aws</c>, the AWS-emulated one
+    /// The reference environment the scenario runs in: <c>local</c>, the default, or <c>aws</c>, the AWS one
     /// (Phase E01). An AWS scenario names the account and region it runs in, which Sentinel maps to a tenant and an
-    /// environment; a manifest never names the emulator.
+    /// environment; a manifest never names local AWS.
     /// </summary>
     public string Environment { get; init; } = "local";
 

@@ -15,9 +15,9 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Scenarios.Infrastructure.Environments.Aws;
 
 /// <summary>
-/// The AWS-emulated reference environment (Phase E01, Stage 1): the queue-consumer runs as an ECS service on an SQS queue
-/// with a dead-letter queue, in the emulator ADR-021 pins, beside the local workloads, which the local environment still
-/// drives. Provisioning and inspection use the public SQS and ECS APIs Sentinel's adapters will use, never an emulator's
+/// The AWS reference environment (Phase E01, Stage 1): the queue-consumer runs as an ECS service on an SQS queue
+/// with a dead-letter queue, in local AWS ADR-021 pins, beside the local workloads, which the local environment still
+/// drives. Provisioning and inspection use the public SQS and ECS APIs Sentinel's adapters will use, never a local AWS's
 /// own. A reset scales the consumer to zero, deletes its service, empties both queues, proves them empty and creates
 /// the service again on the baseline revision, so no message or booking of an earlier run survives it, and Sentinel's
 /// change provider sees a creation, not a deployment it could blame. The consumer's fault controls run inside its task,
@@ -56,7 +56,7 @@ public sealed class AwsReferenceEnvironment(
             await CallAsync(async () =>
             {
                 // The queue has no redrive policy of its own: quarantine is an action, not a side effect of the queue, so a
-                // poison message stays until the quarantine moves it. The emulator would also never apply the quarantine's
+                // poison message stays until the quarantine moves it. Local AWS would also never apply the quarantine's
                 // lowered policy over one the queue was created with (ADR-021).
                 await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = options.DeadLetterQueue }, cancellationToken);
                 await sqs.CreateQueueAsync(
@@ -193,10 +193,10 @@ public sealed class AwsReferenceEnvironment(
         }
         catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
-            problems.Add($"The emulator did not answer: {exception.Message}");
+            problems.Add($"Local AWS did not answer: {exception.Message}");
         }
 
-        return new EnvironmentState(Name, problems.Count == 0, problems, options.Emulator, options.ImageDigest, ProvisioningVersion);
+        return new EnvironmentState(Name, problems.Count == 0, problems, options.Provider, options.ImageDigest, ProvisioningVersion);
     }
 
     // The rule with its approved pattern, targeting the orders queue; putting it again is how a reset undoes a drift.
@@ -270,7 +270,7 @@ public sealed class AwsReferenceEnvironment(
         }
         catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
-            throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"The emulator refused or did not answer: {exception.Message}");
+            throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"Local AWS refused or did not answer: {exception.Message}");
         }
     }
 
@@ -282,7 +282,7 @@ public sealed class AwsReferenceEnvironment(
         }
         catch (Exception exception) when (exception is AmazonServiceException or AmazonClientException or HttpRequestException or TimeoutException)
         {
-            throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"The emulator refused or did not answer: {exception.Message}");
+            throw new ReferenceEnvironmentException(EnvironmentFailure.Unavailable, $"Local AWS refused or did not answer: {exception.Message}");
         }
     }
 }

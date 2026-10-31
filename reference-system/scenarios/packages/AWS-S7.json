@@ -5,18 +5,18 @@
   "version": 1,
   "kind": "counterfactual",
   "manifest": "AWS-S7",
-  "title": "Event route drift with an innocent ECS revision, in the AWS-emulated environment",
+  "title": "Event route drift with an innocent ECS revision, in the AWS environment",
   "description": "The orders-route EventBridge rule stops matching the producer's order events after a benign queue-consumer v1.4.1 task definition has rolled out and is serving. The consumer's queue stays empty and it processes nothing, so the orders are published but never delivered. Restoring the rule's approved pattern is the remedy; rolling the ECS service back is the false remediation, and so is anything done to the consumer, which has nothing to work on.",
   "perturbations": [],
   "fidelity": {
     "environment": "aws",
-    "statement": "EventBridge routing, the orders queue and ECS are emulated by the pinned emulator; the producer, the consumer, their telemetry, which reaches Sentinel through OpenTelemetry rather than CloudWatch, and the AWS SDK calls on both sides are real; the drift and the v1.4.1 rollout are injected by the scenario runner. The result shows Sentinel's diagnosis and its EventBridge, ECS and SQS adapters against AWS-shaped APIs, not AWS's own event-delivery timing or throttling.",
+    "statement": "EventBridge routing, the orders queue and ECS run on local AWS; the producer, the consumer, their telemetry, which reaches Sentinel through OpenTelemetry rather than CloudWatch, and the AWS SDK calls on both sides are real; the drift and the v1.4.1 rollout are injected by the scenario runner. The result shows Sentinel's diagnosis and its EventBridge, ECS and SQS adapters against AWS-shaped APIs, not AWS's own event-delivery timing or throttling.",
     "labels": [
       { "element": "AWS SDK calls from Sentinel's EventBridge, ECS and SQS adapters", "level": "contract-real" },
       { "element": "producer and queue-consumer processes, their OpenTelemetry signals and the ECS task container", "level": "data-plane-real" },
-      { "element": "EventBridge rule matching and delivery to the queue", "level": "emulator-modelled" },
-      { "element": "SQS queue and its attributes", "level": "emulator-modelled" },
-      { "element": "ECS service, task definitions and rollout state", "level": "emulator-modelled" },
+      { "element": "EventBridge rule matching and delivery to the queue", "level": "locally-modelled" },
+      { "element": "SQS queue and its attributes", "level": "locally-modelled" },
+      { "element": "ECS service, task definitions and rollout state", "level": "locally-modelled" },
       { "element": "orders-route pattern drift", "level": "injected" },
       { "element": "queue-consumer v1.4.1 rollout", "level": "injected" }
     ]

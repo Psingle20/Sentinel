@@ -8,7 +8,7 @@ namespace Sentinel.EndToEnd.Tests;
 
 /// <summary>
 /// Phase E01, Stage 1, through the AppHost with <c>Sentinel:ReferenceEnvironment=aws</c> and Sentinel not running: the
-/// runner provisions the queues and the queue-consumer's ECS service in the pinned emulator, the consumer's telemetry
+/// runner provisions the queues and the queue-consumer's ECS service on local AWS, the consumer's telemetry
 /// reaches the same Prometheus as the local workloads', <c>AWS-S0</c> rolls a revision out through ECS without the queue
 /// ageing, and a reset leaves the environment ready on its baseline.
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class AwsEnvironmentTests(AwsReferenceOnlySystem system, ITestOutp
             output.WriteLine($"Environment: {environment}");
             environment.GetProperty("environment").GetString().ShouldBe("aws");
             environment.GetProperty("ready").GetBoolean().ShouldBeTrue(environment.GetProperty("problems").ToString());
-            environment.GetProperty("emulator").GetString().ShouldStartWith("floci ");
+            environment.GetProperty("provider").GetString().ShouldStartWith("floci ");
             environment.GetProperty("imageDigest").GetString().ShouldStartWith("sha256:");
 
             double processed = await Eventually.ValueAsync(

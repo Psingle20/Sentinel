@@ -18,7 +18,7 @@ namespace Sentinel.Executor.Infrastructure.Remediation;
 /// against every message it touched. The queue's state is <c>poisoned</c> while its dead-letter queue is empty and
 /// <c>clear</c> once it holds the quarantined messages; healthy messages never reach it, because they are processed long
 /// before the minimum. Releasing the dead-lettered messages back is the compensation. Only queues on the configured
-/// allow-list can be touched, and the action names neither an ARN nor an operation of its own. The pinned emulator
+/// allow-list can be touched, and the action names neither an ARN nor an operation of its own. Local AWS
 /// applies a changed policy only to a queue created without one (ADR-021).
 /// </summary>
 internal sealed class SqsQuarantineAdapter(IAmazonSQS sqs, SqsQuarantineOptions options, TimeProvider time, ILogger<SqsQuarantineAdapter> logger) : IRemediationAdapter

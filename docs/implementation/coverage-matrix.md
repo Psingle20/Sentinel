@@ -11,7 +11,7 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 5 Control Plane vs Data Plane | [08](phase-08-product-experience.md) | [03](phase-03-incident-runtime.md), [10](phase-10-scale-evolution.md) |
 | 6 Domain Model | [00](phase-00-foundations.md) | [03](phase-03-incident-runtime.md), [06](phase-06-safe-remediation.md) |
 | 7 Canonical Observation Model | [02](phase-02-telemetry-ingestion.md) | [07](phase-07-memory-replay-evaluation.md) |
-| 8 Provider / Plugin Architecture | [02](phase-02-telemetry-ingestion.md) | [06](phase-06-safe-remediation.md), [10](phase-10-scale-evolution.md); AWS-shaped adapters in [E01](phase-e01-aws-emulated-reference-environment.md) |
+| 8 Provider / Plugin Architecture | [02](phase-02-telemetry-ingestion.md) | [06](phase-06-safe-remediation.md), [10](phase-10-scale-evolution.md); AWS-shaped adapters in [E01](phase-e01-aws-reference-environment.md) |
 | 9 Microsoft Orleans Model | [03](phase-03-incident-runtime.md) | [09](phase-09-production-hardening.md) |
 | 10 Event Sourcing | [03](phase-03-incident-runtime.md) | [07](phase-07-memory-replay-evaluation.md) |
 | 11 CQRS | [03](phase-03-incident-runtime.md) | [08](phase-08-product-experience.md) |
@@ -37,7 +37,7 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 31 Recovery Verification | [06](phase-06-safe-remediation.md) | [07](phase-07-memory-replay-evaluation.md); Runtime-owned per [ADR-006](../decisions/ADR-006-remediation-control-path.md) |
 | 32 Incident Memory | [07](phase-07-memory-replay-evaluation.md) | [10](phase-10-scale-evolution.md) |
 | 33 Replay Architecture | [07](phase-07-memory-replay-evaluation.md) | [09](phase-09-production-hardening.md) |
-| 34 Simulation / Digital Twin | [07](phase-07-memory-replay-evaluation.md) | [10](phase-10-scale-evolution.md); a second reference environment in [E01](phase-e01-aws-emulated-reference-environment.md) |
+| 34 Simulation / Digital Twin | [07](phase-07-memory-replay-evaluation.md) | [10](phase-10-scale-evolution.md); a second reference environment in [E01](phase-e01-aws-reference-environment.md) |
 | 35 MAPE-K++ Autonomic Loop | [06](phase-06-safe-remediation.md) | [07](phase-07-memory-replay-evaluation.md), [10](phase-10-scale-evolution.md) |
 | 36 Reliability and Resilience Patterns | [09](phase-09-production-hardening.md) | [02](phase-02-telemetry-ingestion.md), [03](phase-03-incident-runtime.md) |
 | 37 Outbox / Inbox | [02](phase-02-telemetry-ingestion.md) | [03](phase-03-incident-runtime.md), [09](phase-09-production-hardening.md) |
@@ -63,8 +63,8 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 57 Schema Versioning | [00](phase-00-foundations.md) | [02](phase-02-telemetry-ingestion.md), [07](phase-07-memory-replay-evaluation.md) |
 | 58 Idempotency | [09](phase-09-production-hardening.md) | Required from first implementation in each phase |
 | 59 Testing Strategy | [00](phase-00-foundations.md) | Every phase |
-| 60 AI Evaluation Strategy | [07](phase-07-memory-replay-evaluation.md) | Scenarios and baseline defined in [01](phase-01-reference-system.md); metrics begin in [04](phase-04-ai-investigation.md); queue and AWS scenarios added by [E01](phase-e01-aws-emulated-reference-environment.md) |
-| 61 Reference Incident Scenario | [01](phase-01-reference-system.md) | First end-to-end run in [01A](phase-01a-walking-skeleton.md); deepened through [08](phase-08-product-experience.md); extended by [E01](phase-e01-aws-emulated-reference-environment.md) |
+| 60 AI Evaluation Strategy | [07](phase-07-memory-replay-evaluation.md) | Scenarios and baseline defined in [01](phase-01-reference-system.md); metrics begin in [04](phase-04-ai-investigation.md); queue and AWS scenarios added by [E01](phase-e01-aws-reference-environment.md) |
+| 61 Reference Incident Scenario | [01](phase-01-reference-system.md) | First end-to-end run in [01A](phase-01a-walking-skeleton.md); deepened through [08](phase-08-product-experience.md); extended by [E01](phase-e01-aws-reference-environment.md) |
 | 62 Impact-Ordered Product Scope | [README](README.md) | All phases |
 | 63 Non-Goals for MVP | [README](README.md) | Rechecked at each phase gate |
 | 64 Architectural Decision Records | [00](phase-00-foundations.md) | Every consequential change |

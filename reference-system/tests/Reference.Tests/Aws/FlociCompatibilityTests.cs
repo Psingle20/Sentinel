@@ -20,20 +20,20 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// The compatibility gate of the AWS-emulated environment proposal, against the emulator ADR-021 pins: each test is one
+/// The compatibility gate of the AWS environment proposal, against local AWS ADR-021 pins: each test is one
 /// gate check with the AWS SDK clients the scenario runner and Sentinel's adapters will use, so the operation matrix is
 /// these tests' results. The checks assert what the first scenarios need; a failure is an incompatibility to record.
 /// </summary>
-[Trait("Category", "Emulator")]
-[Collection(EmulatorCollection.Name)]
-public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputHelper output) : IClassFixture<FlociEmulator>
+[Trait("Category", "Aws")]
+[Collection(LocalAwsCollection.Name)]
+public sealed class FlociCompatibilityTests(LocalAws localAws, ITestOutputHelper output) : IClassFixture<LocalAws>
 {
     [Fact]
     public async Task Starts_from_the_pinned_image_and_reports_the_services_the_scenarios_use()
     {
-        using JsonDocument health = await emulator.HealthAsync();
+        using JsonDocument health = await localAws.HealthAsync();
         JsonElement services = health.RootElement.GetProperty("services");
-        output.WriteLine($"Started in {emulator.StartedIn.TotalSeconds:F1} s; {health.RootElement}");
+        output.WriteLine($"Started in {localAws.StartedIn.TotalSeconds:F1} s; {health.RootElement}");
 
         // CloudWatch metrics report as "monitoring"; STS is served but not listed, so its own test proves it.
         foreach (string service in new[] { "sqs", "ecs", "iam", "logs", "monitoring", "events" })
@@ -42,13 +42,13 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
             state.GetString().ShouldBe("running");
         }
 
-        health.RootElement.GetProperty("version").GetString().ShouldBe(FlociEmulator.Pin.Version);
+        health.RootElement.GetProperty("version").GetString().ShouldBe(LocalAws.Pin.Version);
     }
 
     [Fact]
     public async Task A_poison_message_moves_to_the_dead_letter_queue_after_its_receive_limit()
     {
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localAws.Sqs();
         string suffix = Guid.NewGuid().ToString("N")[..8];
         string deadLetters = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = $"orders-dlq-{suffix}" })).QueueUrl;
         string deadLetterArn = (await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = deadLetters, AttributeNames = ["QueueArn"] })).Attributes["QueueArn"];
@@ -85,11 +85,11 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     [Fact]
     public async Task A_redrive_policy_set_later_applies_only_to_a_queue_created_without_one()
     {
-        // A known incompatibility (ADR-021). SQS applies a changed redrive policy at the next receive; the emulator applies
+        // A known incompatibility (ADR-021). SQS applies a changed redrive policy at the next receive; local AWS applies
         // one set later only to a queue created without a policy, and otherwise keeps applying the policy the queue was
         // created with while reporting the new one. The quarantine adapter lowers the policy for a window, so the AWS
         // environment's queue has none of its own.
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonSQSClient sqs = localAws.Sqs();
         string suffix = Guid.NewGuid().ToString("N")[..8];
 
         (string bare, string bareDeadLetters, string bareArn) = await QueueAsync(sqs, $"bare-{suffix}", maxReceiveCount: null);
@@ -143,7 +143,7 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     [Fact]
     public async Task An_ecs_service_runs_its_task_as_a_real_container_and_rolls_out_a_new_revision()
     {
-        using AmazonECSClient ecs = emulator.Ecs();
+        using AmazonECSClient ecs = localAws.Ecs();
         string cluster = $"reference-{Guid.NewGuid():N}"[..20];
         await ecs.CreateClusterAsync(new CreateClusterRequest { ClusterName = cluster });
         string first = await EcsWorkload.RegisterAsync(ecs, "1");
@@ -151,7 +151,7 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
 
         Service running = await EcsWorkload.WaitForAsync(ecs, cluster, service => service.RunningCount == 1 && service.Deployments?.Single().RolloutState == DeploymentRolloutState.COMPLETED);
         running.TaskDefinition.ShouldBe(first);
-        (await emulator.StartedContainersAsync()).ShouldNotBeEmpty("the task runs as a real container");
+        (await localAws.StartedContainersAsync()).ShouldNotBeEmpty("the task runs as a real container");
 
         string second = await EcsWorkload.RegisterAsync(ecs, "2");
         await ecs.UpdateServiceAsync(new UpdateServiceRequest { Cluster = cluster, Service = EcsWorkload.Service, TaskDefinition = second });
@@ -185,10 +185,10 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     public async Task Sts_resolves_the_account_from_the_access_key_and_an_assumed_role_acts_as_that_role()
     {
         const string account = "111111111111";
-        using AmazonSecurityTokenServiceClient sts = emulator.Sts(account);
+        using AmazonSecurityTokenServiceClient sts = localAws.Sts(account);
         (await sts.GetCallerIdentityAsync(new GetCallerIdentityRequest())).Account.ShouldBe(account);
 
-        using AmazonIdentityManagementServiceClient iam = emulator.Iam(account);
+        using AmazonIdentityManagementServiceClient iam = localAws.Iam(account);
         string trust = JsonSerializer.Serialize(new
         {
             Version = "2012-10-17",
@@ -197,7 +197,7 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
         string role = (await iam.CreateRoleAsync(new CreateRoleRequest { RoleName = $"executor-{Guid.NewGuid():N}"[..20], AssumeRolePolicyDocument = trust })).Role.Arn;
 
         Credentials assumed = (await sts.AssumeRoleAsync(new AssumeRoleRequest { RoleArn = role, RoleSessionName = "quarantine" })).Credentials;
-        using AmazonSecurityTokenServiceClient asRole = emulator.Sts(new SessionAWSCredentials(assumed.AccessKeyId, assumed.SecretAccessKey, assumed.SessionToken));
+        using AmazonSecurityTokenServiceClient asRole = localAws.Sts(new SessionAWSCredentials(assumed.AccessKeyId, assumed.SecretAccessKey, assumed.SessionToken));
         GetCallerIdentityResponse identity = await asRole.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
         output.WriteLine($"Assumed {identity.Arn} in {identity.Account}.");
@@ -209,9 +209,9 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     public async Task Queues_of_two_accounts_and_of_two_regions_are_invisible_to_each_other()
     {
         string name = $"orders-{Guid.NewGuid():N}"[..20];
-        using AmazonSQSClient first = emulator.Sqs("111111111111");
-        using AmazonSQSClient second = emulator.Sqs("222222222222");
-        using AmazonSQSClient otherRegion = emulator.Sqs("111111111111", "eu-west-1");
+        using AmazonSQSClient first = localAws.Sqs("111111111111");
+        using AmazonSQSClient second = localAws.Sqs("222222222222");
+        using AmazonSQSClient otherRegion = localAws.Sqs("111111111111", "eu-west-1");
 
         string url = (await first.CreateQueueAsync(new CreateQueueRequest { QueueName = name })).QueueUrl;
 
@@ -225,7 +225,7 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
     [Fact]
     public async Task Log_events_and_metric_datapoints_are_written_and_read_back()
     {
-        using AmazonCloudWatchLogsClient logs = emulator.CloudWatchLogs();
+        using AmazonCloudWatchLogsClient logs = localAws.CloudWatchLogs();
         string group = $"/ecs/queue-consumer-{Guid.NewGuid():N}"[..30];
         await logs.CreateLogGroupAsync(new CreateLogGroupRequest { LogGroupName = group });
         await logs.CreateLogStreamAsync(new CreateLogStreamRequest { LogGroupName = group, LogStreamName = "task-1" });
@@ -238,7 +238,7 @@ public sealed class FlociCompatibilityTests(FlociEmulator emulator, ITestOutputH
         List<OutputLogEvent> events = (await logs.GetLogEventsAsync(new GetLogEventsRequest { LogGroupName = group, LogStreamName = "task-1", StartFromHead = true })).Events ?? [];
         events.ShouldContain(logEvent => logEvent.Message.Contains("orderId=poison"));
 
-        using AmazonCloudWatchClient metrics = emulator.Metrics();
+        using AmazonCloudWatchClient metrics = localAws.Metrics();
         Dimension queue = new() { Name = "QueueName", Value = "orders" };
         DateTime now = DateTime.UtcNow;
         await metrics.PutMetricDataAsync(new PutMetricDataRequest

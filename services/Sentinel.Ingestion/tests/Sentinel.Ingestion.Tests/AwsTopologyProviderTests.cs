@@ -16,14 +16,14 @@ using Task = System.Threading.Tasks.Task;
 namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
-/// The AWS topology provider against the pinned emulator (Phase E01, Stage 2): an ECS service depends on the service its
+/// The AWS topology provider against local AWS (Phase E01, Stage 2): an ECS service depends on the service its
 /// task definition is told to call through service discovery and on each queue of the account it is given by name or by
 /// URL, and on nothing else its environment holds; an edge records which variable declared it, never the variable's value.
-/// An emulator that does not answer is an unavailable result.
+/// A local AWS that does not answer is an unavailable result.
 /// </summary>
-[Collection(AwsEmulatorCollection.Name)]
-[Trait("Category", "Emulator")]
-public sealed class AwsTopologyProviderTests(AwsEmulator emulator)
+[Collection(LocalAwsCollection.Name)]
+[Trait("Category", "Aws")]
+public sealed class AwsTopologyProviderTests(LocalAws localAws)
 {
     private static readonly TenantId Tenant = TenantId.From("acme");
     private static readonly EnvironmentId Environment = EnvironmentId.From("reference");
@@ -31,8 +31,8 @@ public sealed class AwsTopologyProviderTests(AwsEmulator emulator)
     [Fact]
     public async Task An_ecs_service_depends_on_what_its_task_definition_names_and_on_nothing_else()
     {
-        using AmazonECSClient ecs = emulator.Ecs();
-        using AmazonSQSClient sqs = emulator.Sqs();
+        using AmazonECSClient ecs = localAws.Ecs();
+        using AmazonSQSClient sqs = localAws.Sqs();
         string suffix = Guid.NewGuid().ToString("N")[..8];
         string queue = $"orders-{suffix}";
         await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = queue });
@@ -56,7 +56,7 @@ public sealed class AwsTopologyProviderTests(AwsEmulator emulator)
                         new KeyValuePair { Name = "Reference__Queue__Sqs__QueueName", Value = queue },
                         new KeyValuePair { Name = "Reference__Queue__Sqs__DeadLetterQueueUrl", Value = deadLetters },
                         new KeyValuePair { Name = "Reference__Queue__Sqs__ServiceUrl", Value = "http://host.docker.internal:4566/" },
-                        new KeyValuePair { Name = "Reference__Queue__Sqs__AccessKey", Value = AwsEmulator.Account }
+                        new KeyValuePair { Name = "Reference__Queue__Sqs__AccessKey", Value = LocalAws.Account }
                     ]
                 }
             ]
@@ -77,11 +77,11 @@ public sealed class AwsTopologyProviderTests(AwsEmulator emulator)
     }
 
     [Fact]
-    public async Task An_emulator_that_does_not_answer_is_an_unavailable_result()
+    public async Task An_aws_endpoint_that_does_not_answer_is_an_unavailable_result()
     {
-        var credentials = new Amazon.Runtime.BasicAWSCredentials(AwsEmulator.Account, AwsEmulator.Secret);
-        using var ecs = new AmazonECSClient(credentials, new AmazonECSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = AwsEmulator.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
-        using var sqs = new AmazonSQSClient(credentials, new AmazonSQSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = AwsEmulator.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
+        var credentials = new Amazon.Runtime.BasicAWSCredentials(LocalAws.Account, LocalAws.Secret);
+        using var ecs = new AmazonECSClient(credentials, new AmazonECSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = LocalAws.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
+        using var sqs = new AmazonSQSClient(credentials, new AmazonSQSConfig { ServiceURL = "http://127.0.0.1:9", AuthenticationRegion = LocalAws.Region, MaxErrorRetry = 0, Timeout = TimeSpan.FromSeconds(2) });
 
         ProviderResult<TopologyObservation> result = await Provider(ecs, sqs, "reference").GetDependenciesAsync(Request(), CancellationToken.None);
 
@@ -92,7 +92,7 @@ public sealed class AwsTopologyProviderTests(AwsEmulator emulator)
     private AwsTopologyProvider Provider(IAmazonECS ecs, IAmazonSQS sqs, string cluster) => new(
         ecs,
         sqs,
-        new AwsProviderOptions { ServiceUrl = emulator.Endpoint, AccessKey = AwsEmulator.Account, SecretKey = AwsEmulator.Secret, Clusters = [cluster] },
+        new AwsProviderOptions { ServiceUrl = localAws.Endpoint, AccessKey = LocalAws.Account, SecretKey = LocalAws.Secret, Clusters = [cluster] },
         TimeProvider.System,
         NullLogger<AwsTopologyProvider>.Instance);
 

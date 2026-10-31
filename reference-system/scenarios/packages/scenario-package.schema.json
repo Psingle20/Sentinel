@@ -33,7 +33,7 @@
       }
     },
     "fidelity": {
-      "description": "What in the scenario is real, emulated and injected, after the AWS-emulated environment proposal's fidelity model, and so which claims its result supports (Phase E01). Required of a scenario outside the local reference system.",
+      "description": "What in the scenario is real, locally modelled and injected, after the AWS environment proposal's fidelity model, and so which claims its result supports (Phase E01). Required of a scenario outside the local reference system.",
       "type": "object",
       "additionalProperties": false,
       "required": ["environment", "statement", "labels"],
@@ -49,7 +49,7 @@
             "required": ["element", "level"],
             "properties": {
               "element": { "type": "string", "minLength": 1 },
-              "level": { "enum": ["contract-real", "data-plane-real", "emulator-modelled", "injected", "unsupported"] }
+              "level": { "enum": ["contract-real", "data-plane-real", "locally-modelled", "injected", "unsupported"] }
             }
           }
         }

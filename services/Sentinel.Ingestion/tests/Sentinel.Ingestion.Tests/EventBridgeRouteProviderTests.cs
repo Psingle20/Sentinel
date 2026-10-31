@@ -18,13 +18,13 @@ using Task = System.Threading.Tasks.Task;
 namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
-/// The EventBridge route provider against the pinned emulator (Phase E01, Stage 4): the first sight of a rule is its
+/// The EventBridge route provider against local AWS (Phase E01, Stage 4): the first sight of a rule is its
 /// baseline, a changed pattern is a change of kind route to the consumer whose ECS task definition names the rule's
 /// target queue, with both patterns as attributes, and a later pull reports the same change without a new one.
 /// </summary>
-[Collection(AwsEmulatorCollection.Name)]
-[Trait("Category", "Emulator")]
-public sealed class EventBridgeRouteProviderTests(AwsEmulator emulator)
+[Collection(LocalAwsCollection.Name)]
+[Trait("Category", "Aws")]
+public sealed class EventBridgeRouteProviderTests(LocalAws localAws)
 {
     private const string Approved = """{"source":["reference.checkout"],"detail-type":["OrderPlaced"]}""";
     private const string Drifted = """{"source":["reference.storefront"],"detail-type":["OrderPlaced"]}""";
@@ -35,9 +35,9 @@ public sealed class EventBridgeRouteProviderTests(AwsEmulator emulator)
     [Fact]
     public async Task A_changed_pattern_is_a_route_change_of_the_consumer_whose_task_names_the_target_queue()
     {
-        using AmazonECSClient ecs = emulator.Ecs();
-        using AmazonSQSClient sqs = emulator.Sqs();
-        using AmazonEventBridgeClient events = emulator.Events();
+        using AmazonECSClient ecs = localAws.Ecs();
+        using AmazonSQSClient sqs = localAws.Sqs();
+        using AmazonEventBridgeClient events = localAws.Events();
         string suffix = Guid.NewGuid().ToString("N")[..8];
         string queue = $"orders-{suffix}";
         string queueUrl = (await sqs.CreateQueueAsync(new CreateQueueRequest { QueueName = queue })).QueueUrl;
@@ -53,7 +53,7 @@ public sealed class EventBridgeRouteProviderTests(AwsEmulator emulator)
         string rule = $"orders-route-{suffix}";
         await events.PutRuleAsync(new PutRuleRequest { Name = rule, EventPattern = Approved, State = RuleState.ENABLED });
         await events.PutTargetsAsync(new PutTargetsRequest { Rule = rule, Targets = [new Target { Id = queue, Arn = queueArn }] });
-        var provider = new EventBridgeRouteProvider(events, ecs, new AwsProviderOptions { ServiceUrl = emulator.Endpoint, AccessKey = AwsEmulator.Account, SecretKey = AwsEmulator.Secret, Clusters = [cluster] }, TimeProvider.System, NullLogger<EventBridgeRouteProvider>.Instance);
+        var provider = new EventBridgeRouteProvider(events, ecs, new AwsProviderOptions { ServiceUrl = localAws.Endpoint, AccessKey = LocalAws.Account, SecretKey = LocalAws.Secret, Clusters = [cluster] }, TimeProvider.System, NullLogger<EventBridgeRouteProvider>.Instance);
         DateTimeOffset from = DateTimeOffset.UtcNow.AddMinutes(-1);
 
         ProviderResult<DeploymentObservation> baseline = await provider.GetDeploymentsAsync(Request(from), CancellationToken.None);

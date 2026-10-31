@@ -11,7 +11,7 @@ namespace Sentinel.EndToEnd.Tests;
 /// record (projection, version manifest and incident memory) and every agent execution, under
 /// artifacts/reports/evaluation/runs. scripts/evaluation/evaluate.py scores it against the package. The record names the
 /// reference environment the run used, as the scenario runner reports it, and carries the fidelity its package declares,
-/// so an emulated run is never read as AWS's own behaviour (Phase E01).
+/// so a run on local AWS is never read as AWS's own behaviour (Phase E01).
 /// </summary>
 public static class EvaluationRun
 {

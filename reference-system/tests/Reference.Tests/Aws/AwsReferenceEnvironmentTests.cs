@@ -15,14 +15,14 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// The AWS environment's lifecycle against the pinned emulator (Phase E01, Stage 1): provisioning creates the queues and
+/// The AWS environment's lifecycle against local AWS (Phase E01, Stage 1): provisioning creates the queues and
 /// the consumer's ECS service once, steps for the consumer go through ECS and SQS, steps for anything else go to the local
 /// environment, and a reset proves that nothing of a run remains and the baseline revision serves again. A stand-in image
 /// already local plays the consumer, so these tests check the environment, not the workload.
 /// </summary>
-[Trait("Category", "Emulator")]
-[Collection(EmulatorCollection.Name)]
-public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClassFixture<FlociEmulator>
+[Trait("Category", "Aws")]
+[Collection(LocalAwsCollection.Name)]
+public sealed class AwsReferenceEnvironmentTests(LocalAws localAws) : IClassFixture<LocalAws>
 {
     [Fact]
     public async Task Provisioning_steps_and_a_repeated_reset_leave_the_baseline_and_empty_queues()
@@ -30,18 +30,18 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         string suffix = Guid.NewGuid().ToString("N")[..8];
         var options = new AwsEnvironmentOptions
         {
-            ServiceUrl = emulator.Endpoint,
+            ServiceUrl = localAws.Endpoint,
             Cluster = $"reference-{suffix}",
             Queue = $"orders-{suffix}",
             DeadLetterQueue = $"orders-{suffix}-dlq",
             Rule = $"orders-route-{suffix}",
             Image = "redis:7-alpine",
-            Emulator = $"{FlociEmulator.Pin.Emulator} {FlociEmulator.Pin.Version}",
-            ImageDigest = FlociEmulator.Pin.Digest
+            Provider = $"{LocalAws.Pin.Tool} {LocalAws.Pin.Version}",
+            ImageDigest = LocalAws.Pin.Digest
         };
-        using AmazonSQSClient sqs = emulator.Sqs();
-        using AmazonECSClient ecs = emulator.Ecs();
-        using AmazonEventBridgeClient events = emulator.Events();
+        using AmazonSQSClient sqs = localAws.Sqs();
+        using AmazonECSClient ecs = localAws.Ecs();
+        using AmazonEventBridgeClient events = localAws.Events();
         using var provisioning = new AwsProvisioning();
         var control = new RecordingControl();
         var environment = new AwsReferenceEnvironment(sqs, ecs, events, options, provisioning, new LocalReferenceEnvironment(control), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
@@ -52,7 +52,7 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         await environment.ResetAsync(CancellationToken.None);
         EnvironmentState state = await environment.InspectAsync(CancellationToken.None);
         state.Ready.ShouldBeTrue(string.Join("; ", state.Problems));
-        state.Emulator.ShouldBe($"{FlociEmulator.Pin.Emulator} {FlociEmulator.Pin.Version}");
+        state.Provider.ShouldBe($"{LocalAws.Pin.Tool} {LocalAws.Pin.Version}");
         state.ProvisioningVersion.ShouldBe(AwsReferenceEnvironment.ProvisioningVersion);
         control.Resets.ShouldBe(2, "every reset resets the local workloads too");
         provisioning.TaskDefinitions.Keys.Order(StringComparer.Ordinal).ToArray().ShouldBe(["v1.4.0", "v1.4.1"], customMessage: "provisioning ran once");

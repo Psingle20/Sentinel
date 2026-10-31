@@ -11,19 +11,19 @@ using DotNet.Testcontainers.Networks;
 namespace Sentinel.Ingestion.Tests;
 
 /// <summary>
-/// The AWS emulator ADR-021 pins, started once for the AWS providers' tests (Phase E01, Stage 2): with the Docker socket
+/// Local AWS ADR-021 pins, started once for the AWS providers' tests (Phase E01, Stage 2): with the Docker socket
 /// mounted and a network of its own, so ECS tasks run as real containers, each labelled so that disposal removes them.
-/// Its digest is read from the reference system's <c>emulator.json</c>, the one place it is written.
+/// Its digest is read from the reference system's <c>local-aws.json</c>, the one place it is written.
 /// </summary>
-public sealed class AwsEmulator : IAsyncLifetime
+public sealed class LocalAws : IAsyncLifetime
 {
     public const string Account = "000000000000";
     public const string Region = "us-east-1";
 
-    // Synthetic and never validated: the emulator does not check signatures, and the access key only selects the account.
+    // Synthetic and never validated: local AWS does not check signatures, and the access key only selects the account.
     public const string Secret = "test-not-a-secret";
 
-    private const string LabelKey = "sentinel.ingestion.emulator";
+    private const string LabelKey = "sentinel.ingestion.aws";
 
     private readonly string _runId = Guid.NewGuid().ToString("N")[..12];
     private INetwork _network = null!;
@@ -33,18 +33,18 @@ public sealed class AwsEmulator : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        using var pin = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Aws", "emulator.json")));
+        using var pin = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Aws", "local-aws.json")));
         string image = $"{pin.RootElement.GetProperty("image").GetString()}@{pin.RootElement.GetProperty("digest").GetString()}";
         int port = pin.RootElement.GetProperty("port").GetInt32();
         _network = new NetworkBuilder().WithName($"ingestion-aws-{_runId}").Build();
         await _network.CreateAsync();
         _container = new ContainerBuilder(image)
             .WithNetwork(_network)
-            .WithNetworkAliases("aws-emulator")
+            .WithNetworkAliases("local-aws")
             .WithPortBinding(port, true)
             .WithBindMount("/var/run/docker.sock", "/var/run/docker.sock")
             .WithCreateParameterModifier(parameters => parameters.User = "root")
-            .WithEnvironment("FLOCI_HOSTNAME", "aws-emulator")
+            .WithEnvironment("FLOCI_HOSTNAME", "local-aws")
             .WithEnvironment("FLOCI_SERVICES_ECS_DOCKER_NETWORK", _network.Name)
             .WithEnvironment("FLOCI_SERVICES_ECS_IMAGE_PULL_BEHAVIOR", "prefer-cached")
             .WithEnvironment("FLOCI_DOCKER_EXTRA_LABELS_0__KEY", LabelKey)

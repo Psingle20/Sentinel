@@ -18,14 +18,14 @@ using Task = System.Threading.Tasks.Task;
 namespace Reference.Tests.Aws;
 
 /// <summary>
-/// The real queue-consumer, published as the image the AWS environment runs, as an ECS task on the emulator's SQS queue:
+/// The real queue-consumer, published as the image the AWS environment runs, as an ECS task on local AWS's SQS queue:
 /// it receives the orders its own producer publishes, books them and confirms each one with order-service, here a stub
 /// on this machine that the task reaches through the container host. This is the workload half of Stage 1; the
 /// environment half is <see cref="AwsReferenceEnvironmentTests"/>.
 /// </summary>
-[Trait("Category", "Emulator")]
-[Collection(EmulatorCollection.Name)]
-public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputHelper output) : IClassFixture<FlociEmulator>
+[Trait("Category", "Aws")]
+[Collection(LocalAwsCollection.Name)]
+public sealed class QueueConsumerOnSqsTests(LocalAws localAws, ITestOutputHelper output) : IClassFixture<LocalAws>
 {
     private const string Repository = "reference-queue-consumer-conformance";
 
@@ -40,22 +40,22 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
         string suffix = Guid.NewGuid().ToString("N")[..8];
         var options = new AwsEnvironmentOptions
         {
-            ServiceUrl = emulator.Endpoint,
+            ServiceUrl = localAws.Endpoint,
             Cluster = $"reference-{suffix}",
             Rule = $"orders-route-{suffix}",
             Image = $"{Repository}:{{revision}}",
             TaskEnvironment = new Dictionary<string, string>
             {
                 ["Reference__Queue__Provider"] = "sqs",
-                ["Reference__Queue__Sqs__ServiceUrl"] = "http://aws-emulator:4566",
+                ["Reference__Queue__Sqs__ServiceUrl"] = "http://local-aws:4566",
                 ["Reference__Queue__Publish"] = "eventbridge",
-                ["Reference__Queue__EventBridge__ServiceUrl"] = "http://aws-emulator:4566",
+                ["Reference__Queue__EventBridge__ServiceUrl"] = "http://local-aws:4566",
                 ["services__order-service__http__0"] = AwsEnvironmentOptions.ForContainers(ordersAddress.ToString(), "host.docker.internal")
             }
         };
-        using AmazonSQSClient sqs = emulator.Sqs();
-        using AmazonECSClient ecs = emulator.Ecs();
-        using AmazonEventBridgeClient events = emulator.Events();
+        using AmazonSQSClient sqs = localAws.Sqs();
+        using AmazonECSClient ecs = localAws.Ecs();
+        using AmazonEventBridgeClient events = localAws.Events();
         using var provisioning = new AwsProvisioning();
         var environment = new AwsReferenceEnvironment(sqs, ecs, events, options, provisioning, new LocalReferenceEnvironment(new NoReferenceControl()), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
 

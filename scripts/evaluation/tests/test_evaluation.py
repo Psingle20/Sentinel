@@ -90,10 +90,10 @@ class PackageTests(unittest.TestCase):
             with self.assertRaises(PackageError):
                 load_package(path)
 
-    def test_an_aws_scenario_says_what_in_it_is_real_emulated_and_injected(self):
+    def test_an_aws_scenario_says_what_in_it_is_real_locally_modelled_and_injected(self):
         fidelity = load_packages(PACKAGES)["AWS-S1"].fidelity
         self.assertEqual(fidelity.environment, "aws")
-        self.assertEqual({label.level for label in fidelity.labels}, {"contract-real", "data-plane-real", "emulator-modelled", "injected"})
+        self.assertEqual({label.level for label in fidelity.labels}, {"contract-real", "data-plane-real", "locally-modelled", "injected"})
 
     def test_an_aws_scenario_without_a_fidelity_statement_is_rejected(self):
         data = json.loads((PACKAGES / "AWS-S1.json").read_text(encoding="utf-8"))
@@ -374,15 +374,15 @@ class CommandTests(unittest.TestCase):
 
 class FidelityTests(unittest.TestCase):
     def test_a_run_record_carries_the_environment_it_ran_in(self):
-        environment = {"name": "aws", "emulator": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}
+        environment = {"name": "aws", "provider": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "AWS-S1.json"
             path.write_text(json.dumps({"schemaVersion": 2, "scenarioId": "AWS-S1", "packageVersion": 1, "environment": environment, "runRecord": None}), encoding="utf-8")
             self.assertEqual(load_v2(path).environment, environment)
 
-    def test_the_report_labels_an_emulated_scenario_and_never_claims_aws_equivalence(self):
+    def test_the_report_labels_a_locally_modelled_scenario_and_never_claims_aws_equivalence(self):
         packages = load_packages(PACKAGES)
-        environments = {"AWS-S1": {"name": "aws", "emulator": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}}
+        environments = {"AWS-S1": {"name": "aws", "provider": "floci/floci:2.3.0", "imageDigest": "sha256:0123", "provisioningVersion": "2"}}
         report = render({"version": "scenarios-v2"}, packages, [], [], [], [], environments=environments)
         self.assertIn("## Environments and fidelity", report)
         self.assertIn("| AWS-S1 | aws | floci/floci:2.3.0 (sha256:0123), provisioning v2 |", report)

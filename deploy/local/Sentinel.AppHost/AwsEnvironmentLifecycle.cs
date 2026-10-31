@@ -5,14 +5,14 @@ using Microsoft.Extensions.Logging;
 namespace Sentinel.AppHost;
 
 /// <summary>
-/// Around the AWS-emulated environment's lifetime: creates the Docker network the emulator starts its ECS tasks on, and
-/// removes every container the emulator started, by the label it gives them, when the AppHost starts and when it stops,
-/// because the emulator does not remove them itself (ADR-021). The emulator itself is Aspire's and never carries the label.
+/// Around the AWS environment's lifetime: creates the Docker network local AWS starts its ECS tasks on, and
+/// removes every container local AWS started, by the label it gives them, when the AppHost starts and when it stops,
+/// because local AWS does not remove them itself (ADR-021). Local AWS itself is Aspire's and never carries the label.
 /// </summary>
 internal sealed class AwsEnvironmentLifecycle(ILogger<AwsEnvironmentLifecycle> logger) : IHostedService
 {
     public const string Network = "reference-aws";
-    public const string LabelKey = "sentinel.reference.emulator";
+    public const string LabelKey = "sentinel.reference.aws";
     public const string LabelValue = "apphost";
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -31,7 +31,7 @@ internal sealed class AwsEnvironmentLifecycle(ILogger<AwsEnvironmentLifecycle> l
         string started = await DockerAsync(cancellationToken, "ps", "-a", "-q", "--filter", $"label={LabelKey}={LabelValue}");
         foreach (string container in started.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            logger.LogInformation("Removing container {Container}, which the AWS emulator started", container);
+            logger.LogInformation("Removing container {Container}, which local AWS started", container);
             await DockerAsync(cancellationToken, "rm", "-f", container);
         }
     }
