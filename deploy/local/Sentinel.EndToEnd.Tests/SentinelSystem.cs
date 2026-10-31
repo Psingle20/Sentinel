@@ -76,7 +76,7 @@ public class SentinelSystem : IAsyncLifetime
 
     public HttpClient DeployController { get; private set; } = null!;
 
-    /// <summary>Sentinel.Api, calling as the default local development identity.</summary>
+    /// <summary>Sentinel.Gateway, calling as the default local development identity.</summary>
     public HttpClient Api { get; private set; } = null!;
 
     public HttpClient AgentWorker { get; private set; } = null!;
@@ -96,6 +96,21 @@ public class SentinelSystem : IAsyncLifetime
     public DateTimeOffset ScenarioStartedAt { get; set; } = DateTimeOffset.MinValue;
 
     public async Task InitializeAsync()
+    {
+        try
+        {
+            await StartAsync();
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains("RuntimeUnhealthy", StringComparison.Ordinal))
+        {
+            // Docker can report a container's runtime unhealthy while it starts right after an earlier system stopped. Every
+            // container is ephemeral, so one fresh start is the same system.
+            await App.DisposeAsync();
+            await StartAsync();
+        }
+    }
+
+    private async Task StartAsync()
     {
         IDistributedApplicationTestingBuilder builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Sentinel_AppHost>(
             ModelProvider == ConfiguredModels
