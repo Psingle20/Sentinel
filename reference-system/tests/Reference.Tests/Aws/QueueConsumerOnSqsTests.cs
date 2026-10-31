@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.SQS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -41,18 +42,22 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
         {
             ServiceUrl = emulator.Endpoint,
             Cluster = $"reference-{suffix}",
+            Rule = $"orders-route-{suffix}",
             Image = $"{Repository}:{{revision}}",
             TaskEnvironment = new Dictionary<string, string>
             {
                 ["Reference__Queue__Provider"] = "sqs",
                 ["Reference__Queue__Sqs__ServiceUrl"] = "http://aws-emulator:4566",
+                ["Reference__Queue__Publish"] = "eventbridge",
+                ["Reference__Queue__EventBridge__ServiceUrl"] = "http://aws-emulator:4566",
                 ["services__order-service__http__0"] = AwsEnvironmentOptions.ForContainers(ordersAddress.ToString(), "host.docker.internal")
             }
         };
         using AmazonSQSClient sqs = emulator.Sqs();
         using AmazonECSClient ecs = emulator.Ecs();
+        using AmazonEventBridgeClient events = emulator.Events();
         using var provisioning = new AwsProvisioning();
-        var environment = new AwsReferenceEnvironment(sqs, ecs, options, provisioning, new LocalReferenceEnvironment(new NoReferenceControl()), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
+        var environment = new AwsReferenceEnvironment(sqs, ecs, events, options, provisioning, new LocalReferenceEnvironment(new NoReferenceControl()), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
 
         await environment.ResetAsync(CancellationToken.None);
 

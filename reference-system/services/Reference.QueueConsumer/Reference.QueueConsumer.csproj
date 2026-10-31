@@ -17,6 +17,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AWSSDK.EventBridge" />
         <PackageReference Include="AWSSDK.SQS" />
     </ItemGroup>
 

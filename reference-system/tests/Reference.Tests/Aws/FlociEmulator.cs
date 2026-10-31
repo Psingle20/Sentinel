@@ -3,6 +3,7 @@ using System.Text.Json;
 using Amazon.CloudWatch;
 using Amazon.CloudWatchLogs;
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.IdentityManagement;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
@@ -92,6 +93,9 @@ public sealed class FlociEmulator : IAsyncLifetime
 
     public AmazonECSClient Ecs(string account = DefaultAccount) =>
         new(Credentials(account), new AmazonECSConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
+
+    public AmazonEventBridgeClient Events(string account = DefaultAccount) =>
+        new(Credentials(account), new AmazonEventBridgeConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
 
     public AmazonIdentityManagementServiceClient Iam(string account = DefaultAccount) =>
         new(Credentials(account), new AmazonIdentityManagementServiceConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });

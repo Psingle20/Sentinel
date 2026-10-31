@@ -54,6 +54,8 @@ internal static class Harness
         options.Metrics["queue_processed_rate"] = "Messages processed per second.";
         options.Metrics["queue_duplicate_rate"] = "Orders booked again per second.";
         options.Metrics["queue_retry_rate"] = "Calls retried per second.";
+        options.Metrics["orders_undelivered_rate"] = "Orders published but never processed per second.";
+        options.Metrics["queue_depth"] = "Messages a queue holds.";
         return options;
     }
 

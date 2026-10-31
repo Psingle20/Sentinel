@@ -163,6 +163,34 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         return telemetry;
     }
 
+    /// <summary>
+    /// AWS-S7: a benign queue-consumer v1.4.1 serves from 15 s; at 45 s the pattern of the route that feeds its queue
+    /// changes, so from 50 s its orders are published but never processed and its queue stays empty; the undelivered rate
+    /// passed the onset threshold at 55 s.
+    /// </summary>
+    public static Telemetry RouteDrift()
+    {
+        var telemetry = new Telemetry { AffectedService = "queue-consumer", _onset = 55 };
+        telemetry.Deployment("queue-consumer", "v1.4.1", "v1.4.0", "d13", 0, 15);
+        telemetry._observations.Add(telemetry.RouteAt("queue-consumer", "default/orders-route/1", 45, null, "started", "in-progress"));
+        telemetry._observations.Add(telemetry.RouteAt("queue-consumer", "default/orders-route/1", 45, 45, "completed", "completed"));
+        for (int second = -120; second <= 120; second += 5)
+        {
+            telemetry.Metric("orders_undelivered_rate", "queue-consumer", second, second < 50 ? 0 : Math.Min(4, (second - 45) / 15.0));
+            telemetry.Metric("queue_depth", "queue-consumer", second, 0);
+            telemetry.Metric("queue_processed_rate", "queue-consumer", second, second < 50 ? 4 : 0);
+        }
+
+        return telemetry;
+    }
+
+    /// <summary>The same telemetry with no change recorded at all.</summary>
+    public Telemetry WithoutChanges()
+    {
+        _observations.RemoveAll(observation => observation is DeploymentObservation);
+        return this;
+    }
+
     /// <summary>An earlier scenario's duplicate bookings, over a minute before this incident's window starts to burn.</summary>
     public Telemetry WithEarlierDuplicates()
     {
@@ -331,6 +359,26 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
         Version = version,
         PreviousVersion = previous,
         StartedAt = Start.AddSeconds(started),
+        CompletedAt = completed is { } done ? Start.AddSeconds(done) : null,
+        Status = status
+    };
+
+    // A change to an event route's pattern, as Ingestion's EventBridge provider reports it: effective at once.
+    private DeploymentObservation RouteAt(string service, string id, int changed, int? completed, string state, string status) => new()
+    {
+        ObservationId = ObservationId.From($"eventbridge:deployment:{id}:{state}"),
+        TenantId = Tenant,
+        EnvironmentId = Environment,
+        ServiceId = ServiceId.From(service),
+        SourceProvider = "eventbridge",
+        SourceResource = "events/default/rules/orders-route",
+        EventTime = Start.AddSeconds(changed),
+        IngestTime = Start.AddSeconds(changed + 2),
+        DeploymentId = id,
+        Version = "pattern 1a2b3c4d",
+        PreviousVersion = "pattern 5e6f7a8b",
+        ChangeKind = "route",
+        StartedAt = Start.AddSeconds(changed),
         CompletedAt = completed is { } done ? Start.AddSeconds(done) : null,
         Status = status
     };

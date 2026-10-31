@@ -39,7 +39,7 @@ public sealed class ProviderRegistrationTests
         local.GetServices<IDeploymentProvider>().Select(provider => provider.Name).ShouldBe([DeployControllerProvider.ProviderName]);
         local.GetServices<ITopologyProvider>().Select(provider => provider.Name).ShouldBe([JaegerProvider.ProviderName]);
         local.GetServices<IMetricsProvider>().Select(provider => provider.Name).ShouldBe([PrometheusMetricsProvider.ProviderName]);
-        aws.GetServices<IDeploymentProvider>().Select(provider => provider.Name).ShouldBe([DeployControllerProvider.ProviderName, EcsDeploymentProvider.ProviderName], ignoreOrder: true);
+        aws.GetServices<IDeploymentProvider>().Select(provider => provider.Name).ShouldBe([DeployControllerProvider.ProviderName, EcsDeploymentProvider.ProviderName, EventBridgeRouteProvider.ProviderName], ignoreOrder: true);
         aws.GetServices<ITopologyProvider>().Select(provider => provider.Name).ShouldBe([JaegerProvider.ProviderName, AwsTopologyProvider.ProviderName], ignoreOrder: true);
         aws.GetServices<IMetricsProvider>().Select(provider => provider.Name).ShouldBe([PrometheusMetricsProvider.ProviderName, SqsQueueMetricsProvider.ProviderName], ignoreOrder: true);
     }

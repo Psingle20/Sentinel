@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.Runtime;
 using Amazon.SQS;
 using DotNet.Testcontainers.Builders;
@@ -68,6 +69,8 @@ public sealed class AwsEmulator : IAsyncLifetime
     public AmazonECSClient Ecs() => new(new BasicAWSCredentials(Account, Secret), new AmazonECSConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
 
     public AmazonSQSClient Sqs() => new(new BasicAWSCredentials(Account, Secret), new AmazonSQSConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
+
+    public AmazonEventBridgeClient Events() => new(new BasicAWSCredentials(Account, Secret), new AmazonEventBridgeConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
 
     /// <summary>Tags an image already local under another name, so a task definition names a version without a pull.</summary>
     public static Task TagAsync(string source, string target) => DockerAsync("tag", source, target);

@@ -6,6 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="AWSSDK.ECS" />
+        <PackageReference Include="AWSSDK.EventBridge" />
         <PackageReference Include="AWSSDK.SQS" />
     </ItemGroup>
 

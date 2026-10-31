@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Amazon.EventBridge;
 using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,6 +51,16 @@ internal static class AdapterRegistration
         // The quarantine adapter is optional too: without the consumer's endpoint and control token, quarantine-message has no
         // adapter and is refused (Phase E01). In the AWS environment the queue is an SQS queue, and Executor quarantines
         // through SQS with credentials of its own instead (Phase E01, Stage 2).
+        // The route adapter is the AWS environment's alone: without EventBridge configured, restore-route has no adapter and
+        // is refused (Phase E01, Stage 4).
+        if (EventBridgeRouteOptions.Configured(configuration))
+        {
+            var routes = EventBridgeRouteOptions.From(configuration);
+            services.AddSingleton(routes);
+            services.AddSingleton<IAmazonEventBridge>(_ => new AmazonEventBridgeClient(routes.Credentials(), new AmazonEventBridgeConfig { ServiceURL = routes.ServiceUrl.ToString(), AuthenticationRegion = routes.Region }));
+            services.AddTransient<IRemediationAdapter, EventBridgeRouteAdapter>();
+        }
+
         if (configuration["Executor:Adapters:QueueConsumer:Provider"] == "sqs")
         {
             var sqs = SqsQuarantineOptions.From(configuration);

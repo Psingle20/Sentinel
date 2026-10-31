@@ -1,4 +1,6 @@
 using Amazon.ECS;
+using Amazon.EventBridge;
+using Amazon.EventBridge.Model;
 using Amazon.ECS.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -32,15 +34,17 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
             Cluster = $"reference-{suffix}",
             Queue = $"orders-{suffix}",
             DeadLetterQueue = $"orders-{suffix}-dlq",
+            Rule = $"orders-route-{suffix}",
             Image = "redis:7-alpine",
             Emulator = $"{FlociEmulator.Pin.Emulator} {FlociEmulator.Pin.Version}",
             ImageDigest = FlociEmulator.Pin.Digest
         };
         using AmazonSQSClient sqs = emulator.Sqs();
         using AmazonECSClient ecs = emulator.Ecs();
+        using AmazonEventBridgeClient events = emulator.Events();
         using var provisioning = new AwsProvisioning();
         var control = new RecordingControl();
-        var environment = new AwsReferenceEnvironment(sqs, ecs, options, provisioning, new LocalReferenceEnvironment(control), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
+        var environment = new AwsReferenceEnvironment(sqs, ecs, events, options, provisioning, new LocalReferenceEnvironment(control), TimeProvider.System, NullLogger<AwsReferenceEnvironment>.Instance);
 
         (await environment.InspectAsync(CancellationToken.None)).Ready.ShouldBeFalse("nothing is provisioned yet");
 
@@ -60,6 +64,9 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         (await ServiceAsync(ecs, options)).TaskDefinition.ShouldBe(provisioning.TaskDefinitions["v1.4.1"]);
         (await DepthAsync(sqs, options.Queue)).ShouldBe(1, "the poison message waits in the queue");
         control.Deployments.ShouldBe(["order-service v1.7.1"], "a step for a local workload goes to the local environment");
+        (await events.ListTargetsByRuleAsync(new ListTargetsByRuleRequest { Rule = options.Rule })).Targets.ShouldHaveSingleItem().Arn.ShouldEndWith($":{options.Queue}", Case.Sensitive, "the rule routes orders to the queue");
+        await environment.ActivateAsync(Step("driftRoute", "queue-consumer"), "run-1", CancellationToken.None);
+        (await environment.InspectAsync(CancellationToken.None)).Problems.ShouldContain(problem => problem.Contains(options.Rule, StringComparison.Ordinal), "a drifted route is reported");
 
         ReferenceEnvironmentException unsupported = await Should.ThrowAsync<ReferenceEnvironmentException>(
             () => environment.ActivateAsync(Step("duplicatePublication", "queue-consumer"), "run-1", CancellationToken.None));
@@ -69,6 +76,7 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         (await DepthAsync(sqs, options.Queue)).ShouldBe(0, "no message of the run survives a reset");
         (await ServiceAsync(ecs, options)).TaskDefinition.ShouldBe(provisioning.TaskDefinitions["v1.4.0"], "the baseline revision serves again");
         (await ServiceAsync(ecs, options)).RunningCount.ShouldBe(1);
+        (await environment.InspectAsync(CancellationToken.None)).Ready.ShouldBeTrue("the reset puts the route's approved pattern back");
     }
 
     private static ScenarioStep Step(string action, string service, string? version = null) =>

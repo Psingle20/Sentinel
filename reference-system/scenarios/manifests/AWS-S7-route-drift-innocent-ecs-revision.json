@@ -1,0 +1,103 @@
+{
+  "id": "AWS-S7",
+  "slug": "route-drift-innocent-ecs-revision",
+  "version": 1,
+  "kind": "confounder",
+  "description": "Event route drift in the AWS-emulated environment. The queue-consumer's producer publishes four orders a second as EventBridge events, and the orders-route rule delivers them to the orders queue. A benign queue-consumer v1.4.1 task definition rolls out through ECS first and serves before anything goes wrong; 45 s in, the rule's pattern is changed to expect a source the producer does not use, so every order event is accepted by the bus and matched by nothing. The consumer's queue stays empty, it processes nothing and fails nothing, and its orders are published but never delivered. Fidelity: EventBridge routing, the queue and the ECS rollout are emulated by the pinned emulator; the producer, the consumer and their telemetry are real; the drift is injected through the EventBridge API.",
+  "environment": "aws",
+  "account": "000000000000",
+  "region": "us-east-1",
+  "affectedService": "queue-consumer",
+  "downstreamServices": [],
+  "warmupSeconds": 75,
+  "durationSeconds": 300,
+  "steps": [
+    { "atSeconds": 0, "action": "deploy", "service": "queue-consumer", "version": "v1.4.1", "role": "confounder" },
+    { "atSeconds": 45, "action": "driftRoute", "service": "queue-consumer", "configurationDiff": "orders-route source: reference.checkout -> reference.storefront", "role": "cause" }
+  ],
+  "cause": {
+    "description": "The orders-route rule's pattern stops matching the producer's order events.",
+    "service": "queue-consumer",
+    "change": "orders-route pattern changed to source reference.storefront",
+    "activationSeconds": 45
+  },
+  "confounders": [
+    { "description": "Benign queue-consumer v1.4.1 ECS task definition, rolled out from 0 s and serving before the drift.", "service": "queue-consumer", "change": "deploy queue-consumer v1.4.1", "atSeconds": 0, "servingFromSeconds": 15 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "queue-consumer",
+    "metric": "orders_undelivered_rate",
+    "threshold": 2,
+    "withinSeconds": 120
+  },
+  "expectedObservations": [
+    {
+      "description": "Orders are published but not processed.",
+      "query": "clamp_min(sum(rate(reference_orders_published_total{route=\"eventbridge\"}[1m])) - sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m])), 0)",
+      "expectation": "above",
+      "threshold": 2,
+      "fromSeconds": 45,
+      "withinSeconds": 90
+    },
+    {
+      "description": "The consumer processes nothing.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m]))",
+      "expectation": "below",
+      "threshold": 0.5,
+      "fromSeconds": 45,
+      "withinSeconds": 90
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "The consumer's queue stays empty, so the orders never reach it.",
+      "query": "max(last_over_time(reference_queue_depth[30s]))",
+      "expectation": "below",
+      "threshold": 1,
+      "fromSeconds": 60,
+      "withinSeconds": 90
+    },
+    {
+      "description": "No order fails: the consumer is not failing, it has nothing to work on.",
+      "query": "sum(rate(reference_queue_messages_total{outcome=\"failed\"}[1m])) or vector(0)",
+      "expectation": "below",
+      "threshold": 0.02,
+      "fromSeconds": 60,
+      "withinSeconds": 90
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 4,
+    "seed": 2007,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 15,
+    "notes": "The consumer's own producer publishes four orders a second through EventBridge; the bus accepts every event whether or not a rule matches it."
+  },
+  "hypotheses": {
+    "leading": { "service": "queue-consumer", "cause": "the orders-route pattern no longer matches the producer's order events" },
+    "rejected": [
+      { "service": "queue-consumer", "cause": "queue-consumer v1.4.1 ECS task definition" }
+    ]
+  },
+  "remediation": {
+    "permitted": [ { "action": "restore-route", "service": "queue-consumer", "mode": "approval-required" } ],
+    "falseRemediations": [ { "action": "rollback", "service": "queue-consumer" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "queue-consumer",
+    "fromVersion": "v1.4.1",
+    "toVersion": "v1.4.0",
+    "correct": false
+  },
+  "recovery": {
+    "restoredBy": "restore the orders-route rule's approved pattern",
+    "criteria": [
+      { "description": "Orders reach the consumer again.", "query": "clamp_min(sum(rate(reference_orders_published_total{route=\"eventbridge\"}[1m])) - sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m])), 0)", "comparison": "lessThan", "threshold": 0.5 },
+      { "description": "The consumer processes them.", "query": "sum(rate(reference_queue_messages_total{outcome=\"processed\"}[1m]))", "comparison": "greaterThan", "threshold": 2 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

@@ -67,7 +67,7 @@ def baseline_execution(blamed: str | None) -> dict:
 class PackageTests(unittest.TestCase):
     def test_every_package_in_the_repository_loads(self):
         packages = load_packages(PACKAGES)
-        self.assertEqual(sorted(packages), ["AWS-S1", "S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"])
+        self.assertEqual(sorted(packages), ["AWS-S1", "AWS-S7", "S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"])
         self.assertEqual(packages["S1"].root_cause.change_version, "v2.4.1")
         self.assertTrue(packages["S3"].is_false_remediation("rollback", "checkout-service"))
         self.assertEqual(packages["S4"].expected_missing, ("logs",))
@@ -118,6 +118,7 @@ class ObservationTests(unittest.TestCase):
     def test_observation_identity_reveals_kind_service_and_metric(self):
         deployments = {"d1": "checkout-service"}
         self.assertEqual(classify_observation("prometheus:latency_p95:order-service:1793200505", deployments), ("metric", "order-service", "latency_p95"))
+        self.assertEqual(classify_observation("sqs:queue_depth:queue-consumer:1793200505", deployments), ("metric", "queue-consumer", "queue_depth"))
         self.assertEqual(classify_observation(DEPLOY, deployments), ("deployment", "checkout-service", None))
         self.assertEqual(classify_observation("loki:service-warnings:checkout-service:17:abc", deployments), ("log", "checkout-service", None))
         self.assertEqual(classify_observation("jaeger:trace1:span1", deployments), ("trace", None, None))
@@ -367,7 +368,7 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(evaluate.main([*arguments, "--check"]), 1)
             report = (root / "out" / "report.md").read_text(encoding="utf-8")
             self.assertIn("## Gate", report)
-            self.assertIn("Packages without a recorded run: AWS-S1, S0, S1, S2, S4, S5, S6, S7, S8.", report)
+            self.assertIn("Packages without a recorded run: AWS-S1, AWS-S7, S0, S1, S2, S4, S5, S6, S7, S8.", report)
             self.assertFalse(json.loads((root / "out" / "report.json").read_text(encoding="utf-8"))["gatePassed"])
 
 

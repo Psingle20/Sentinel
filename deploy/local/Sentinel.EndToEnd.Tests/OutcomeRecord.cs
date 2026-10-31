@@ -92,6 +92,7 @@ public sealed record OutcomeRecord
                 RollbackAction rollback => $"rollback {rollback.TargetServiceId} {rollback.FromRevision} -> {rollback.ToRevision}",
                 PauseBatchAction pause => $"pause-batch {pause.TargetServiceId}",
                 QuarantineMessageAction quarantine => $"quarantine {quarantine.TargetServiceId} {quarantine.Queue} messages received {quarantine.MinimumReceives}+ times",
+                RestoreRouteAction restore => $"restore the {restore.Rule} route to {restore.TargetServiceId}",
                 _ => null
             },
             SentinelIncidentStatus = incident.Summary.Status.ToString(),

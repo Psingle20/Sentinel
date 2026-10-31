@@ -90,6 +90,9 @@ internal sealed class InMemoryRuntime : IDisposable
         options.Owners["checkout-service"] = "payments";
         options.BatchServices.Add("reporting-worker");
         options.QueueServices["queue-consumer"] = "orders";
+        options.RouteServices["queue-consumer"] = "orders-route";
+        options.Detection.Add(new DetectionRuleOptions { Service = "queue-consumer", Metric = "orders_undelivered_rate", DetectionThreshold = 2, OnsetThreshold = 0.5, RequiredSamples = 2 });
+        options.Recovery["queue-consumer"] = [new RecoveryCriterionOptions { Metric = "queue_oldest_message_age", Comparison = ThresholdComparison.LessThan, Threshold = 20 }];
     }
 
     public async Task<T> InScopeAsync<T>(Func<IServiceProvider, Task<T>> action)

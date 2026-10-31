@@ -141,11 +141,11 @@ public sealed class ExecutionService(
         static Result Refuse(string reason) => Result.Failure(Error.Problem("Execution.Refused", reason));
     }
 
-    /// <summary>Preconditions Executor can check from an inspection: what is serving, whether a batch is active, and whether a queue still redelivers a poison message.</summary>
+    /// <summary>Preconditions Executor can check from an inspection: what is serving, whether a batch is active, whether a queue still redelivers a poison message, and whether a route has drifted.</summary>
     private static bool Holds(PlanPrecondition precondition, TargetInspection target) => precondition.Condition switch
     {
         "serving-revision" => target.ServingRevision == precondition.Expected,
-        "batch-active" or "queue-state" => string.Equals(target.ServingRevision, precondition.Expected, StringComparison.OrdinalIgnoreCase),
+        "batch-active" or "queue-state" or "route-state" => string.Equals(target.ServingRevision, precondition.Expected, StringComparison.OrdinalIgnoreCase),
         _ => false
     };
 

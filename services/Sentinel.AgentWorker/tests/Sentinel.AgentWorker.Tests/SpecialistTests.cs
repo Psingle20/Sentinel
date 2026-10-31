@@ -100,6 +100,35 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task In_route_drift_metrics_blame_the_route_change_and_contradict_the_serving_deployment()
+    {
+        var telemetry = Telemetry.RouteDrift();
+        string route = HypothesisKeys.Change(ObservationId.From("eventbridge:deployment:default/orders-route/1:started"));
+        string deployment = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d13:started"));
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 80);
+        InvestigationRun changes = await Run(telemetry, InvestigationRoles.Changes, 80);
+
+        HypothesisFinding cause = metrics.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == route);
+        cause.SuspectedServiceId.ShouldBe(ServiceId.From("queue-consumer"));
+        cause.SupportingEvidenceIds.Count.ShouldBe(2, "the undelivered orders and the empty queue");
+        metrics.Completed.Evidence.ShouldContain(evidence => evidence.Statement.Contains("held no message", StringComparison.Ordinal));
+        metrics.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == deployment).ContradictingEvidenceIds.ShouldNotBeEmpty("an empty queue rules out the consumer");
+        changes.Completed.Hypotheses.ShouldContain(hypothesis => hypothesis.Key == route, "the route change is a change like any other");
+    }
+
+    [Fact]
+    public async Task Without_a_route_change_undelivered_orders_are_an_unknown_not_a_cause()
+    {
+        Telemetry telemetry = Telemetry.RouteDrift().WithoutChanges();
+
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 80);
+
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key != null && hypothesis.Key.StartsWith("change:", StringComparison.Ordinal));
+        metrics.Completed.Unknowns.ShouldNotBeNull().ShouldContain(unknown => unknown.Contains("no change to the route", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task In_the_poison_message_metrics_and_logs_name_the_message_and_contradict_the_later_deployment()
     {
         var telemetry = Telemetry.PoisonMessage();

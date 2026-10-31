@@ -120,6 +120,7 @@ public static class IncidentMemoryBuilder
             RollbackAction => "rollback",
             PauseBatchAction => "pause-batch",
             QuarantineMessageAction => "quarantine-message",
+            RestoreRouteAction => "restore-route",
             _ => action.GetType().Name
         };
         return new MemoryAction(

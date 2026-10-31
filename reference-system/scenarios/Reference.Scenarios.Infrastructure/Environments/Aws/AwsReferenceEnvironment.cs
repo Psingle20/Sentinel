@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Amazon.ECS;
 using Amazon.ECS.Model;
+using Amazon.EventBridge;
+using Amazon.EventBridge.Model;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -25,6 +27,7 @@ namespace Reference.Scenarios.Infrastructure.Environments.Aws;
 public sealed class AwsReferenceEnvironment(
     IAmazonSQS sqs,
     IAmazonECS ecs,
+    IAmazonEventBridge events,
     AwsEnvironmentOptions options,
     AwsProvisioning provisioning,
     LocalReferenceEnvironment local,
@@ -32,7 +35,7 @@ public sealed class AwsReferenceEnvironment(
     ILogger<AwsReferenceEnvironment> logger) : IReferenceEnvironment
 {
     public const string EnvironmentName = "aws";
-    public const string ProvisioningVersion = "2";
+    public const string ProvisioningVersion = "3";
 
     private static readonly TimeSpan RolloutTimeout = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
@@ -59,6 +62,7 @@ public sealed class AwsReferenceEnvironment(
                 await sqs.CreateQueueAsync(
                     new CreateQueueRequest { QueueName = options.Queue, Attributes = new Dictionary<string, string> { ["VisibilityTimeout"] = "30" } },
                     cancellationToken);
+                await RouteAsync(cancellationToken);
 
                 await ecs.CreateClusterAsync(new CreateClusterRequest { ClusterName = options.Cluster }, cancellationToken);
                 foreach (string revision in options.Revisions)
@@ -75,7 +79,7 @@ public sealed class AwsReferenceEnvironment(
             });
 
             provisioning.Done = true;
-            logger.LogInformation("Provisioned the AWS environment: queues {Queue} and {DeadLetterQueue}, ECS service {Service} on {Image}", options.Queue, options.DeadLetterQueue, options.Service, options.Image);
+            logger.LogInformation("Provisioned the AWS environment: queues {Queue} and {DeadLetterQueue}, rule {Rule} routing to the first, ECS service {Service} on {Image}", options.Queue, options.DeadLetterQueue, options.Rule, options.Service, options.Image);
         }
         finally
         {
@@ -99,6 +103,7 @@ public sealed class AwsReferenceEnvironment(
 
         await CallAsync(async () =>
         {
+            await RouteAsync(cancellationToken);
             foreach (string queue in new[] { options.Queue, options.DeadLetterQueue })
             {
                 await sqs.PurgeQueueAsync(await QueueUrlAsync(queue, cancellationToken), cancellationToken);
@@ -133,6 +138,13 @@ public sealed class AwsReferenceEnvironment(
                 break;
             case "deploy":
                 throw new ReferenceEnvironmentException(EnvironmentFailure.Unsupported, $"{options.Service} has no revision {step.Version}.");
+            case "driftRoute":
+                // The rule is edited as if the producer had been renamed in it alone: order events still flow onto the bus,
+                // and none matches any more.
+                await CallAsync(() => events.PutRuleAsync(
+                    new PutRuleRequest { Name = options.Rule, EventBusName = options.EventBus, EventPattern = AwsEnvironmentOptions.RoutePattern(options.DriftedOrderSource), State = RuleState.ENABLED },
+                    cancellationToken));
+                break;
             case "poisonMessage":
                 DateTimeOffset now = time.GetUtcNow();
                 string body = JsonSerializer.Serialize(new { id = $"msg-poison-{now.ToUnixTimeMilliseconds()}", orderId = $"ord-poison-{now.ToUnixTimeMilliseconds()}", amount = "NaN", enqueuedAt = now }, Json);
@@ -156,6 +168,19 @@ public sealed class AwsReferenceEnvironment(
                 problems.Add($"The queue {queue} does not exist.");
             }
 
+            try
+            {
+                DescribeRuleResponse rule = await events.DescribeRuleAsync(new DescribeRuleRequest { Name = options.Rule, EventBusName = options.EventBus }, cancellationToken);
+                if (rule.EventPattern != AwsEnvironmentOptions.RoutePattern(options.OrderSource))
+                {
+                    problems.Add($"The rule {options.Rule} routes {rule.EventPattern}, not the approved pattern.");
+                }
+            }
+            catch (Amazon.EventBridge.Model.ResourceNotFoundException)
+            {
+                problems.Add($"The rule {options.Rule} does not exist.");
+            }
+
             switch (await ServiceAsync(cancellationToken))
             {
                 case null or { Status: not "ACTIVE" }:
@@ -172,6 +197,16 @@ public sealed class AwsReferenceEnvironment(
         }
 
         return new EnvironmentState(Name, problems.Count == 0, problems, options.Emulator, options.ImageDigest, ProvisioningVersion);
+    }
+
+    // The rule with its approved pattern, targeting the orders queue; putting it again is how a reset undoes a drift.
+    private async Task RouteAsync(CancellationToken cancellationToken)
+    {
+        string queueArn = (await sqs.GetQueueAttributesAsync(new GetQueueAttributesRequest { QueueUrl = await QueueUrlAsync(options.Queue, cancellationToken), AttributeNames = ["QueueArn"] }, cancellationToken)).Attributes["QueueArn"];
+        await events.PutRuleAsync(
+            new PutRuleRequest { Name = options.Rule, EventBusName = options.EventBus, EventPattern = AwsEnvironmentOptions.RoutePattern(options.OrderSource), State = RuleState.ENABLED },
+            cancellationToken);
+        await events.PutTargetsAsync(new PutTargetsRequest { Rule = options.Rule, EventBusName = options.EventBus, Targets = [new Target { Id = options.Queue, Arn = queueArn }] }, cancellationToken);
     }
 
     // A deleted service lingers as INACTIVE beside the one created after it; the live one is what counts.

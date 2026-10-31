@@ -13,14 +13,21 @@ internal static class AwsReferenceEnvironmentExtensions
     /// <summary>Synthetic: the emulator does not check signatures.</summary>
     public const string SyntheticSecret = "test-not-a-secret";
 
+    /// <summary>
+    /// The approved pattern of the rule that routes the producer's order events to the orders queue: Executor restores it
+    /// when the route drifts, and holds it as the route's source of truth (Phase E01, Stage 4).
+    /// </summary>
+    public const string ApprovedOrdersRoute = """{"source":["reference.checkout"],"detail-type":["OrderPlaced"]}""";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// Sentinel's side of the AWS environment (Phase E01, Stage 2): Ingestion reads the consumer's ECS deployments, the
-    /// topology its task definition declares and the orders queue's depth and dead-letter depth, and Executor quarantines
-    /// through the orders queue's redrive policy, each with credentials of its own role.
+    /// Sentinel's side of the AWS environment (Phase E01, Stages 2 and 4): Ingestion reads the consumer's ECS deployments,
+    /// its event route's changes, the topology its task definition declares and the orders queue's depth and dead-letter
+    /// depth; AgentWorker's investigators read the queue's depth, which exists only here; and Executor quarantines through
+    /// the orders queue's redrive policy and restores the route's approved pattern, each with credentials of its own role.
     /// </summary>
-    public static void WireSentinel(IResourceBuilder<ContainerResource> emulator, IResourceBuilder<ProjectResource> ingestion, IResourceBuilder<ProjectResource> executor)
+    public static void WireSentinel(IResourceBuilder<ContainerResource> emulator, IResourceBuilder<ProjectResource> ingestion, IResourceBuilder<ProjectResource> agentWorker, IResourceBuilder<ProjectResource> executor)
     {
         ingestion
             .WithEnvironment("Ingestion__Providers__Aws__ServiceUrl", emulator.GetEndpoint("http"))
@@ -36,7 +43,12 @@ internal static class AwsReferenceEnvironmentExtensions
             .WithEnvironment("Executor__Adapters__Sqs__AccessKey", Account)
             .WithEnvironment("Executor__Adapters__Sqs__SecretKey", SyntheticSecret)
             .WithEnvironment("Executor__Adapters__Sqs__Queues__0", "orders")
+            .WithEnvironment("Executor__Adapters__EventBridge__ServiceUrl", emulator.GetEndpoint("http"))
+            .WithEnvironment("Executor__Adapters__EventBridge__AccessKey", Account)
+            .WithEnvironment("Executor__Adapters__EventBridge__SecretKey", SyntheticSecret)
+            .WithEnvironment("Executor__Adapters__EventBridge__Routes__orders-route", ApprovedOrdersRoute)
             .WaitFor(emulator);
+        agentWorker.WithEnvironment("Investigation__Metrics__queue_depth", "Messages a consumer's SQS queue holds, waiting or in flight, as SQS reports them.");
     }
 
     // A series of SQS queue attributes, appended after Ingestion's own series at indexes its configuration leaves unused;

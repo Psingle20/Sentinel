@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,17 +35,22 @@ public sealed class ProviderConformanceTests
     private static readonly TenantId Tenant = TenantId.From("acme");
     private static readonly EnvironmentId Environment = EnvironmentId.From("reference");
 
-    public static TheoryData<string> Adapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller", "ecs-deployments", "aws-topology", "sqs-metrics" };
+    public static TheoryData<string> Adapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller", "ecs-deployments", "aws-topology", "sqs-metrics", "eventbridge-routes" };
 
     public static TheoryData<string> BufferedAdapters => new() { "prometheus", "prometheus-alerts", "loki", "jaeger-traces", "jaeger-topology", "deploy-controller" };
 
     private const string Cluster = "arn:aws:ecs:us-east-1:000000000000:cluster/reference";
     private const string Definition = "arn:aws:ecs:us-east-1:000000000000:task-definition/queue-consumer";
     private const string Queue = "http://aws-emulator:4566/000000000000/orders";
+    private const string ApprovedRoute = """{"source":["reference.checkout"],"detail-type":["OrderPlaced"]}""";
+    private const string DriftedRoute = """{"source":["reference.storefront"],"detail-type":["OrderPlaced"]}""";
 
     // One answer per AWS operation, as the emulator gives them: a queue-consumer service rolled out to revision 2, whose
-    // task definition calls order-service and names its queue, and that queue's attributes.
-    private static string Aws(HttpRequestMessage request)
+    // task definition calls order-service and names its queue, that queue's attributes, and the rule that routes orders to
+    // it, with a drifted pattern.
+    private static string Aws(HttpRequestMessage request) => Aws(request, DriftedRoute);
+
+    private static string Aws(HttpRequestMessage request, string routePattern)
     {
         string target = request.Headers.TryGetValues("X-Amz-Target", out IEnumerable<string>? values) ? values.Single() : string.Empty;
         string body = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? string.Empty;
@@ -58,6 +65,8 @@ public sealed class ProviderConformanceTests
             "ListQueues" => $$$"""{"QueueUrls":["{{{Queue}}}"]}""",
             "GetQueueUrl" => $$$"""{"QueueUrl":"{{{Queue}}}"}""",
             "GetQueueAttributes" => """{"Attributes":{"ApproximateNumberOfMessages":"2","ApproximateNumberOfMessagesNotVisible":"1"}}""",
+            "ListRules" => $$$"""{"Rules":[{"Name":"orders-route","Arn":"arn:aws:events:us-east-1:000000000000:rule/orders-route","EventPattern":{{{JsonSerializer.Serialize(routePattern)}}},"State":"ENABLED","EventBusName":"default"}]}""",
+            "ListTargetsByRule" => """{"Targets":[{"Id":"orders","Arn":"arn:aws:sqs:us-east-1:000000000000:orders"}]}""",
             _ => throw new InvalidOperationException($"No answer for {target}.")
         };
     }
@@ -280,6 +289,24 @@ public sealed class ProviderConformanceTests
             },
             EventTimesInRange: false,
             Route: Aws),
+        "eventbridge-routes" => new AdapterCase(
+            EventBridgeRouteProvider.ProviderName,
+            string.Empty,
+            async client =>
+            {
+                // EventBridge keeps no history, so the provider's first pull, of the approved pattern, is its baseline; the
+                // suite's transport answers the second, which sees the drifted one.
+                using var transport = new Baseline(client);
+                using var http = new HttpClient(transport) { BaseAddress = new Uri("http://backend.test") };
+                var provider = new EventBridgeRouteProvider(Events(http), Ecs(http), AwsOptions, new FakeTimeProvider(From.AddMinutes(10)), NullLogger<EventBridgeRouteProvider>.Instance);
+                var request = new DeploymentRequest(Tenant, Environment, new TimeRange(From, From.AddMinutes(20)));
+                await provider.GetDeploymentsAsync(request, CancellationToken.None);
+                transport.Forward = true;
+                ProviderResult<DeploymentObservation> result = await provider.GetDeploymentsAsync(request, CancellationToken.None);
+                return (result.Status, result.Observations);
+            },
+            EventTimesInRange: false,
+            Route: Aws),
         _ => throw new ArgumentOutOfRangeException(nameof(adapter), adapter, "Unknown adapter.")
     };
 
@@ -287,6 +314,9 @@ public sealed class ProviderConformanceTests
 
     private static AmazonECSClient Ecs(HttpClient client) =>
         new(new BasicAWSCredentials(AwsOptions.AccessKey, AwsOptions.SecretKey), new AmazonECSConfig { ServiceURL = "http://backend.test", AuthenticationRegion = "us-east-1", MaxErrorRetry = 0, HttpClientFactory = new Transport(client) });
+
+    private static AmazonEventBridgeClient Events(HttpClient client) =>
+        new(new BasicAWSCredentials(AwsOptions.AccessKey, AwsOptions.SecretKey), new AmazonEventBridgeConfig { ServiceURL = "http://backend.test", AuthenticationRegion = "us-east-1", MaxErrorRetry = 0, HttpClientFactory = new Transport(client) });
 
     private static AmazonSQSClient Sqs(HttpClient client) =>
         new(new BasicAWSCredentials(AwsOptions.AccessKey, AwsOptions.SecretKey), new AmazonSQSConfig { ServiceURL = "http://backend.test", AuthenticationRegion = "us-east-1", MaxErrorRetry = 0, HttpClientFactory = new Transport(client) });
@@ -310,6 +340,33 @@ public sealed class ProviderConformanceTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body(request), Encoding.UTF8, "application/json") });
+    }
+
+    // Answers a provider's first pull itself, with the approved route, and forwards every later request to the suite's client.
+    private sealed class Baseline(HttpClient suite) : HttpMessageHandler
+    {
+        public bool Forward { get; set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (!Forward)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Aws(request, ApprovedRoute), Encoding.UTF8, "application/json") };
+            }
+
+            using var copy = new HttpRequestMessage(request.Method, request.RequestUri);
+            if (request.Content is not null)
+            {
+                copy.Content = new StringContent(await request.Content.ReadAsStringAsync(cancellationToken), Encoding.UTF8, request.Content.Headers.ContentType?.MediaType ?? "application/json");
+            }
+
+            foreach (KeyValuePair<string, IEnumerable<string>> header in request.Headers)
+            {
+                copy.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            return await suite.SendAsync(copy, cancellationToken);
+        }
     }
 
     // Hands the AWS SDK the stubbed client, so the AWS adapters meet the same transport faults as the HTTP ones.

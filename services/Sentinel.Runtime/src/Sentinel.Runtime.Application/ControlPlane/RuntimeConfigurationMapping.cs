@@ -29,7 +29,8 @@ public static class RuntimeConfigurationMapping
                 Dependencies = options.Dependencies.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<string>)[.. entry.Value], StringComparer.Ordinal),
                 Owners = new Dictionary<string, string>(options.Owners, StringComparer.Ordinal),
                 BatchServices = [.. options.BatchServices],
-                QueueServices = new Dictionary<string, string>(options.QueueServices, StringComparer.Ordinal)
+                QueueServices = new Dictionary<string, string>(options.QueueServices, StringComparer.Ordinal),
+                RouteServices = new Dictionary<string, string>(options.RouteServices, StringComparer.Ordinal)
             },
             Suppressions = [.. options.Correlation.Suppressions.Select(rule => new SuppressionSetting(rule.Service, rule.Metric, rule.From, rule.Until, rule.Reason))],
             Investigation = new InvestigationSetting
@@ -104,6 +105,12 @@ public static class RuntimeConfigurationMapping
         foreach ((string service, string queue) in document.Catalog.QueueServices)
         {
             options.QueueServices[service] = queue;
+        }
+
+        options.RouteServices.Clear();
+        foreach ((string service, string rule) in document.Catalog.RouteServices)
+        {
+            options.RouteServices[service] = rule;
         }
 
         Replace(options.Correlation.Suppressions, document.Suppressions.Select(rule => new SuppressionOptions { Service = rule.Service, Metric = rule.Metric, From = rule.From, Until = rule.Until, Reason = rule.Reason }));

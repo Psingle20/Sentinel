@@ -20,14 +20,15 @@ public sealed class ScenarioManifestTests
         [QueueRevisions.ServiceName] = QueueRevisions.Baseline
     };
 
-    public static TheoryData<string> ScenarioIds => new() { "AWS-S0", "AWS-S1", "S0", "S1", "S2", "S3", "S6", "S7", "S8" };
+    public static TheoryData<string> ScenarioIds => new() { "AWS-S0", "AWS-S1", "AWS-S7", "S0", "S1", "S2", "S3", "S6", "S7", "S8" };
 
     [Fact]
-    public void The_suite_contains_the_golden_case_six_confounders_and_two_controls()
+    public void The_suite_contains_the_golden_case_seven_confounders_and_two_controls()
     {
-        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "AWS-S1", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        Catalog.Manifests.Keys.Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "AWS-S1", "AWS-S7", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
         Catalog.Manifests["AWS-S0"].Kind.ShouldBe("control");
         Catalog.Manifests["AWS-S1"].Kind.ShouldBe("confounder");
+        Catalog.Manifests["AWS-S7"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S6"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S7"].Kind.ShouldBe("confounder");
         Catalog.Manifests["S8"].Kind.ShouldBe("confounder");

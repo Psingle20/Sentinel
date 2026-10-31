@@ -149,7 +149,7 @@ public static class CorrelationEngine
     private static double KindWeight(string kind) => kind switch
     {
         "deploy" or "rollback" => 1.0,
-        "config-change" => 0.9,
+        "config-change" or "route" => 0.9,
         _ => 0.3
     };
 }

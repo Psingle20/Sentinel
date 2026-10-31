@@ -94,6 +94,14 @@ Two checks decide which of Stage 4's scenarios the pinned image can carry, kept 
 - EventBridge, for `AWS-S7`: a rule delivers a matching event to its SQS target, a changed pattern stops the delivery, and `DescribeRule` and `ListTargetsByRule` report the pattern and target, so route drift is emulator-modelled and readable as a change. `AWS-S7` can be admitted.
 - IAM, for `AWS-S4`: policies are stored and versioned, and an approved default version can be restored, but no policy is enforced, so a permission removed from a role changes nothing a workload does. A permission-drift failure could only be faked by the workload itself, so `AWS-S4` is not admitted on this image; it waits for an emulator that enforces IAM or for the real-cloud validation of Stage 5.
 
+`AWS-S7` was built on the EventBridge result. It also relies on these, each checked by the emulator tests of the reference system, Ingestion and Executor:
+
+- `PutEvents` accepts an event whether or not a rule matches it, and a rule delivers the whole event envelope to its SQS target, the order inside it as `detail`; the consumer unwraps it.
+- `ListRules` reports each rule's pattern as it was put, so Ingestion's route provider compares the patterns it sees between pulls; EventBridge keeps no history of a rule, so a rule's first sight is its baseline.
+- `PutRule` on an existing rule replaces its pattern and keeps its targets, so restoring the approved pattern is one idempotent call.
+
+`AWS-S12`, colliding resources in two accounts, passed gate check 7's account isolation, but Sentinel itself reads one account per Ingestion and routes every investigation and recovery query to one Ingestion, so it waits for Phase 10's multi-tenant operation rather than for the emulator.
+
 ### Known incompatibilities
 
 - An ECS task container outlives the emulator that started it; the environment must remove containers by label when it stops, and the conformance fixture does.

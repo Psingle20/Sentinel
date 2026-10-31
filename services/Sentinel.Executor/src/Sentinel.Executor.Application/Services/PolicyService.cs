@@ -75,6 +75,7 @@ public sealed class PolicyService(IPolicyStore policies, IControlStore controls,
         RollbackAction => "rollback",
         PauseBatchAction => "pause-batch",
         QuarantineMessageAction => "quarantine-message",
+        RestoreRouteAction => "restore-route",
         _ => action.GetType().Name
     };
 }

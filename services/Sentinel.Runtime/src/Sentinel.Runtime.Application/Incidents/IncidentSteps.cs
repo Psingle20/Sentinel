@@ -42,6 +42,16 @@ public sealed class IncidentSteps(
     private const int PoisonReceives = 3;
     private const int PoisonMessagesAtMost = 5;
 
+    // The reference environment routes its order events on the account's default bus.
+    private const string RouteBus = "default";
+
+    // A restored route recovers only once the signal that opened the incident is back below its onset: the service's own
+    // criteria, such as its queue's age, can look healthy while nothing reaches it at all.
+    private static IEnumerable<Sentinel.Contracts.Incidents.RecoveryCriterion> TriggerCleared(IncidentSnapshot incident, RuntimeOptions settings) =>
+        settings.DetectionRules()
+            .Where(rule => rule.ServiceId == incident.AffectedServiceId && rule.MetricName == incident.TriggerMetric)
+            .Select(rule => new Sentinel.Contracts.Incidents.RecoveryCriterion { ServiceId = rule.ServiceId, MetricName = rule.MetricName, Comparison = Sentinel.Contracts.Incidents.ThresholdComparison.LessThan, Threshold = rule.OnsetThreshold });
+
     /// <summary>An ID derived from the incident, its cycle and the step, so a retried step names the same investigation.</summary>
     public static InvestigationId StepInvestigationId(IncidentId incidentId, int cycle, string step)
     {
@@ -147,7 +157,8 @@ public sealed class IncidentSteps(
     /// <summary>
     /// Turns a diagnosis into a typed plan (Phase 06): a diagnosed deployment is rolled back one
     /// revision, a diagnosed saturation caused by a batch service pauses the batch, and a diagnosed
-    /// poison message on a queue consumer's queue is quarantined (Phase E01). Each plan
+    /// poison message on a queue consumer's queue is quarantined, and a diagnosed change to the event
+    /// route that feeds a consumer restores the route's approved pattern (Phase E01). Each plan
     /// states its preconditions, expected effect, blast radius and compensation, and carries
     /// Executor's plan-time policy evaluation. Any other diagnosis is escalated with its explanation.
     /// </summary>
@@ -193,6 +204,21 @@ public sealed class IncidentSteps(
                 ExpectedEffect = $"The messages of {queue} received at least {PoisonReceives} times leave the queue, and {incident.AffectedServiceId}'s recovery signals return.",
                 BlastRadius = [consumer],
                 Compensation = $"Release the quarantined messages back to {queue} once they can be processed."
+            },
+            { LeadingChange: { ChangeKind: "route" } route } when settings.RouteServices.TryGetValue(route.ServiceId.Value, out string? rule) => new RemediationPlan
+            {
+                PlanId = planId,
+                PlanVersion = 1,
+                PlanHash = string.Empty,
+                HypothesisId = incident.LeadingHypothesisId!.Value,
+                Actions = [new RestoreRouteAction { ActionId = actionId, TargetServiceId = route.ServiceId, Rule = rule, EventBus = RouteBus, Reason = $"Its route stopped delivering: {incident.LeadingStatement}" }],
+                ExpectedRecovery = [.. settings.RecoveryCriteriaFor(incident.AffectedServiceId), .. TriggerCleared(incident, settings)],
+                ObservationWindow = settings.ObservationWindow,
+                Risk = RiskLevel.Low,
+                Preconditions = [new PlanPrecondition(route.ServiceId, "route-state", "drifted")],
+                ExpectedEffect = $"Rule {rule} routes its approved pattern again, and what it delivers reaches {route.ServiceId} once more.",
+                BlastRadius = [route.ServiceId],
+                Compensation = "None automatic: drifting the route again would be a human decision."
             },
             { LeadingServiceId: { } culprit } when settings.BatchServices.Contains(culprit.Value) => new RemediationPlan
             {
@@ -248,6 +274,7 @@ public sealed class IncidentSteps(
                 RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",
                 PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch ({plan.ExpectedEffect})",
                 QuarantineMessageAction quarantine => $"quarantine the messages of {quarantine.TargetServiceId}'s {quarantine.Queue} queue received at least {quarantine.MinimumReceives} times",
+                RestoreRouteAction restore => $"restore the {restore.Rule} route's approved pattern for {restore.TargetServiceId}",
                 _ => plan.ExpectedEffect
             }
         }), cancellationToken)).Snapshot;

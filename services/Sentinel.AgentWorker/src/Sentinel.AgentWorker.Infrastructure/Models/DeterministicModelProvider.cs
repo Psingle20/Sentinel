@@ -184,6 +184,10 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
         // Calls retried this often a second are a storm, not an occasional slow attempt.
         private const double RetryRate = 1.0;
 
+        // Orders a second published and never processed: a route that stopped delivering them, not a passing lag.
+        private const double UndeliveredRate = 2.0;
+        private const double UndeliveredFloor = 0.5;
+
         // An excursion counts when it was under way at onset: from this long before it to half a minute after.
         private static readonly TimeSpan OngoingBefore = TimeSpan.FromMinutes(2);
         private static readonly TimeSpan OngoingAfter = TimeSpan.FromSeconds(30);
@@ -206,6 +210,7 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             LogSignatures(conversation, output, changes, onset);
             PoisonMessages(conversation, output, changes, onset);
             DuplicateDeliveries(conversation, output, changes, onset);
+            RouteDrift(conversation, output, changes, onset);
             SlowCalls(conversation, output, changes);
             Topology(conversation, output);
 
@@ -258,14 +263,16 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                 return;
             }
 
-            foreach (Change change in changes.Where(change => change.Kind is "deploy" or "rollback"))
+            foreach (Change change in changes.Where(change => change.Kind is "deploy" or "rollback" or "route"))
             {
-                string hypothesis = output.Hypothesis(
-                    change.Key,
-                    $"The {change.Service} {change.Version} deployment caused the symptoms.",
-                    [$"deploy {change.Service} {change.Version}", "regression in " + change.Service, $"{conversation.AffectedService} SLO burn"],
-                    change.Service,
-                    change.StartedId);
+                string hypothesis = change.Kind == "route"
+                    ? RouteHypothesis(output, change, conversation.AffectedService)
+                    : output.Hypothesis(
+                        change.Key,
+                        $"The {change.Service} {change.Version} deployment caused the symptoms.",
+                        [$"deploy {change.Service} {change.Version}", "regression in " + change.Service, $"{conversation.AffectedService} SLO burn"],
+                        change.Service,
+                        change.StartedId);
                 double strength = change.ServingFrom is { } serving && serving <= onset
                     ? 0.3 + 0.4 * Math.Exp(-(onset - serving) / ProximityScale)
                     : 0.2;
@@ -664,6 +671,82 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                 }
             }
         }
+
+        /// <summary>
+        /// R12 (Phase E01, Stage 4): orders published but never processed while the consumer's queue stays empty were lost
+        /// on the way to it. A change to the route that feeds the consumer, made just before they stopped arriving, explains
+        /// it; a change to the consumer itself cannot, because it would have left them waiting in the queue.
+        /// </summary>
+        private static void RouteDrift(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
+        {
+            foreach (Series undelivered in SeriesOf(conversation, "orders_undelivered_rate"))
+            {
+                if (Ongoing(undelivered, onset, UndeliveredFloor) is not { } samples || samples.MaxBy(sample => sample.Value) is not { Value: >= UndeliveredRate } peak)
+                {
+                    continue;
+                }
+
+                string service = undelivered.Service;
+                Sample first = samples.First(sample => sample.Value > UndeliveredFloor);
+                Change? route = changes.LastOrDefault(change => change.Service == service && change.Kind == "route" && change.ServingFrom is { } serving && serving <= first.At + TimeSpan.FromSeconds(10));
+                if (route is null)
+                {
+                    output.Unknown($"{service}'s orders went undelivered from {first.At:O}, and no change to the route that feeds it explains it.");
+                    continue;
+                }
+
+                string hypothesis = RouteHypothesis(output, route, conversation.AffectedService);
+                output.Evidence(
+                    hypothesis,
+                    $"{service}'s orders were published but not processed from {first.At:O}, up to {peak.Value:G3} a second by {peak.At:O}, after its route changed at {route.ServingFrom:O}.",
+                    "supports",
+                    0.8,
+                    [first.Id, peak.Id, route.StartedId],
+                    route.ServingFrom!.Value,
+                    peak.At,
+                    "call_orders_undelivered_rate",
+                    $"orders-undelivered:{service}");
+
+                if (SeriesOf(conversation, "queue_depth").FirstOrDefault(series => series.Service == service) is not { Samples.Count: > 0 } depth
+                    || depth.Samples.Where(sample => sample.At >= first.At).ToArray() is not { Length: > 0 } after
+                    || after.Max(sample => sample.Value) >= 1)
+                {
+                    continue;
+                }
+
+                output.Evidence(
+                    hypothesis,
+                    $"{service}'s queue held no message while its orders went undelivered: they never reached the queue.",
+                    "supports",
+                    0.6,
+                    [after[0].Id, after[^1].Id],
+                    after[0].At,
+                    after[^1].At,
+                    "call_queue_depth",
+                    $"queue-empty:{service}");
+                foreach (Change change in changes.Where(change => change.Service == service && change.Kind is "deploy" or "rollback"))
+                {
+                    string deployment = output.Hypothesis(change.Key, $"The {change.Service} {change.Version} deployment caused the symptoms.", [$"deploy {change.Service} {change.Version}", $"regression in {change.Service}", "symptoms"], change.Service, change.StartedId);
+                    output.Evidence(
+                        deployment,
+                        $"{service}'s queue stayed empty while its orders went undelivered, so they never reached it; the {change.Version} deployment could only have left them waiting there.",
+                        "contradicts",
+                        0.8,
+                        [after[0].Id, change.StartedId],
+                        after[0].At,
+                        after[^1].At,
+                        "call_queue_depth",
+                        $"queue-empty-not-consumer:{change.Service}");
+                }
+            }
+        }
+
+        private static string RouteHypothesis(Findings output, Change route, string affected) => output.Hypothesis(
+            route.Key,
+            $"The {route.Version} change to {route.Service}'s event route stopped delivering its orders.",
+            [$"route change to {route.Version}", "order events no longer match the route", "orders never reach the queue", $"{affected} has nothing to process"],
+            route.Service,
+            route.StartedId);
 
         private static string DuplicateHypothesis(Findings output, string service, string affected) => output.Hypothesis(
             $"duplicate-delivery:{service}",

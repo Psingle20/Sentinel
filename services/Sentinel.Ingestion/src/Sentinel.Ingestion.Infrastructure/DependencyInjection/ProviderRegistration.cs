@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,9 +46,9 @@ internal static class ProviderRegistration
             services.AddTransient<ITopologyProvider>(provider => provider.GetRequiredService<JaegerProvider>());
         }
 
-        // The AWS-emulated environment is optional (Phase E01, Stage 2): its ECS deployments, the topology its ECS services
-        // declare and its queues' attributes are read only where it is configured. The deployment provider remembers what
-        // each service served, so it lives as long as the process, and the clients are shared.
+        // The AWS-emulated environment is optional (Phase E01, Stages 2 and 4): its ECS deployments, its event routes, the
+        // topology its ECS services declare and its queues' attributes are read only where it is configured. The change
+        // providers remember what they saw, so they live as long as the process, and the clients are shared.
         if (AwsProviderOptions.Configured(configuration))
         {
             var aws = AwsProviderOptions.From(configuration);
@@ -58,8 +59,13 @@ internal static class ProviderRegistration
             services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(
                 aws.Credentials(),
                 new AmazonSQSConfig { ServiceURL = aws.ServiceUrl.ToString(), AuthenticationRegion = aws.Region, MaxErrorRetry = 1, Timeout = TimeSpan.FromSeconds(30) }));
+            services.AddSingleton<IAmazonEventBridge>(_ => new AmazonEventBridgeClient(
+                aws.Credentials(),
+                new AmazonEventBridgeConfig { ServiceURL = aws.ServiceUrl.ToString(), AuthenticationRegion = aws.Region, MaxErrorRetry = 1, Timeout = TimeSpan.FromSeconds(30) }));
             services.AddSingleton<EcsDeploymentProvider>();
             services.AddSingleton<IDeploymentProvider>(provider => provider.GetRequiredService<EcsDeploymentProvider>());
+            services.AddSingleton<EventBridgeRouteProvider>();
+            services.AddSingleton<IDeploymentProvider>(provider => provider.GetRequiredService<EventBridgeRouteProvider>());
             services.AddSingleton<ITopologyProvider, AwsTopologyProvider>();
             services.AddSingleton<IMetricsProvider, SqsQueueMetricsProvider>();
         }

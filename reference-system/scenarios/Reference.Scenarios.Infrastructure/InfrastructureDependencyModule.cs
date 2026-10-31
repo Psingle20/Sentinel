@@ -1,4 +1,5 @@
 using Amazon.ECS;
+using Amazon.EventBridge;
 using Amazon.SQS;
 using CleanArchitecture.BuildingBlocks;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +34,7 @@ public sealed class InfrastructureDependencyModule : IDependencyModule
                 services.AddSingleton<AwsProvisioning>();
                 services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(options.Credentials(), new AmazonSQSConfig { ServiceURL = options.ServiceUrl.ToString(), AuthenticationRegion = options.Region }));
                 services.AddSingleton<IAmazonECS>(_ => new AmazonECSClient(options.Credentials(), new AmazonECSConfig { ServiceURL = options.ServiceUrl.ToString(), AuthenticationRegion = options.Region }));
+                services.AddSingleton<IAmazonEventBridge>(_ => new AmazonEventBridgeClient(options.Credentials(), new AmazonEventBridgeConfig { ServiceURL = options.ServiceUrl.ToString(), AuthenticationRegion = options.Region }));
                 services.AddTransient<IReferenceEnvironment, AwsReferenceEnvironment>();
                 break;
             default:

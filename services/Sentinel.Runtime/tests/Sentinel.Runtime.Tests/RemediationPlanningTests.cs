@@ -68,6 +68,30 @@ public sealed class RemediationPlanningTests : IDisposable
     }
 
     [Fact]
+    public async Task A_drifted_route_gets_its_approved_pattern_restored_which_recovers_only_once_its_signal_clears()
+    {
+        LinkedChange route = Deployment("queue-consumer", "pattern 1a2b3c4d", "pattern 5e6f7a8b", -20, -20, "default/orders-route/1") with
+        {
+            ChangeKind = "route",
+            ObservationIds = [ObservationId.From("eventbridge:deployment:default/orders-route/1:started"), ObservationId.From("eventbridge:deployment:default/orders-route/1:completed")]
+        };
+        IncidentId incidentId = await DiagnoseAsync(new HypothesisSpec("change:eventbridge:deployment:default/orders-route/1:started", route.ObservationIds[0], Consumer), Consumer, "orders_undelivered_rate", route);
+
+        IncidentSnapshot planned = await _runtime.InScopeAsync(provider => Steps(provider).PlanAsync(incidentId, CancellationToken.None));
+
+        planned.State.ShouldBe(IncidentState.AwaitingApproval);
+        RemediationPlan plan = _runtime.Outbox.Of<Sentinel.Contracts.Remediation.RemediationPlanProposed>().Single().Plan;
+        RestoreRouteAction restore = plan.Actions.Single().ShouldBeOfType<RestoreRouteAction>("a route change is restored, never rolled back");
+        restore.TargetServiceId.ShouldBe(Consumer);
+        restore.Rule.ShouldBe("orders-route");
+        restore.EventBus.ShouldBe("default");
+        plan.Preconditions.ShouldNotBeNull().ShouldHaveSingleItem().ShouldBe(new PlanPrecondition(Consumer, "route-state", "drifted"));
+        plan.ExpectedRecovery.Select(criterion => (criterion.MetricName, criterion.Threshold)).ShouldBe(
+            [("queue_oldest_message_age", 20.0), ("orders_undelivered_rate", 0.5)],
+            "the consumer's own criteria hold while nothing reaches it, so the signal that opened the incident must clear too");
+    }
+
+    [Fact]
     public async Task Signals_worse_after_the_action_than_before_it_require_compensation()
     {
         IncidentId incidentId = await DiagnoseAsync(new HypothesisSpec("change:deploy-controller:deployment:d1:started", ObservationId.From("deploy-controller:deployment:d1:started"), null));
@@ -107,11 +131,13 @@ public sealed class RemediationPlanningTests : IDisposable
 
     private sealed record HypothesisSpec(string Key, ObservationId? Change, ServiceId? Service);
 
-    private async Task<IncidentId> DiagnoseAsync(HypothesisSpec spec)
+    private Task<IncidentId> DiagnoseAsync(HypothesisSpec spec) =>
+        DiagnoseAsync(spec, Checkout, "slo_burn_rate", Deployment("checkout-service", "v2.4.1", "v2.4.0", -60, -40, "d1"));
+
+    private async Task<IncidentId> DiagnoseAsync(HypothesisSpec spec, ServiceId affected, string trigger, LinkedChange change)
     {
         var incidentId = IncidentId.New();
-        LinkedChange change = Deployment("checkout-service", "v2.4.1", "v2.4.0", -60, -40, "d1");
-        await _runtime.Owner.SendAsync(incidentId, new OpenIncidentCommand(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, Checkout, "checkout-service slo_burn_rate at 9.0", IncidentSeverity.High, Start, [ObservationId.From("prometheus:slo_burn_rate:checkout-service:x")], [change]), CancellationToken.None);
+        await _runtime.Owner.SendAsync(incidentId, new OpenIncidentCommand(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, affected, $"{affected} {trigger} at 9.0", IncidentSeverity.High, Start, [ObservationId.From($"prometheus:{trigger}:{affected}:x")], [change], trigger), CancellationToken.None);
         var investigation = InvestigationId.New();
         await _runtime.Owner.SendAsync(incidentId, new RequestInvestigationsCommand([new InvestigationSpec(investigation, null, "Find it.", Start.AddMinutes(-15), Start.AddMinutes(1))]), CancellationToken.None);
         var cause = HypothesisId.New();

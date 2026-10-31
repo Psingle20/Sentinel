@@ -67,7 +67,8 @@ def classify_observation(observation_id: str, deployments: dict[str, str]) -> tu
     """(kind, service, metric) from Ingestion's deterministic observation identity."""
     parts = observation_id.split(":")
     provider = parts[0]
-    if provider == "prometheus" and len(parts) >= 4:
+    # Metric samples share one identity whatever their provider: Prometheus, or SQS queue attributes (Phase E01).
+    if provider in ("prometheus", "sqs") and len(parts) >= 4:
         return "metric", parts[2], parts[1]
     if len(parts) >= 3 and parts[1] == "deployment":
         return "deployment", deployments.get(parts[2]), None

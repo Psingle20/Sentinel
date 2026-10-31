@@ -37,7 +37,7 @@ public sealed class SqsOrderQueue(IAmazonSQS sqs, SqsQueueOptions options, TimeP
             return null;
         }
 
-        OrderMessage order = JsonSerializer.Deserialize<OrderMessage>(message.Body, Json)!;
+        OrderMessage order = OrderOf(message.Body);
         int receive = ReceivesOf(message);
         _inFlight[message.ReceiptHandle] = new InFlightOrder(order.Id, SentAt(message) ?? order.EnqueuedAt, receive);
         return new ReceivedOrder(order, message.ReceiptHandle, receive);
@@ -183,6 +183,15 @@ public sealed class SqsOrderQueue(IAmazonSQS sqs, SqsQueueOptions options, TimeP
 
     private static int Count(Dictionary<string, string> attributes, string name) =>
         attributes.TryGetValue(name, out string? value) && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) ? count : 0;
+
+    // An order routed through EventBridge arrives inside the event's envelope, as its detail; one sent to the queue directly
+    // is the order itself.
+    private static OrderMessage OrderOf(string body)
+    {
+        using var document = JsonDocument.Parse(body);
+        JsonElement order = document.RootElement.TryGetProperty("detail", out JsonElement detail) && detail.ValueKind == JsonValueKind.Object ? detail : document.RootElement;
+        return order.Deserialize<OrderMessage>(Json)!;
+    }
 
     private static int ReceivesOf(Message message) =>
         message.Attributes is { } attributes && attributes.TryGetValue(ReceiveCount, out string? value) && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) ? count : 1;

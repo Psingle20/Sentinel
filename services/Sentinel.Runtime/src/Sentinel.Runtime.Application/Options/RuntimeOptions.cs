@@ -25,6 +25,9 @@ public sealed class RuntimeOptions
     /// <summary>Services that consume a queue, and the queue: a poison message they cannot process is remediated by quarantining it (Phase E01).</summary>
     public IDictionary<string, string> QueueServices { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
+    /// <summary>Services fed by an event route, and the route's rule: a change that stops the route is remediated by restoring its approved pattern (Phase E01).</summary>
+    public IDictionary<string, string> RouteServices { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     /// <summary>The service catalog's owning team per service.</summary>
     public IDictionary<string, string> Owners { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 

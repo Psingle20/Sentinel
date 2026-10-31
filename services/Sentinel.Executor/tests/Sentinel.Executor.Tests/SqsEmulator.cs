@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Amazon.EventBridge;
 using Amazon.Runtime;
 using Amazon.SQS;
 using DotNet.Testcontainers.Builders;
@@ -39,4 +40,6 @@ public sealed class SqsEmulator : IAsyncLifetime
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
     public AmazonSQSClient Sqs() => new(new BasicAWSCredentials(Account, Secret), new AmazonSQSConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
+
+    public AmazonEventBridgeClient Events() => new(new BasicAWSCredentials(Account, Secret), new AmazonEventBridgeConfig { ServiceURL = Endpoint.ToString(), AuthenticationRegion = Region });
 }

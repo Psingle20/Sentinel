@@ -71,6 +71,8 @@ export function describeAction(action: RemediationAction): string {
       return `Pause the ${action.targetServiceId} batch`;
     case "quarantine-message":
       return `Quarantine the messages of ${action.targetServiceId}'s ${action.queue} queue received at least ${action.minimumReceives} times`;
+    case "restore-route":
+      return `Restore the approved pattern of the ${action.rule} route to ${action.targetServiceId}`;
     default:
       return `Roll back ${action.targetServiceId} from ${action.fromRevision} to ${action.toRevision}`;
   }

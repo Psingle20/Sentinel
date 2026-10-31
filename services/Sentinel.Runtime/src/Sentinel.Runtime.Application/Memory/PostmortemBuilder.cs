@@ -195,6 +195,7 @@ public static class PostmortemBuilder
         Sentinel.Contracts.Remediation.RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",
         Sentinel.Contracts.Remediation.PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch",
         Sentinel.Contracts.Remediation.QuarantineMessageAction quarantine => $"quarantine the messages of {quarantine.TargetServiceId}'s {quarantine.Queue} queue received at least {quarantine.MinimumReceives} times",
+        Sentinel.Contracts.Remediation.RestoreRouteAction restore => $"restore the {restore.Rule} route's approved pattern for {restore.TargetServiceId}",
         _ => action.GetType().Name
     };
 

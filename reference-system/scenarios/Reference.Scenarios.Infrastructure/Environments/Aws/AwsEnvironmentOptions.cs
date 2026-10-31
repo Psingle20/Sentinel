@@ -5,8 +5,8 @@ namespace Reference.Scenarios.Infrastructure.Environments.Aws;
 
 /// <summary>
 /// The AWS-emulated environment as the AppHost describes it under <c>Reference:Aws</c>: the emulator's endpoint as the
-/// runner reaches it, the account and region the scenarios run in, the consumer's ECS service and image, and the emulator
-/// and digest a run record names. Containers the emulator starts reach the host's endpoints through
+/// runner reaches it, the account and region the scenarios run in, the consumer's ECS service and image, the EventBridge
+/// rule that routes the producer's orders to its queue, and the emulator and digest a run record names. Containers the emulator starts reach the host's endpoints through
 /// <see cref="ContainerHost"/>, so every address handed to a task is rewritten from localhost to it. The secret is
 /// synthetic: the emulator does not check signatures, and the access key only selects the account.
 /// </summary>
@@ -30,6 +30,17 @@ public sealed class AwsEnvironmentOptions
 
     public string DeadLetterQueue { get; init; } = "orders-dlq";
 
+    /// <summary>The rule on <see cref="EventBus"/> that routes the producer's order events to <see cref="Queue"/>.</summary>
+    public string Rule { get; init; } = "orders-route";
+
+    public string EventBus { get; init; } = "default";
+
+    /// <summary>The source the producer's order events carry, which the rule's approved pattern matches.</summary>
+    public string OrderSource { get; init; } = "reference.checkout";
+
+    /// <summary>The source a drifted rule expects instead, as if the producer had been renamed in the rule alone.</summary>
+    public string DriftedOrderSource { get; init; } = "reference.storefront";
+
     /// <summary>The consumer's image; <c>{revision}</c> becomes the task definition's revision, so a version is an image tag.</summary>
     public string Image { get; init; } = "reference-queue-consumer:{revision}";
 
@@ -48,6 +59,10 @@ public sealed class AwsEnvironmentOptions
 
     public AWSCredentials Credentials() => new BasicAWSCredentials(Account, Secret);
 
+    /// <summary>The rule's event pattern for order events from <paramref name="source"/>.</summary>
+    public static string RoutePattern(string source) =>
+        System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string[]> { ["source"] = [source], ["detail-type"] = ["OrderPlaced"] });
+
     /// <summary>The options from configuration, with the task environment built from the runner's own telemetry and order-service addresses.</summary>
     public static AwsEnvironmentOptions From(IConfiguration configuration)
     {
@@ -64,7 +79,11 @@ public sealed class AwsEnvironmentOptions
             ["Reference__Queue__Provider"] = "sqs",
             ["Reference__Queue__Sqs__ServiceUrl"] = ForContainers(endpoint.ToString(), host),
             ["Reference__Queue__Sqs__Region"] = region,
-            ["Reference__Queue__Sqs__AccessKey"] = account
+            ["Reference__Queue__Sqs__AccessKey"] = account,
+            ["Reference__Queue__Publish"] = "eventbridge",
+            ["Reference__Queue__EventBridge__ServiceUrl"] = ForContainers(endpoint.ToString(), host),
+            ["Reference__Queue__EventBridge__Region"] = region,
+            ["Reference__Queue__EventBridge__AccessKey"] = account
         };
         Add("Reference__Telemetry__MetricsEndpoint", configuration["Reference:Telemetry:MetricsEndpoint"]);
         Add("Reference__Telemetry__LogsEndpoint", configuration["Reference:Telemetry:LogsEndpoint"]);

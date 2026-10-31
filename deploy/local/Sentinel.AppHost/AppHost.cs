@@ -114,7 +114,7 @@ void AddSentinel()
 
     if (reference.AwsEmulator is { } emulator)
     {
-        AwsReferenceEnvironmentExtensions.WireSentinel(emulator, ingestion, executor);
+        AwsReferenceEnvironmentExtensions.WireSentinel(emulator, ingestion, agentworker, executor);
     }
 
     // The web app talks only to Sentinel.Gateway. Run `npm ci` in apps/Sentinel.Web once; the AppHost does not install packages.

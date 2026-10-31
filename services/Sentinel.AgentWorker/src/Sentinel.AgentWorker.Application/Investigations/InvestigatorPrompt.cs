@@ -43,9 +43,16 @@ public static class InvestigatorPrompt
     /// </summary>
     public const string V7 = "investigator-v7";
 
-    public const string Version = V7;
+    /// <summary>
+    /// Phase E01, Stage 4: v7 with the rule that orders published but never processed while the consumer's queue stays
+    /// empty were lost on the way to it, which a change to the route that feeds the queue explains and a change to the
+    /// consumer cannot.
+    /// </summary>
+    public const string V8 = "investigator-v8";
 
-    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4, V5, V6, V7];
+    public const string Version = V8;
+
+    public static readonly IReadOnlyList<string> Versions = [V2, V3, V4, V5, V6, V7, V8];
 
     public static bool IsKnown(string version) => Versions.Contains(version);
 
@@ -87,7 +94,7 @@ public static class InvestigatorPrompt
             - Give every hypothesis a key from this vocabulary so investigators' explanations merge:
               change:<deployment observation ID> for a change; redis-saturation[:<culprit service>];
               dependency-regression[:<dependency service>]; load-change:<service>; external-dependency{(KnowsMessages(version) ? "; poison-message:<consumer service> for a message its consumer cannot process" : string.Empty)}{(KnowsDuplicates(version) ? "; duplicate-delivery:<consumer service> for messages delivered twice and processed twice" : string.Empty)}.
-            - A deployment can cause a symptom only after its new version starts serving.{(KnowsMessages(version) ? MessageRule : string.Empty)}{(KnowsDuplicates(version) ? DuplicateRule : string.Empty)}{(KnowsRetries(version) ? RetryRule : string.Empty)}
+            - A deployment can cause a symptom only after its new version starts serving.{(KnowsMessages(version) ? MessageRule : string.Empty)}{(KnowsDuplicates(version) ? DuplicateRule : string.Empty)}{(KnowsRetries(version) ? RetryRule : string.Empty)}{(KnowsRoutes(version) ? RouteRule : string.Empty)}
             - List what you could not determine under "unknowns".
             - If the data cannot support a conclusion, abstain and say what is missing.{(version == V2 ? string.Empty : MemoryRule)}
 
@@ -114,6 +121,10 @@ public static class InvestigatorPrompt
     private static readonly string RetryRule = Environment.NewLine
         + "- A consumer that retries at once while a dependency is already slowing amplifies the dependency's slowdown; the" + Environment.NewLine
         + "  dependency is the cause. Name it with dependency-regression:<dependency>, not a cause in the consumer.";
+
+    private static readonly string RouteRule = Environment.NewLine
+        + "- Orders published but never processed while the consumer's queue stays empty never reached the queue: a change of" + Environment.NewLine
+        + "  kind route that stopped delivering them is the cause. A deployment of the consumer would leave them waiting in its queue.";
 
     /// <summary>The task, given as data: the model cannot mistake incident fields for instructions.</summary>
     public static string Task(InvestigateIncident command) => Task(command, Version);
@@ -181,6 +192,9 @@ public static class InvestigatorPrompt
 
     /// <summary>Whether the version names retry amplification, from v7.</summary>
     public static bool KnowsRetries(string version) => version is not (V2 or V3 or V4 or V5 or V6);
+
+    /// <summary>Whether the version names route drift, from v8.</summary>
+    public static bool KnowsRoutes(string version) => version is not (V2 or V3 or V4 or V5 or V6 or V7);
 
     /// <summary>
     /// A tool result as the model reads it. From v4 it opens with the call's ID, so evidence can cite the call; earlier

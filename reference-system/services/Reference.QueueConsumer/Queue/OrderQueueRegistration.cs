@@ -1,3 +1,4 @@
+using Amazon.EventBridge;
 using Amazon.Runtime;
 using Amazon.SQS;
 
@@ -32,6 +33,34 @@ public static class OrderQueueRegistration
                 break;
             default:
                 throw new InvalidOperationException($"Reference:Queue:Provider is '{provider}'; it must be 'redis' or 'sqs'.");
+        }
+
+        return services.AddOrderPublisher(configuration);
+    }
+
+    /// <summary>
+    /// How the producer publishes, from <c>Reference:Queue:Publish</c>: <c>queue</c>, the default, straight onto the
+    /// queue, or <c>eventbridge</c> in the AWS reference environment, through an EventBridge rule that routes orders to it.
+    /// </summary>
+    private static IServiceCollection AddOrderPublisher(this IServiceCollection services, IConfiguration configuration)
+    {
+        string publish = configuration["Reference:Queue:Publish"] ?? "queue";
+        switch (publish)
+        {
+            case "queue":
+                services.AddSingleton<IOrderPublisher, QueueOrderPublisher>();
+                break;
+            case "eventbridge":
+                EventBridgeOptions options = configuration.GetSection(EventBridgeOptions.Section).Get<EventBridgeOptions>() ?? new EventBridgeOptions();
+                Uri endpoint = options.ServiceUrl ?? throw new InvalidOperationException($"{EventBridgeOptions.Section}:ServiceUrl must name the emulator's endpoint.");
+                services.AddSingleton(options);
+                services.AddSingleton<IAmazonEventBridge>(_ => new AmazonEventBridgeClient(
+                    new BasicAWSCredentials(options.AccessKey, options.SecretKey),
+                    new AmazonEventBridgeConfig { ServiceURL = endpoint.ToString(), AuthenticationRegion = options.Region }));
+                services.AddSingleton<IOrderPublisher, EventBridgeOrderPublisher>();
+                break;
+            default:
+                throw new InvalidOperationException($"Reference:Queue:Publish is '{publish}'; it must be 'queue' or 'eventbridge'.");
         }
 
         return services;
