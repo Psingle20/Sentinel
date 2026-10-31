@@ -1,6 +1,6 @@
 import { ApiUnavailableError, openEventStream } from "@/lib/api/server";
 
-// Live updates for the browser (Phase 08): Sentinel.Api's server-sent event stream, proxied with
+// Live updates for the browser (Phase 08): Sentinel.Gateway's server-sent event stream, proxied with
 // the server-side identity so the browser never talks to Api directly. Reading the request makes
 // this handler run per request; the browser's EventSource sends Last-Event-ID when it reconnects,
 // and Api resumes after it.
@@ -11,12 +11,12 @@ export async function GET(request: Request): Promise<Response> {
   try {
     upstream = await openEventStream(resume && /^\d+$/.test(resume) ? resume : null, request.signal);
   } catch (error) {
-    const reason = error instanceof ApiUnavailableError || error instanceof Error ? error.message : "Sentinel.Api is unreachable.";
+    const reason = error instanceof ApiUnavailableError || error instanceof Error ? error.message : "Sentinel.Gateway is unreachable.";
     return new Response(reason, { status: 503, headers: { "Retry-After": "5" } });
   }
 
   if (!upstream.ok || !upstream.body) {
-    return new Response(`Sentinel.Api returned ${upstream.status}.`, { status: upstream.status === 200 ? 502 : upstream.status });
+    return new Response(`Sentinel.Gateway returned ${upstream.status}.`, { status: upstream.status === 200 ? 502 : upstream.status });
   }
 
   return new Response(upstream.body, {

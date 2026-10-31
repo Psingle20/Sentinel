@@ -32,7 +32,7 @@ async function Incident({ params }: { params: Promise<{ incidentId: string }> })
   try {
     incident = await getIncident(incidentId);
   } catch {
-    return <DataState kind="error" title="This incident is unavailable" description="Sentinel.Api cannot be reached. The page updates once it is back." />;
+    return <DataState kind="error" title="This incident is unavailable" description="Sentinel.Gateway cannot be reached. The page updates once it is back." />;
   }
 
   if (!incident) {

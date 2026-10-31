@@ -29,7 +29,7 @@ export const Error: Story = {
   args: {
     kind: "error",
     title: "Incidents could not be loaded",
-    description: "Sentinel.Api did not respond. Retry, or check the service health dashboard.",
+    description: "Sentinel.Gateway did not respond. Retry, or check the service health dashboard.",
     action: <Button variant="outline">Retry</Button>,
   },
 };

@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const appUrl = "http://127.0.0.1:3100";
 const storybookUrl = "http://127.0.0.1:6106";
-// The web app's own tests run against a fixture-backed stand-in for Sentinel.Api.
+// The web app's own tests run against a fixture-backed stand-in for Sentinel.Gateway.
 const mockApiUrl = "http://127.0.0.1:3199";
 const isCi = Boolean(process.env.CI);
 

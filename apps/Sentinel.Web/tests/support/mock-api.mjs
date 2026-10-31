@@ -1,13 +1,13 @@
-// A stand-in for Sentinel.Api, used only by the web app's own Playwright tests. Next.js calls Api
+// A stand-in for Sentinel.Gateway, used only by the web app's own Playwright tests. Next.js calls the Gateway
 // from the server, so browser-level request interception cannot reach those calls; this server
 // answers them from fixtures instead. It is stateful: approving the plan moves it to approved,
 // saving a narrative bumps its version, and every incident change is published on the live stream.
 //
-// Test-only controls, never part of Api's contract:
+// Test-only controls, never part of the Gateway's contract:
 //   POST /__reset                     restore the fixtures
 //   POST /__fail { route, status }    answer a route group with an error ("agent-executions", "similar", "admin")
 //   POST /__advance { summary }       append a timeline entry, as Runtime would, and publish it live
-//   GET  /__analytics                 the analytics events Api accepted, oldest first
+//   GET  /__analytics                 the analytics events the Gateway accepted, oldest first
 //   POST /__large { timeline, evidence } make the incident that large, for the performance tests
 //   POST /__quarantine                plan a poison message's quarantine instead of the rollback, as in S6 and AWS-S1
 //   POST /__inject                    record an instruction to AI agents found in order-service's logs, as in S9
@@ -26,7 +26,7 @@ const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, 
 const incidentFixture = fixture("incident-awaiting-approval.json");
 const historyFixture = fixture("incident-history.json");
 const controlPlaneFixture = fixture("control-plane.json");
-// Api's catalog of approved analytics events and the values each property may take.
+// The Gateway's catalog of approved analytics events and the values each property may take.
 const analyticsCatalog = {
   "incident.viewed": { status: incidentStatuses(), severity: ["critical", "high", "medium", "low"] },
   "approval.dialog-opened": { action: ["approve", "reject", "revoke"] },
@@ -70,7 +70,7 @@ function initialState() {
 
 let state = initialState();
 
-// Live events outlive a reset, as Api's sequence does: a reconnecting browser resumes after its last ID.
+// Live events outlive a reset, as the Gateway's sequence does: a reconnecting browser resumes after its last ID.
 const liveEvents = [];
 const liveClients = new Set();
 
@@ -335,7 +335,7 @@ async function handleIncident(request, response, url) {
     return send(response, 200, incident);
   }
 
-  // One page of the timeline, newest first, as Api pages it: before is the stream version to page back from.
+  // One page of the timeline, newest first, as the Gateway pages it: before is the stream version to page back from.
   if (request.method === "GET" && rest === "/timeline") {
     const before = url.searchParams.get("before");
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50), 1), 200);
@@ -568,7 +568,7 @@ async function handleConfiguration(request, response, area, history) {
   return send(response, 200, published);
 }
 
-// Today's counts per event and values, the way Api stores them: properties in name order, joined.
+// Today's counts per event and values, the way the Gateway stores them: properties in name order, joined.
 function dailyCounts() {
   const day = new Date().toISOString().slice(0, 10);
   const counts = new Map();
@@ -583,7 +583,7 @@ function dailyCounts() {
   return [...counts.values()];
 }
 
-// Api keeps only daily counts of approved events; anything outside the catalog is refused.
+// The Gateway keeps only daily counts of approved events; anything outside the catalog is refused.
 async function handleAnalytics(request, response) {
   const body = await readBody(request);
   const allowed = analyticsCatalog[body.name];
@@ -691,4 +691,4 @@ const server = createServer(async (request, response) => {
   return problem(response, 404, "Not found", undefined);
 });
 
-server.listen(port, "127.0.0.1", () => console.log(`Mock Sentinel.Api on http://127.0.0.1:${port}`));
+server.listen(port, "127.0.0.1", () => console.log(`Mock Sentinel.Gateway on http://127.0.0.1:${port}`));

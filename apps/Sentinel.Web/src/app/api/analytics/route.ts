@@ -2,7 +2,7 @@ import { recordAnalytics } from "@/lib/api/server";
 
 const maxBody = 2_048;
 
-// Product analytics, forwarded to Sentinel.Api with the server-side identity so the browser never
+// Product analytics, forwarded to Sentinel.Gateway with the server-side identity so the browser never
 // talks to Api directly. A browser that asks not to be tracked (Global Privacy Control or Do Not
 // Track) is honoured here: its events are dropped before they leave the web app.
 export async function POST(request: Request): Promise<Response> {

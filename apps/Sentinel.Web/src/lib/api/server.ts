@@ -22,7 +22,7 @@ import type {
   SourceState,
 } from "./contracts";
 
-// Server-side access to Sentinel.Api: the only backend the web app talks to (ADR-001). The
+// Server-side access to Sentinel.Gateway: the only backend the web app talks to (ADR-001). The
 // orchestrator provides Api's address; locally, requests carry a development identity, which
 // Api accepts only in its Development environment (Phase 01A).
 
@@ -31,7 +31,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly problem: ProblemDetails | undefined,
   ) {
-    super(problem?.detail ?? problem?.title ?? `Sentinel.Api returned ${status}.`);
+    super(problem?.detail ?? problem?.title ?? `Sentinel.Gateway returned ${status}.`);
   }
 }
 
@@ -70,7 +70,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
       });
     } catch (error) {
       if (!mutation || attempt >= 2) {
-        throw new ApiUnavailableError(error instanceof Error ? error.message : "Sentinel.Api is unreachable.");
+        throw new ApiUnavailableError(error instanceof Error ? error.message : "Sentinel.Gateway is unreachable.");
       }
     }
   }

@@ -45,7 +45,7 @@ async function Postmortem({ params }: { params: Promise<{ incidentId: string }> 
   try {
     postmortem = await getPostmortem(incidentId);
   } catch {
-    return <DataState kind="error" title="The postmortem is unavailable" description="Sentinel.Api cannot be reached." />;
+    return <DataState kind="error" title="The postmortem is unavailable" description="Sentinel.Gateway cannot be reached." />;
   }
 
   if (!postmortem) {

@@ -40,7 +40,7 @@ async function Incidents() {
       <DataState
         kind="error"
         title="Incidents are unavailable"
-        description={unreachable ? "Sentinel.Api cannot be reached. The list updates once it is back." : "Sentinel.Api returned an error."}
+        description={unreachable ? "Sentinel.Gateway cannot be reached. The list updates once it is back." : "Sentinel.Gateway returned an error."}
       />
     );
   }

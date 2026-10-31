@@ -1,4 +1,4 @@
-// Sentinel.Api's HTTP contract as the web app reads it. It mirrors the views in
+// Sentinel.Gateway's HTTP contract as the web app reads it. It mirrors the views in
 // packages/Sentinel.Contracts (camelCase JSON, enums as camelCase strings, nulls omitted) and is
 // maintained by hand beside docs/business-contracts/synchronous-contracts.md; Api's OpenAPI
 // document at /openapi/v1.json is the reference when they disagree.
