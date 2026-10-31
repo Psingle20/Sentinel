@@ -20,7 +20,7 @@ $requiredFiles = @(
     '.agents\validate-commit-message.ps1',
     '.codex\config.toml', '.claude\CLAUDE.md', '.claude\settings.json', '.claude\hooks\stop-validation.ps1'
 )
-$requiredDirectories = @('docs', 'docs\business-contracts', 'artifacts', 'apps', 'services', 'packages', 'deploy', 'scripts')
+$requiredDirectories = @('docs', 'docs\business-contracts', 'artifacts', 'apps', 'services', 'packages', 'deploy', 'scripts', 'personal-docs')
 $errors = [System.Collections.Generic.List[string]]::new()
 
 foreach ($relative in $requiredFiles) {
@@ -37,6 +37,11 @@ foreach ($obsoleteMirror in @('.agents\skills', '.claude\skills')) {
     if (Test-Path -LiteralPath (Join-Path $projectRoot $obsoleteMirror)) {
         $errors.Add("Remove obsolete local skill mirror '$obsoleteMirror'; shared skills are installed globally.")
     }
+}
+
+$gitignorePath = Join-Path $projectRoot '.gitignore'
+if (-not (Test-Path -LiteralPath $gitignorePath -PathType Leaf) -or ((Get-Content -Raw -LiteralPath $gitignorePath) -notmatch '(?m)^/?personal-docs/?\s*$')) {
+    $errors.Add("'.gitignore' must exclude 'personal-docs/'; personal-use documents are never committed.")
 }
 
 $metadataPath = Join-Path $projectRoot 'PROJECT.json'

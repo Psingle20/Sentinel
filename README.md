@@ -417,6 +417,7 @@ All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still o
 - `artifacts/`: generated diagrams and reports, with their sources.
 - `scripts/`: repeatable build, test and lint automation.
 - `.agents/`, `.codex/`, `.claude/`: project steering, commit guidelines and agent adapters.
+- `personal-docs/`: the owner's personal-use documents in topic folders, excluded from version control.
 - `Sentinel.slnx`, `global.json`, `Directory.Build.props` and `Directory.Packages.props` pin the SDK, analyzers and package versions for every project.
 
 ## Getting started

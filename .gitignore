@@ -63,6 +63,9 @@ appsettings.Development.json
 ## Node
 node_modules/
 
+## Personal-use documents (presentation preparation, understanding notes, analyses, plans not yet agreed); never committed
+personal-docs/
+
 ## Local agent settings
 .claude/settings.local.json
 .codex/*.local.*
