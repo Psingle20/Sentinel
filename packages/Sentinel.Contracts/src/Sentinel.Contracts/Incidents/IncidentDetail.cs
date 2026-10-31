@@ -33,6 +33,9 @@ public sealed record IncidentDetail
 
     public IReadOnlyList<LinkedChangeView> Changes { get; init; } = [];
 
+    /// <summary>Instructions to AI agents found in the investigations' untrusted tool results, once each: shown, never obeyed.</summary>
+    public IReadOnlyList<SuspectedInjection> SuspectedInjections { get; init; } = [];
+
     public IReadOnlyList<LinkedSignalView> LinkedSignals { get; init; } = [];
 
     public IReadOnlyList<ChallengeView> Challenges { get; init; } = [];

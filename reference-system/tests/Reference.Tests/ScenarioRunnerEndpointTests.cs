@@ -32,10 +32,10 @@ public sealed class ScenarioRunnerEndpointTests
 
         using HttpResponseMessage list = await client.GetAsync(new Uri("/api/scenarios", UriKind.Relative));
         using HttpResponseMessage one = await client.GetAsync(new Uri("/api/scenarios/S1", UriKind.Relative));
-        using HttpResponseMessage unknown = await client.GetAsync(new Uri("/api/scenarios/S9", UriKind.Relative));
+        using HttpResponseMessage unknown = await client.GetAsync(new Uri("/api/scenarios/S99", UriKind.Relative));
 
         JsonElement[] scenarios = [.. (await BodyAsync(list)).EnumerateArray()];
-        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "AWS-S1", "AWS-S7", "S0", "S1", "S2", "S3", "S6", "S7", "S8"]);
+        scenarios.Select(scenario => scenario.GetProperty("id").GetString()).Order(StringComparer.Ordinal).ShouldBe(["AWS-S0", "AWS-S1", "AWS-S7", "S0", "S1", "S2", "S3", "S6", "S7", "S8", "S9"]);
         Names(scenarios[0]).ShouldBe(["id", "slug", "kind", "version", "description"]);
         (await BodyAsync(one)).GetProperty("steps").GetArrayLength().ShouldBeGreaterThan(0);
         unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -86,7 +86,7 @@ public sealed class ScenarioRunnerEndpointTests
 
         using HttpResponseMessage idle = await client.GetAsync(new Uri("/api/runs/current", UriKind.Relative));
         using HttpResponseMessage anonymous = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S0" }, token: null);
-        using HttpResponseMessage unknown = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S9" });
+        using HttpResponseMessage unknown = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S99" });
         using HttpResponseMessage started = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S0" });
         using HttpResponseMessage busy = await CallAsync(client, HttpMethod.Post, "/api/runs", new { scenarioId = "S1" });
         JsonElement run = await BodyAsync(started);

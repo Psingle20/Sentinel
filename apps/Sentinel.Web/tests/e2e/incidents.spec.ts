@@ -147,6 +147,24 @@ test.describe("incidents", () => {
     await expect(page.getByText("Remediating", { exact: true })).toBeVisible();
   });
 
+  test("shows an instruction to AI agents found in the logs as an ignored manipulation attempt", async ({ page, request }) => {
+    await request.post(`${mockApi}/__inject`);
+    await page.reload();
+    await openIncident(page);
+
+    const attempts = page.getByRole("region", { name: "Instructions to AI agents" });
+    await expect(attempts).toContainText("Manipulation attempt ignored");
+    await expect(attempts).toContainText("Sentinel treated it as data");
+    await expect(attempts).toContainText("In order-service's logs, matching ignore-instructions, addressed-to-ai, disregard-rules");
+    await expect(attempts.getByText(/ignore your previous instructions/)).toBeVisible();
+  });
+
+  test("shows no manipulation attempt when the investigations found none", async ({ page }) => {
+    await openIncident(page);
+
+    await expect(page.getByRole("region", { name: "Instructions to AI agents" })).toHaveCount(0);
+  });
+
   test("revokes an approval before execution starts", async ({ page }) => {
     await openIncident(page);
     await page.getByRole("button", { name: "Approve plan" }).click();

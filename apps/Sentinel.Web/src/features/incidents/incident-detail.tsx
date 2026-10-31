@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleX, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 import { ConfidenceDisplay } from "@/design-system/domain/confidence-display";
@@ -51,6 +51,7 @@ export function IncidentDetailView({
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
+        <InjectionSection incident={incident} />
         <DecisionSection incident={incident} />
         <PlanSection incident={incident} />
         <ExecutionSection incident={incident} />
@@ -65,6 +66,54 @@ export function IncidentDetailView({
         <SimilarSection similar={similar} />
       </div>
     </div>
+  );
+}
+
+const injectionSources: Record<string, string> = {
+  log_signatures: "logs",
+  search_runbooks: "runbooks",
+};
+
+// Instructions to AI agents that the investigations found in logs or runbooks. They are data: shown so that responders
+// know someone tried, never a reason for anything Sentinel concluded or proposed.
+function InjectionSection({ incident }: { incident: IncidentDetail }) {
+  const attempts = incident.suspectedInjections ?? [];
+  if (attempts.length === 0) {
+    return null;
+  }
+
+  const bySource = [...new Map(attempts.map((attempt) => [attempt.source, attempt])).values()];
+  return (
+    <Card role="region" aria-label="Instructions to AI agents">
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          <StatusBadge tone="warning" icon={ShieldAlert}>
+            Manipulation attempt ignored
+          </StatusBadge>
+        </CardTitle>
+        <CardDescription>
+          {bySource.length === 1 ? "An instruction" : `${bySource.length} instructions`} addressed to AI agents turned up in untrusted
+          data. Sentinel treated {bySource.length === 1 ? "it" : "them"} as data: nothing it concluded or proposed rests on{" "}
+          {bySource.length === 1 ? "it" : "them"}, and every action still needs policy and approval.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-3 text-body">
+          {bySource.map((attempt) => (
+            <li key={attempt.source} className="flex flex-col gap-1">
+              <span className="text-text-muted">
+                In {attempt.serviceId ?? "an unknown service"}&apos;s {injectionSources[attempt.tool] ?? attempt.tool}, matching{" "}
+                {attempts
+                  .filter((match) => match.source === attempt.source)
+                  .map((match) => match.pattern)
+                  .join(", ")}
+              </span>
+              <blockquote className="font-mono text-code break-words text-text-primary">{attempt.excerpt}</blockquote>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 

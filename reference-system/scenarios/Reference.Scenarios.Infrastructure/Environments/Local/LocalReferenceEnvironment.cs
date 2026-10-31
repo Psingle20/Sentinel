@@ -29,6 +29,7 @@ public sealed class LocalReferenceEnvironment(IReferenceControl control) : IRefe
             "poisonMessage" => control.InjectPoisonMessageAsync(step, cancellationToken),
             "duplicatePublication" => control.DuplicatePublicationAsync(step, cancellationToken),
             "slowConfirmations" => control.SlowConfirmationsAsync(step, cancellationToken),
+            "plantLog" => control.PlantLogAsync(step, cancellationToken),
             _ => throw new ReferenceEnvironmentException(EnvironmentFailure.Unsupported, $"Unknown action {step.Action}.")
         };
     }

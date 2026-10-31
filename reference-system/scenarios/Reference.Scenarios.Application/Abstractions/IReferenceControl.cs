@@ -21,4 +21,7 @@ public interface IReferenceControl
 
     /// <summary>Makes the step's service slow its order confirmations for the step's duration.</summary>
     Task SlowConfirmationsAsync(ScenarioStep step, CancellationToken cancellationToken);
+
+    /// <summary>Makes the step's service log the step's message as a warning for the step's duration.</summary>
+    Task PlantLogAsync(ScenarioStep step, CancellationToken cancellationToken);
 }

@@ -16,13 +16,16 @@ public static class FailureControlExtensions
     public static IServiceCollection AddFailureControl(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.AddSingleton(FailureControl.From(configuration, environment));
+        services.AddSingleton<PlantedLog>();
+        services.AddHostedService<PlantedLogWriter>();
         return services;
     }
 
     /// <summary>
     /// Maps <c>GET /_reference/revision</c> and, when failure controls are enabled, the guarded
-    /// <c>/_reference</c> group with <c>PUT /_reference/revision</c>. Returns the guarded group, or
-    /// null when controls are disabled, so services can add their own control endpoints.
+    /// <c>/_reference</c> group with <c>PUT /_reference/revision</c> and the planted log line,
+    /// <c>POST /_reference/planted-log</c> and <c>DELETE /_reference/planted-log</c>. Returns the guarded
+    /// group, or null when controls are disabled, so services can add their own control endpoints.
     /// </summary>
     public static RouteGroupBuilder? MapReferenceControl(this WebApplication app)
     {
@@ -45,6 +48,22 @@ public static class FailureControlExtensions
             await state.SwitchAsync(request.Revision)
                 ? Results.Ok(new RevisionView(state.ServiceName, state.Current, state.ActiveSince, state.KnownRevisions))
                 : Results.BadRequest($"{request.Revision} is not a revision of {state.ServiceName}."));
+
+        group.MapPost("/planted-log", (PlantLogRequest request, PlantedLog planted) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Message) || request.Seconds <= 0)
+            {
+                return Results.BadRequest("A planted log line needs a message and a positive number of seconds.");
+            }
+
+            planted.Plant(request.Message, request.Seconds);
+            return Results.NoContent();
+        });
+        group.MapDelete("/planted-log", (PlantedLog planted) =>
+        {
+            planted.Stop();
+            return Results.NoContent();
+        });
 
         return group;
     }

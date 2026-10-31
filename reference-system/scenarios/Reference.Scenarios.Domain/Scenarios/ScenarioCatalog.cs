@@ -3,7 +3,7 @@ namespace Reference.Scenarios.Domain.Scenarios;
 /// <summary>The scenarios a runner can run, each satisfying the manifest rules, by ID.</summary>
 public sealed class ScenarioCatalog
 {
-    private static readonly string[] Actions = ["deploy", "configChange", "startBatch", "stopBatch", "poisonMessage", "duplicatePublication", "slowConfirmations", "driftRoute"];
+    private static readonly string[] Actions = ["deploy", "configChange", "startBatch", "stopBatch", "poisonMessage", "duplicatePublication", "slowConfirmations", "driftRoute", "plantLog"];
     private static readonly string[] Kinds = ["golden", "confounder", "control"];
     private static readonly string[] BaselineOutcomes = ["rollback", "abstain", "noIncident"];
     private static readonly string[] Expectations = ["above", "below"];
@@ -67,6 +67,7 @@ public sealed class ScenarioCatalog
         {
             Require(Actions.Contains(step.Action), $"step action '{step.Action}' is unknown.");
             Require(step.Action != "deploy" || step.Version is not null, $"deploy step at {step.AtSeconds}s needs a version.");
+            Require(step.Action != "plantLog" || !string.IsNullOrWhiteSpace(step.Message), $"plantLog step at {step.AtSeconds}s needs a message.");
             Require(step.AtSeconds <= manifest.DurationSeconds, $"step at {step.AtSeconds}s is after the scenario ends.");
         }
 

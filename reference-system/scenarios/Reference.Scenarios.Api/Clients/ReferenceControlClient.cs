@@ -79,6 +79,13 @@ public sealed class ReferenceControlClient(HttpClient http, IConfiguration confi
         return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/orders/slow-confirmations"), cancellationToken, new { seconds = step.DurationSeconds ?? 180 });
     }
 
+    public Task PlantLogAsync(ScenarioStep step, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        return SendControlAsync(HttpMethod.Post, Address(step.Service, "/_reference/planted-log"), cancellationToken, new { message = step.Message, seconds = step.DurationSeconds ?? 180 });
+    }
+
     private Task SendControlAsync(HttpMethod method, Uri uri, CancellationToken cancellationToken, object? body = null)
     {
         var request = new HttpRequestMessage(method, uri);

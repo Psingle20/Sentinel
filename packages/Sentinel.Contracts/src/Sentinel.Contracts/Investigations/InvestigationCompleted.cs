@@ -43,6 +43,9 @@ public sealed record InvestigationCompleted : ISentinelMessage
     /// <summary>What the investigator could not determine and would need, for example a missing signal.</summary>
     public IReadOnlyList<string>? Unknowns { get; init; }
 
+    /// <summary>Text in the investigation's untrusted tool results that read as an instruction to an AI agent; reported, never obeyed.</summary>
+    public IReadOnlyList<SuspectedInjection>? SuspectedInjections { get; init; }
+
     /// <summary>The version of the tool catalog the investigator could call, for the run's version manifest (Phase 07).</summary>
     public string? ToolCatalogVersion { get; init; }
 }

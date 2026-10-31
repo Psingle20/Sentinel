@@ -130,5 +130,7 @@ public sealed class QueueConsumerOnSqsTests(FlociEmulator emulator, ITestOutputH
         public Task DuplicatePublicationAsync(Scenarios.Domain.Scenarios.ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task SlowConfirmationsAsync(Scenarios.Domain.Scenarios.ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PlantLogAsync(Scenarios.Domain.Scenarios.ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

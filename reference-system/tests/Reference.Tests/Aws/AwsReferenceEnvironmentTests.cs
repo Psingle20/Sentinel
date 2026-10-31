@@ -119,5 +119,7 @@ public sealed class AwsReferenceEnvironmentTests(FlociEmulator emulator) : IClas
         public Task DuplicatePublicationAsync(ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task SlowConfirmationsAsync(ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PlantLogAsync(ScenarioStep step, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

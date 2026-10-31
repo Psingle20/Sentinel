@@ -59,7 +59,9 @@ internal static class InvestigationRecords
             Model = new ModelMetadata(execution.Model.Provider, execution.Model.Model, execution.Model.ModelVersion, execution.Model.PromptVersion),
             CompletedAt = execution.CompletedAt!.Value,
             Role = command.Role,
-            ToolCatalogVersion = ToolCatalog.Version
+            ToolCatalogVersion = ToolCatalog.Version,
+            // Reported whatever the outcome: an attempt that made an investigator abstain is worth seeing most of all.
+            SuspectedInjections = UntrustedInstructions.Scan(execution.ToolCalls) is { Count: > 0 } suspected ? suspected : null
         };
 
         return new InvestigationRun(message, execution.ToRecord(JsonSerializer.Serialize(message, SentinelJson.Options)));

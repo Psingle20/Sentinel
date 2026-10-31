@@ -67,6 +67,7 @@ public static class IncidentMapping
         ModelVersion = completed.Model.ModelVersion,
         PromptVersion = completed.Model.PromptVersion,
         ToolCatalogVersion = completed.ToolCatalogVersion,
+        SuspectedInjections = [.. (completed.SuspectedInjections ?? []).Select(found => new UntrustedInstruction(found.Tool, found.Source, found.ServiceId, found.Excerpt, found.Pattern))],
         CompletedAt = completed.CompletedAt,
         Role = completed.Role,
         Challenges = [.. (completed.Challenges ?? []).Select(challenge => new Challenge(

@@ -62,6 +62,10 @@ public static class IncidentProjector
                 : null,
             AffectedServices = incident.AffectedServices,
             Changes = [.. incident.Changes.OrderByDescending(change => change.CorrelationScore ?? 0).Select(change => change.ToView())],
+            SuspectedInjections = [.. incident.Reports
+                .SelectMany(reported => reported.Report.SuspectedInjections)
+                .DistinctBy(found => (found.Source, found.Pattern))
+                .Select(found => new Sentinel.Contracts.Investigations.SuspectedInjection { Tool = found.Tool, Source = found.Source, ServiceId = found.ServiceId, Excerpt = found.Excerpt, Pattern = found.Pattern })],
             LinkedSignals = [.. incident.LinkedSignals.Select(signal => new LinkedSignalView(signal.ServiceId, signal.MetricName, signal.Value, signal.Score, signal.Reasons, signal.OccurredAt))],
             Challenges = [.. incident.Reports.SelectMany(reported => reported.Report.Challenges.Select(challenge => challenge.ToView(reported.Report.InvestigationId)))],
             Decisions = [.. incident.Decisions.Select(made => made.ToView())],
@@ -269,7 +273,10 @@ public static class IncidentProjector
         SignalLinked linked => string.Create(CultureInfo.InvariantCulture, $"{linked.ServiceId} {linked.MetricName} at {linked.Value:F1} merged into this incident (score {linked.Score:F2}): {string.Join("; ", linked.Reasons)}"),
         SeverityChanged changed => $"Severity {changed.Severity}: {changed.Reason}",
         IncidentReopened reopened => $"Reopened: {reopened.Reason}",
-        InvestigationReported reported => string.Create(CultureInfo.InvariantCulture, $"{reported.Report.Model} investigation {reported.Report.Result}: {reported.Report.Hypotheses.Count} hypotheses, {reported.Report.Evidence.Count - reported.RejectedEvidence.Count} accepted evidence, {reported.RejectedEvidence.Count} rejected."),
+        InvestigationReported reported => string.Create(CultureInfo.InvariantCulture, $"{reported.Report.Model} investigation {reported.Report.Result}: {reported.Report.Hypotheses.Count} hypotheses, {reported.Report.Evidence.Count - reported.RejectedEvidence.Count} accepted evidence, {reported.RejectedEvidence.Count} rejected.")
+            + (reported.Report.SuspectedInjections.Count > 0
+                ? string.Create(CultureInfo.InvariantCulture, $" {reported.Report.SuspectedInjections.Count} instruction(s) to AI agents found in {string.Join(", ", reported.Report.SuspectedInjections.Select(found => found.ServiceId?.Value ?? found.Source).Distinct(StringComparer.Ordinal))}'s untrusted data were ignored.")
+                : string.Empty),
         ChangeUpdated updated => $"{updated.Change.ServiceId} {updated.Change.Version} {ChangeState(updated.Change)}.",
         DecisionMade made => $"{made.Decision.Result}: {made.Decision.Rationale}",
         PlanProposed proposed => $"Plan v{proposed.Plan.Version} proposed for {proposed.Plan.TargetServiceId}; policy {proposed.Plan.PolicyVersion}: {proposed.Plan.Policy}.",

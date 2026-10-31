@@ -35,6 +35,9 @@ public sealed record InvestigationReport
     /// <summary>What the investigator could not determine, for the decision's missing-evidence record.</summary>
     public IReadOnlyList<string> Unknowns { get; init; } = [];
 
+    /// <summary>Instructions to AI agents its untrusted tool results held: recorded to be shown, never acted on.</summary>
+    public IReadOnlyList<UntrustedInstruction> SuspectedInjections { get; init; } = [];
+
     /// <summary>The tool catalog the investigator could call, for the version manifest (Phase 07).</summary>
     public string? ToolCatalogVersion { get; init; }
 }

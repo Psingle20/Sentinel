@@ -280,6 +280,15 @@ export type CausalEdge = { from: string; to: string; relation: string; weight?: 
 
 export type CausalGraphView = { nodes: CausalNode[]; edges: CausalEdge[] };
 
+// Text in untrusted tool results that read as an instruction to an AI agent: shown, never obeyed.
+export type SuspectedInjection = {
+  tool: string;
+  source: string;
+  serviceId?: string;
+  excerpt: string;
+  pattern: string;
+};
+
 export type IncidentDetail = {
   summary: IncidentSummary;
   triggerObservationIds?: string[];
@@ -299,6 +308,7 @@ export type IncidentDetail = {
   decisions?: DecisionView[];
   cycle?: number;
   causalGraph?: CausalGraphView;
+  suspectedInjections?: SuspectedInjection[];
 };
 
 // Phase 07: memory, replay and postmortems.
