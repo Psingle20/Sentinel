@@ -1,6 +1,6 @@
 # ADR-023: Approver identity
 
-- Status: Proposed
+- Status: Deferred until production (2026-10-31). The local deployment has no identity provider, so this is decided with the production deployment environment; the proposal below is the starting point for that decision.
 - Date: 2026-10-30
 
 ## Context

@@ -27,6 +27,6 @@ Each decision should record status, context, constraints, considered options, de
 - [ADR-019: Incident memory, replay and retention](ADR-019-incident-memory-replay-and-retention.md) — Accepted
 - [ADR-020: Application composition and CQRS conventions](ADR-020-application-composition-and-cqrs.md) — Accepted
 - [ADR-021: Local AWS for the reference environment](ADR-021-local-aws.md) — Accepted (Floci 2.3.0, pinned by digest)
-- [ADR-022: Service-to-service authentication](ADR-022-service-to-service-authentication.md) — Proposed
-- [ADR-023: Approver identity](ADR-023-approver-identity.md) — Proposed
+- [ADR-022: Service-to-service authentication](ADR-022-service-to-service-authentication.md) — Deferred until production
+- [ADR-023: Approver identity](ADR-023-approver-identity.md) — Deferred until production
 - [ADR-024: Model roles beyond the specialists](ADR-024-model-roles.md) — Accepted

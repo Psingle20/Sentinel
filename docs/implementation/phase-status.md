@@ -417,6 +417,6 @@ Open:
 
 ## Decisions this ledger surfaces
 
-- Service-to-service authentication between the five services: [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) is Proposed and awaits a decision.
-- Approver identity: [ADR-023](../decisions/ADR-023-approver-identity.md) is Proposed and awaits a decision, although approvals are signed from Phase 01A and JWT identity exists.
+- Service-to-service authentication between the five services: [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) is deferred until production, when an identity provider and the deployment environment exist.
+- Approver identity: [ADR-023](../decisions/ADR-023-approver-identity.md) is deferred until production for the same reason, although approvals are signed from Phase 01A and JWT identity exists.
 - `packages/Sentinel.Testing` is a shared test-support package that [ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md) does not list.

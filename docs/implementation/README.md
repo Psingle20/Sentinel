@@ -67,7 +67,7 @@ Set on 2026-10-31; the ledger records each phase's state.
 1. **In progress:** [E03](phase-e03-demonstration-depth.md) and the AWS tiers of [E01](phase-e01-aws-reference-environment.md).
 2. **Next: [E05](phase-e05-escalation-investigator.md).** The only pending item that changes what Sentinel can do rather than how it is shown, and small: a consensus reason, one role, one tool call and a scenario. It gives the `meta-wonder` profile a role of its own and is kept only if the harness shows it introduces no wrong diagnosis.
 3. **Then: [E04](phase-e04-judge-mode.md) slice 1.** The captured story over run records, web-only, with fixtures as its only dependency; the artifact every demonstration after the first is built on.
-4. **Between them:** decide [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](../decisions/ADR-023-approver-identity.md); they close the threat model's open findings and are the first two questions a technical reviewer asks.
+4. **Deferred until production:** [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](../decisions/ADR-023-approver-identity.md). The local deployment has no identity provider, so both are decided with the production deployment environment; they close the threat model's open findings then.
 5. **Not scheduled:** [E06](phase-e06-incident-artifacts.md) and [E07](phase-e07-visual-synthetic-monitor.md) are accepted designs waiting for a reason. E06 waits for a user who starts incidents from screenshots and for the multimodal-input assumption to be confirmed; E07 waits for a hosted environment and the segmentation assumption. Neither is started before E05 and E04 slice 1 are complete.
 
 ## Universal definition of done
