@@ -36,6 +36,8 @@ class Run:
     legacy_baseline: str | None = None
     # The reference environment the run used, as the scenario runner reported it: name, provider, digest, provisioning.
     environment: dict | None = None
+    # The investigator the system was configured with: the test double or a model profile; absent before the field existed.
+    configured_provider: str | None = None
 
     @property
     def legacy(self) -> bool:
@@ -73,6 +75,7 @@ def load_v2(path: Path) -> Run:
         executions=list(data.get("agentExecutions", [])),
         scenario_started_at=parse_time(data.get("scenarioStartedAt")),
         environment=data.get("environment"),
+        configured_provider=data.get("configuredProvider"),
     )
 
 

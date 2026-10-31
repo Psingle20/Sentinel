@@ -40,6 +40,8 @@ public static class EvaluationRun
             ["recordedAt"] = DateTimeOffset.UtcNow.ToString("O"),
             ["scenarioStartedAt"] = system.ScenarioStartedAt.ToString("O"),
             ["approved"] = approved,
+            // Which investigator the system was configured with, so a run in which none ran is scored with its peers.
+            ["configuredProvider"] = SentinelSystem.ModelProvider,
             ["environment"] = await system.ScenarioRunner.GetFromJsonAsync<JsonNode>("/api/environment"),
             ["fidelity"] = Package(packageId)["fidelity"]?.DeepClone(),
             ["runRecord"] = runRecord,

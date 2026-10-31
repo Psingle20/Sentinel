@@ -136,12 +136,30 @@ def sentinel_label(run: Run) -> str:
         investigations = (run.incident or {}).get("investigations") or []
         models = [investigation.get("model") for investigation in investigations if investigation.get("model")]
     names = sorted({f"{model.get('provider')}/{model.get('model')}@{str(model.get('promptVersion', '')).split('/')[0]}" for model in models if model.get("provider") != "sentinel"})
-    return f"sentinel {', '.join(names)}" if names else "sentinel (unknown model)"
+    return f"sentinel {', '.join(names)}" if names else "sentinel (no investigation ran)"
 
 
-def score_sentinel(run: Run, package: Package, pricing: dict) -> Score:
+def labeller(runs: list[Run]):
+    """
+    The label for each run. A run in which no investigation ran, such as a healthy control that opened no incident, names
+    no model, so it takes the label of the runs recorded with the same configured provider and is scored with them.
+    """
+    by_provider: dict[str, str] = {}
+    for run in sorted(runs, key=lambda item: item.recorded_at or parse_time("1970-01-01T00:00:00+00:00")):
+        label = sentinel_label(run)
+        if run.configured_provider and label != "sentinel (no investigation ran)":
+            by_provider[run.configured_provider] = label
+
+    def label(run: Run) -> str:
+        own = sentinel_label(run)
+        return by_provider.get(run.configured_provider or "", own) if own == "sentinel (no investigation ran)" else own
+
+    return label
+
+
+def score_sentinel(run: Run, package: Package, pricing: dict, label=sentinel_label) -> Score:
     incident = run.incident
-    score = Score(run.scenario_id, SENTINEL, sentinel_label(run), run.legacy, incident is not None, "none")
+    score = Score(run.scenario_id, SENTINEL, label(run), run.legacy, incident is not None, "none")
     primary = [execution for execution in run.executions if not execution.get("shadow")]
     score.input_tokens = sum(execution.get("inputTokens", 0) for execution in primary)
     score.output_tokens = sum(execution.get("outputTokens", 0) for execution in primary)

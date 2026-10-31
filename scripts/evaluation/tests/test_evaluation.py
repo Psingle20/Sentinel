@@ -19,7 +19,7 @@ from sentinel_eval.calibration import MINIMUM_DECISIONS, calibrate, reliability 
 from sentinel_eval.packages import PackageError, load_package, load_packages  # noqa: E402
 from sentinel_eval.records import Run, latest_per_scenario, latest_runs, load_v1, load_v2, parse_time  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render  # noqa: E402
-from sentinel_eval.scoring import Score, classify_observation, score_baseline, score_sentinel, sentinel_label  # noqa: E402
+from sentinel_eval.scoring import Score, classify_observation, labeller, score_baseline, score_sentinel, sentinel_label  # noqa: E402
 
 PACKAGES = HERE.parents[2] / "reference-system" / "scenarios" / "packages"
 PRICING = {"models": {"meta/muse-spark": {"inputPerMillion": 1.0, "outputPerMillion": 4.0}}, "default": {"inputPerMillion": 0, "outputPerMillion": 0}}
@@ -370,6 +370,19 @@ class CommandTests(unittest.TestCase):
             self.assertIn("## Gate", report)
             self.assertIn("Packages without a recorded run: AWS-S1, AWS-S7, S0, S1, S10, S2, S4, S5, S6, S7, S8, S9.", report)
             self.assertFalse(json.loads((root / "out" / "report.json").read_text(encoding="utf-8"))["gatePassed"])
+
+
+class LabelTests(unittest.TestCase):
+    def test_a_run_in_which_no_investigation_ran_is_scored_with_the_runs_of_its_configured_provider(self):
+        investigated = run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))
+        investigated.configured_provider = "test-double"
+        quiet = run("S0", None)
+        quiet.configured_provider = "test-double"
+        unrecorded = run("S0", None)
+        label = labeller([investigated, quiet])
+        self.assertEqual(label(quiet), label(investigated))
+        self.assertEqual(label(investigated), "sentinel sentinel-test-double/deterministic-analyst@investigator-v3")
+        self.assertEqual(label(unrecorded), "sentinel (no investigation ran)")
 
 
 class FidelityTests(unittest.TestCase):

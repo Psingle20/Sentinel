@@ -20,7 +20,7 @@ from sentinel_eval.packages import load_packages  # noqa: E402
 from sentinel_eval.calibration import calibrate, reliability  # noqa: E402
 from sentinel_eval.records import latest_per_scenario, latest_runs, load_runs  # noqa: E402
 from sentinel_eval.report import aggregate, gate, render, to_json  # noqa: E402
-from sentinel_eval.scoring import BASELINE, score_baseline, score_sentinel, sentinel_label  # noqa: E402
+from sentinel_eval.scoring import BASELINE, labeller, score_baseline, score_sentinel  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -49,8 +49,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # Each investigator's newest run of each scenario is scored; the deploy-blame baseline, which runs in shadow beside
     # every investigation, is scored once per scenario, from that scenario's newest run.
-    runs = latest_runs(current, sentinel_label)
-    scores = [score_sentinel(run, packages[scenario_id], pricing) for (scenario_id, _), run in sorted(runs.items())]
+    label = labeller(current)
+    runs = latest_runs(current, label)
+    scores = [score_sentinel(run, packages[scenario_id], pricing, label) for (scenario_id, _), run in sorted(runs.items())]
     scores += [score_baseline(run, packages[scenario_id]) for scenario_id, run in sorted(latest_per_scenario(list(runs.values())).items())]
 
     labels = sorted({score.label for score in scores if score.investigator != BASELINE})
