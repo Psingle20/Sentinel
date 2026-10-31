@@ -23,7 +23,7 @@
 
 ## Decision
 
-Floci, version 2.3.0 for linux/amd64, digest `sha256:09b72c45f333019adecb302e79c6b746e290135f528016c8514618bc7ab02344` (86.8 MB compressed), pinned in [`reference-system/deploy/aws/local-aws.json`](../../reference-system/deploy/aws/local-aws.json), which is the only place the version is written. The owner chose Floci over LocalStack and MiniStack, so neither was evaluated; the gate was run against Floci alone, as evidence of what it supports rather than as a comparison.
+Floci, version 2.3.0 for linux/amd64, digest `sha256:09b72c45f333019adecb302e79c6b746e290135f528016c8514618bc7ab02344` (86.8 MB compressed), pinned in [`reference-system/deploy/aws/local-aws.json`](../../reference-system/deploy/aws/local-aws.json), which is the only place the version is written. Floci was chosen over LocalStack and MiniStack without evaluating them; the gate was run against Floci alone, as evidence of what it supports rather than as a comparison.
 
 Floci runs with the Docker socket mounted and a user-defined Docker network, so that ECS tasks start as real containers on that network, with `FLOCI_SERVICES_ECS_IMAGE_PULL_BEHAVIOR=prefer-cached` so that a task never pulls an image that is already local. Every container it starts carries the environment's label, and the environment removes them when it stops, because Floci does not.
 

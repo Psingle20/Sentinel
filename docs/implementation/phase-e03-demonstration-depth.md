@@ -35,6 +35,6 @@ The proposal's success criteria, with evidence in the ledger.
 
 ## Deferred deliberately
 
-- The audience fault page and guarded autonomy, which the owner set aside on 2026-10-31 ([not pursued](../architecture/demonstration-depth.md#not-pursued)).
-- Approvals from chat tools and runs against a real cloud account, which need the owner's external accounts.
+- The audience fault page and guarded autonomy, set aside on 2026-10-31 ([not pursued](../architecture/demonstration-depth.md#not-pursued)).
+- Approvals from chat tools and runs against a real cloud account, which need external accounts.
 - Any capability that would need a live model to pass its tests.

@@ -44,7 +44,7 @@ The incident page already refreshes from the live stream whenever the incident c
 
 ## Not pursued
 
-The owner narrowed the proposal on 2026-10-31 to the capabilities above. Two were considered and set aside:
+The proposal was narrowed on 2026-10-31 to the capabilities above. Two were considered and set aside:
 
 - Audience-driven faults: a development-only page in Sentinel.Web that would start a scenario chosen by someone in the room. The scenario runner's commands in the Aspire dashboard already start any scenario.
 - Guarded autonomy: low-risk actions run under policy without approval, behind a kill switch. It would change who may act without a person, so it needs its own decision record, and nothing here assumes it.
