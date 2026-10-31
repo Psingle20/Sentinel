@@ -5,6 +5,7 @@
 - [Full Sentinel product architecture](architecture.md)
 - [Concise architecture overview](overview.md)
 - [Frontend design system](frontend-design-system.md): stack, rules, token model and the 2026-10-30 gap assessment; deepened by [Phase E02](../implementation/phase-e02-frontend-design-system-depth.md)
+- [Sentinel time budget](time-budget.md): where a run's time goes, measured from the run records, the local budget and the design that reaches it without weakening a decision; delivered by [Phase E04](../implementation/phase-e04-time-budget.md)
 - [Application composition and CQRS guide](application-composition-and-cqrs.md)
 - [Threat model](threat-model.md): trust boundaries, mitigations with evidence, open risks and the status of the 2026-10-29 review findings
 - [Service-level objectives](service-level-objectives.md): what Sentinel itself promises, the metric behind each promise and what to do when a budget is spent
