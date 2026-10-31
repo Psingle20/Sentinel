@@ -297,6 +297,7 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
             resolved.Recovery!.Outcome.ShouldBe(RecoveryOutcome.Recovered);
             (await system.SentinelRollbacksAsync("order-service")).ShouldBe(0, "order-service was never touched");
 
+            await ShouldTellTheStoryInJudgeModeAsync(resolved);
             await system.RecordOutcomeAsync("S9", resolved, approved: true);
             await EvaluationRun.WriteAsync(system, "S9", resolved, approved: true);
         }
@@ -834,6 +835,33 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
 
     // Sentinel.Web runs under next dev, which compiles a route on its first visit, so assertions get the actions' budget
     // instead of Playwright's five seconds.
+    /// <summary>
+    /// Judge mode (Phase E04) tells the resolved incident live from the incident queries and captured from its run record:
+    /// the instruction planted in the logs shown and not acted on, and recovery proven by telemetry.
+    /// </summary>
+    private async Task ShouldTellTheStoryInJudgeModeAsync(IncidentDetail resolved)
+    {
+        using IPlaywright playwright = await Playwright.CreateAsync();
+        await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        IPage page = await NewPageAsync(browser);
+
+        foreach ((string query, string mode) in new[] { (string.Empty, "Live"), ("?source=captured", "Captured") })
+        {
+            await page.GotoAsync($"{system.WebUrl}/incidents/{resolved.Summary.IncidentId}/judge{query}");
+            await page.Locator("html[data-hydrated='true']").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached });
+            await Assertions.Expect(page.GetByRole(AriaRole.Region, new PageGetByRoleOptions { Name = "Truth bar" })).ToContainTextAsync(mode);
+            ILocator stages = page.GetByRole(AriaRole.Navigation, new PageGetByRoleOptions { Name = "Stages" });
+
+            await stages.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { NameRegex = new Regex("^Manipulation") }).ClickAsync();
+            await Assertions.Expect(page.GetByLabel("Summary")).ToContainTextAsync("did not act on them");
+            await stages.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions { NameRegex = new Regex("^Recovery") }).ClickAsync();
+            await Assertions.Expect(page.GetByLabel("Summary")).ToContainTextAsync("Independent telemetry proved recovery");
+            await Assertions.Expect(page.GetByRole(AriaRole.Region, new PageGetByRoleOptions { Name = "Outcome" })).ToContainTextAsync("Resolved");
+        }
+
+        output.WriteLine("Sentinel.Web tells S9 in Judge mode, live and captured.");
+    }
+
     private static async Task<IPage> NewPageAsync(IBrowser browser)
     {
         IPage page = await browser.NewPageAsync();

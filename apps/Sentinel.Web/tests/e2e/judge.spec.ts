@@ -19,6 +19,11 @@ function rail(page: Page) {
   return page.getByRole("navigation", { name: "Stages" });
 }
 
+// The stages themselves, without the rail's Previous, Next and Play controls.
+function stages(page: Page) {
+  return rail(page).getByRole("listitem").getByRole("button");
+}
+
 async function openStage(page: Page, title: string) {
   await rail(page).getByRole("button", { name: new RegExp(`^${title}`) }).click();
   await expect(page.locator("#stage-title")).toContainText(title);
@@ -143,5 +148,69 @@ test.describe("judge mode", () => {
 
     await expect(page).toHaveURL(new RegExp(`/incidents/${liveIncidentId}/judge$`));
     await expect(page.getByRole("navigation", { name: "Stages" })).toBeVisible();
+  });
+});
+
+// Phase E04 slice 3: every ending is told as recorded; the story never advances past an unmet condition.
+const endings: { control: string; data?: Record<string, string>; stage: string; status: string; text: string }[] = [
+  { control: "__ambiguous", stage: "Decision", status: "Inconclusive", text: "stood too close to choose between" },
+  { control: "__ending", data: { ending: "denied" }, stage: "Governance", status: "Failed", text: "Policy denied it, so nothing runs." },
+  { control: "__ending", data: { ending: "rejected" }, stage: "Governance", status: "Failed", text: "An approver rejected it, so nothing runs." },
+  { control: "__ending", data: { ending: "failed" }, stage: "Action", status: "Failed", text: "The deploy controller refused the rollback." },
+  { control: "__ending", data: { ending: "inconclusive" }, stage: "Recovery", status: "Inconclusive", text: "Recovery inconclusive" },
+];
+
+test.describe("judge mode endings", () => {
+  test.beforeEach(async ({ request }) => {
+    await request.post(`${mockApi}/__reset`);
+  });
+
+  for (const ending of endings) {
+    test(`ends on ${ending.stage.toLowerCase()} ${ending.status.toLowerCase()} when ${ending.data?.ending ?? "the decision is ambiguous"}, and hands over to responders`, { tag: "@layout" }, async ({ page, request }) => {
+      await request.post(`${mockApi}/${ending.control}`, { data: ending.data ?? {} });
+      await page.goto(`/incidents/${liveIncidentId}/judge`);
+
+      await expect(rail(page).getByRole("button", { name: new RegExp(`^${ending.stage}`) })).toContainText(ending.status);
+      await openStage(page, ending.stage);
+      await expect(summary(page)).toContainText(ending.text);
+      const outcome = page.getByRole("region", { name: "Outcome" });
+      await expect(outcome).toContainText("Escalated");
+      await expect(outcome).toContainText("Responders take over");
+      // Nothing past the stage that stopped: no action without a permitted plan, no recovery without an action.
+      await expect(rail(page).getByRole("button", { name: /^Action/ })).toHaveCount(["Action", "Recovery"].includes(ending.stage) ? 1 : 0);
+      await expect(rail(page).getByRole("button", { name: /^Recovery/ })).toHaveCount(ending.stage === "Recovery" ? 1 : 0);
+    });
+  }
+});
+
+test.describe("judge mode live", () => {
+  test.beforeEach(async ({ request }) => {
+    await request.post(`${mockApi}/__reset`);
+  });
+
+  test("keeps following a live incident across a dropped stream and shows each change once", async ({ page, request }) => {
+    await page.goto(`/incidents/${liveIncidentId}/judge`);
+    await expect(stages(page).last()).toContainText("Governance");
+
+    await request.post(`${mockApi}/__disconnect`);
+    await request.post(`${mockApi}/__ending`, { data: { ending: "failed" } });
+
+    await expect(stages(page).last()).toContainText("Action", { timeout: 20_000 });
+    const count = await stages(page).count();
+    await request.post(`${mockApi}/__duplicate`);
+    await page.waitForTimeout(1_500);
+    await expect(stages(page)).toHaveCount(count);
+    await expect(rail(page).getByRole("button", { name: /^Action/ })).toHaveCount(1);
+  });
+
+  test("tells a long incident within the budget", async ({ page, request }) => {
+    await request.post(`${mockApi}/__large`, { data: { timeline: 5000, evidence: 400 } });
+    const started = Date.now();
+    await page.goto(`/incidents/${liveIncidentId}/judge`);
+    await expect(stages(page).last()).toContainText("Governance");
+    expect(Date.now() - started, "time until the story is on screen").toBeLessThan(6_000);
+
+    await openStage(page, "Investigation");
+    await expect(summary(page)).toContainText("Runtime accepted");
   });
 });

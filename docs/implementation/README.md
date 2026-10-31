@@ -64,9 +64,9 @@ Phases 00 to 10 implement the architecture document, and the [coverage matrix](c
 
 Set on 2026-10-31; the ledger records each phase's state.
 
-1. **In progress:** the AWS tiers of [E01](phase-e01-aws-reference-environment.md). [E03](phase-e03-demonstration-depth.md) completed on 2026-10-31.
-2. **Next: [E05](phase-e05-escalation-investigator.md).** The only pending item that changes what Sentinel can do rather than how it is shown, and small: a consensus reason, one role, one tool call and a scenario. It gives the `meta-wonder` profile a role of its own and is kept only if the harness shows it introduces no wrong diagnosis.
-3. **Then: [E04](phase-e04-judge-mode.md) slice 1.** The captured story over run records, web-only, with fixtures as its only dependency; the artifact every demonstration after the first is built on.
+1. **In progress:** the AWS tiers of [E01](phase-e01-aws-reference-environment.md), and [E05](phase-e05-escalation-investigator.md)'s live `meta-wonder` run, which waits for the account's credit to be confirmed above its floor. [E03](phase-e03-demonstration-depth.md) completed on 2026-10-31 and [E04](phase-e04-judge-mode.md) on 2026-11-01.
+2. **Done: [E05](phase-e05-escalation-investigator.md) slices 1 and 2.** Consensus says why it abstained, an ambiguous decision asks the escalation role for one discriminating query, and `S11` is diagnosed with it and abstains without it, end to end.
+3. **Done: [E04](phase-e04-judge-mode.md).** The captured and live stories over the records the Gateway already serves, every failure ending and the end-to-end `S9` story.
 4. **Deferred until production:** [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](../decisions/ADR-023-approver-identity.md). The local deployment has no identity provider, so both are decided with the production deployment environment; they close the threat model's open findings then.
 5. **Not scheduled:** [E06](phase-e06-incident-artifacts.md) and [E07](phase-e07-visual-synthetic-monitor.md) are accepted designs waiting for a reason. E06 waits for a user who starts incidents from screenshots and for the multimodal-input assumption to be confirmed; E07 waits for a hosted environment and the segmentation assumption. Neither is started before E05 and E04 slice 1 are complete.
 

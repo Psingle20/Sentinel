@@ -55,7 +55,7 @@
     },
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
-      "runs": 13,
+      "runs": 14,
       "root_cause_accuracy": 1.0,
       "consensus_accuracy": 1.0,
       "acceptable_rate": 1.0,
@@ -64,13 +64,13 @@
       "fabricated_evidence": 0,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_precision": 0.605,
+      "evidence_precision": 0.607,
       "evidence_recall": 0.629,
       "unsupported_rate": 0.0,
       "schema_failures": 0,
-      "mean_decision_seconds": 76.408,
-      "mean_recovery_seconds": 229.9,
-      "input_tokens": 601478,
+      "mean_decision_seconds": 76.238,
+      "mean_recovery_seconds": 235.7,
+      "input_tokens": 593589,
       "output_tokens": 67600,
       "cost": 0.0,
       "escalations": 1,
@@ -80,7 +80,7 @@
     },
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
-      "runs": 2,
+      "runs": 1,
       "root_cause_accuracy": 0.0,
       "consensus_accuracy": 0.0,
       "acceptable_rate": 1.0,
@@ -206,12 +206,12 @@
           4,
           3
         ],
-        "jaeger": [
-          3,
-          0
-        ],
         "aws": [
           2,
+          0
+        ],
+        "jaeger": [
+          3,
           0
         ]
       },
@@ -256,11 +256,11 @@
       "cost": 0.0,
       "confidence": 0.6615730337078651,
       "provider_evidence": {
-        "jaeger": [
+        "aws": [
           2,
           0
         ],
-        "aws": [
+        "jaeger": [
           2,
           0
         ],
@@ -290,7 +290,7 @@
     {
       "scenario_id": "S0",
       "investigator": "sentinel",
-      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8 [without-escalation]",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "legacy": false,
       "incident_opened": false,
       "decision": "none",
@@ -1204,7 +1204,7 @@
       "incident_opened": true,
       "decision": "diagnosed",
       "leading_service": "checkout-service",
-      "leading_key": "change:deploy-controller:deployment:01a192a0-2a10-705e-a2d6-84b7f8d252a7:started",
+      "leading_key": "change:deploy-controller:deployment:01a1936b-d295-7699-9ba6-1e356f76c853:started",
       "root_cause_correct": true,
       "correct_hypothesis_proposed": true,
       "consensus_correct": true,
@@ -1212,8 +1212,8 @@
       "fabricated_evidence": false,
       "hallucinated_evidence": 0,
       "hallucination_rate": 0.0,
-      "evidence_count": 15,
-      "evidence_precision": 0.533,
+      "evidence_count": 9,
+      "evidence_precision": 0.556,
       "evidence_recall": 0.5,
       "rejected_evidence": 0,
       "unsupported_rate": 0.0,
@@ -1223,21 +1223,21 @@
       "unsafe_execution": false,
       "missing_evidence_reported": null,
       "final_status": "resolved",
-      "detection_seconds": 114.0,
-      "decision_seconds": 64.4,
-      "recovery_seconds": 209.2,
-      "input_tokens": 45140,
+      "detection_seconds": 117.6,
+      "decision_seconds": 62.2,
+      "recovery_seconds": 249.8,
+      "input_tokens": 37251,
       "output_tokens": 4800,
       "cost": 0.0,
-      "confidence": 0.7839808525266414,
+      "confidence": 0.6899592233009709,
       "provider_evidence": {
         "deploy-controller": [
-          5,
-          3
+          1,
+          1
         ],
         "prometheus": [
-          5,
-          3
+          3,
+          2
         ],
         "loki": [
           3,
@@ -1924,8 +1924,8 @@
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "decisions": 13,
-      "brier_score": 0.085,
-      "expected_calibration_error": 0.286,
+      "brier_score": 0.088,
+      "expected_calibration_error": 0.293,
       "status": "uncalibrated",
       "reason": "13 scored diagnoses; at least 30 are needed to call confidence calibrated.",
       "buckets": [
@@ -1939,15 +1939,15 @@
         {
           "low": 0.6,
           "high": 0.7,
-          "decisions": 4,
-          "mean_confidence": 0.671,
+          "decisions": 5,
+          "mean_confidence": 0.675,
           "accuracy": 1.0
         },
         {
           "low": 0.7,
           "high": 0.8,
-          "decisions": 8,
-          "mean_confidence": 0.752,
+          "decisions": 7,
+          "mean_confidence": 0.747,
           "accuracy": 1.0
         },
         {
@@ -2043,9 +2043,9 @@
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "provider": "deploy-controller",
-      "evidence": 72,
-      "matching": 45,
-      "precision": 0.625
+      "evidence": 68,
+      "matching": 43,
+      "precision": 0.632
     },
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
@@ -2078,9 +2078,9 @@
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",
       "provider": "prometheus",
-      "evidence": 62,
-      "matching": 49,
-      "precision": 0.79
+      "evidence": 60,
+      "matching": 48,
+      "precision": 0.8
     },
     {
       "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8",

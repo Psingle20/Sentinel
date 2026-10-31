@@ -17,6 +17,9 @@
 //   POST /__report { role }           record that specialist's report and publish it live
 //   POST /__runrecord { schemaVersion } export the incident's run record with that schema version
 //   POST /__ambiguous                 abstain between the two leading explanations after the escalation's one query, as in S11
+//   POST /__ending { ending }         end the incident "denied", "rejected", "failed" or "inconclusive", and publish it live
+//   POST /__disconnect                drop every live connection, as a restarting Gateway would
+//   POST /__duplicate                 deliver the last live event again with the same sequence
 //
 // Captured runs (Phase E04): every file under fixtures/captures is a recorded run of the real system, trimmed to what
 // the Gateway serves. Its incident, agent executions and run record answer under its own incident ID, unchanged by
@@ -159,6 +162,38 @@ function abstainAmbiguous() {
   incident.decision = { ...incident.decision, outcome: "abstained", leadingHypothesisId: undefined, abstainedFor: "ambiguous", contenders: [first, second] };
   delete incident.plan;
   incident.summary = { ...incident.summary, status: "escalated" };
+}
+
+// Phase E04: the endings the story must tell as they were recorded, each escalating to responders.
+function end(ending) {
+  const { incident } = state;
+  const plan = incident.plan;
+  const at = "2026-10-28T09:10:00+00:00";
+  const approved = { ...plan, status: "executed", approvedBy: "responder@example.test", approvedAt: at };
+  const executed = { planId: plan.plan.planId, planVersion: plan.plan.planVersion, requestedAt: at, startedAt: at, completedAt: at };
+  const endings = {
+    denied: ["plan.denied", "Policy denied plan v1; the incident escalates to responders.", { plan: { ...plan, status: "denied", policyEvaluation: { ...plan.policyEvaluation, decision: "deny" } } }],
+    rejected: ["plan.rejected", "Plan v1 rejected by responder@example.test: the rollback window is closed.", { plan: { ...plan, status: "rejected" } }],
+    failed: ["execution.failed", "Executor reported Failed: the deploy controller refused the rollback.", { plan: approved, execution: { ...executed, outcome: "failed", detail: "The deploy controller refused the rollback." } }],
+    inconclusive: [
+      "recovery.evaluated",
+      "Recovery Inconclusive: the metrics provider covered half the observation window.",
+      {
+        plan: approved,
+        execution: { ...executed, outcome: "actionVerified" },
+        recovery: {
+          planId: plan.plan.planId,
+          outcome: "inconclusive",
+          measurements: plan.plan.expectedRecovery.map((criterion) => ({ criterion })),
+          observedThrough: at,
+          evaluatedAt: at,
+          reason: "The metrics provider covered half the observation window.",
+        },
+      },
+    ],
+  };
+  const [kind, summary, change] = endings[ending];
+  append(kind, summary, { ...change, summary: { status: "escalated" } });
 }
 
 // The baseline blames an innocent order-service deployment that served after onset; Sentinel proposed it and eliminated it.
@@ -729,6 +764,27 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && url.pathname === "/__advance") {
     const body = await readBody(request);
     append("note.recorded", body.summary ?? "Runtime recorded a change.");
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__ending") {
+    const body = await readBody(request);
+    end(body.ending);
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__disconnect") {
+    for (const client of [...liveClients]) {
+      client.end();
+    }
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__duplicate") {
+    const last = liveEvents.at(-1);
+    for (const client of last ? liveClients : []) {
+      writeLive(client, last);
+    }
     return send(response, 204);
   }
 
