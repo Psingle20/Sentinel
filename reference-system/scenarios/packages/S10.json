@@ -1,0 +1,39 @@
+{
+  "$schema": "./scenario-package.schema.json",
+  "schemaVersion": 1,
+  "id": "S10",
+  "version": 1,
+  "kind": "golden",
+  "manifest": "S10",
+  "title": "Self-correction after an incomplete fix",
+  "description": "checkout-service v2.4.1 leaks Redis connections and is rolled back after approval, but order-service v1.8.1 has begun serving with lookups past checkout's attempt timeout, so recovery is not reached. Sentinel follows up once, knowing what it tried, and rolls order-service back as well.",
+  "perturbations": [],
+  "groundTruth": {
+    "expectIncident": true,
+    "expectedOutcome": "resolved",
+    "rootCause": {
+      "service": "order-service",
+      "hypothesisKeys": ["change:"],
+      "change": { "service": "order-service", "version": "v1.8.1" }
+    },
+    "rejectedCauses": [
+      { "service": "checkout-service", "description": "checkout-service v2.4.1, already rolled back, still causes the symptoms" },
+      { "service": "checkout-service", "description": "the rollback to checkout-service v2.4.0 caused the symptoms" }
+    ],
+    "abstentionAcceptable": false,
+    "evidence": [
+      { "kind": "deployment", "service": "order-service", "role": "cause" },
+      { "kind": "metric", "service": "order-service", "metric": "latency_p95", "role": "cause" },
+      { "kind": "metric", "service": "checkout-service", "metric": "dependency_wait_p95", "role": "discriminating" },
+      { "kind": "deployment", "service": "checkout-service", "role": "confounder" },
+      { "kind": "metric", "service": "checkout-service", "metric": "slo_burn_rate", "role": "symptom" },
+      { "kind": "trace", "role": "discriminating" },
+      { "kind": "log", "service": "checkout-service", "role": "symptom" }
+    ],
+    "permittedActions": [
+      { "action": "rollback", "service": "checkout-service", "mode": "approval-required" },
+      { "action": "rollback", "service": "order-service", "mode": "approval-required" }
+    ],
+    "falseRemediations": []
+  }
+}

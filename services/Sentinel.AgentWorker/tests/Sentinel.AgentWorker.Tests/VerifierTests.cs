@@ -71,6 +71,24 @@ public sealed class VerifierTests
     }
 
     [Fact]
+    public async Task In_a_follow_up_the_rollback_that_unmasked_a_slow_dependency_shows_no_mechanism_of_its_own()
+    {
+        // S10: checkout's latency rose only once the rollback let it reach order-service, which was already slow.
+        var telemetry = Telemetry.FollowUpAfterRollback();
+        HypothesisFinding rollback = Change("d15");
+        HypothesisFinding orders = Change("d14", Orders);
+        HypothesisFinding leak = Change("d1");
+
+        InvestigationRun run = await Verify(telemetry, 270, rollback, orders, leak);
+
+        Verdict(run, rollback, AdversarialVerifier.MechanismFollowsChange).ShouldBe(ChallengeVerdict.Inconclusive);
+        run.Completed.Evidence.Where(evidence => evidence.HypothesisIds.Contains(rollback.HypothesisId)).ShouldAllBe(evidence => evidence.Direction == EvidenceDirection.Contradicts);
+        Verdict(run, orders, AdversarialVerifier.MechanismFollowsChange).ShouldBe(ChallengeVerdict.Survived);
+        Verdict(run, leak, AdversarialVerifier.ChangeStillServing).ShouldBe(ChallengeVerdict.Falsified);
+        run.Completed.Model.PromptVersion.ShouldBe("falsifiers-v3");
+    }
+
+    [Fact]
     public async Task In_the_dependency_regression_only_the_dependency_change_shows_a_mechanism()
     {
         var telemetry = Telemetry.DependencyRegression();

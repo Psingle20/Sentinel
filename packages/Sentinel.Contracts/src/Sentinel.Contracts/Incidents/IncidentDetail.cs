@@ -43,6 +43,9 @@ public sealed record IncidentDetail
     /// <summary>Every decision of the current cycle, oldest first, superseded ones included.</summary>
     public IReadOnlyList<DecisionView> Decisions { get; init; } = [];
 
+    /// <summary>Remedies earlier cycles executed and verified at their target, with the verdict that followed, oldest first (Phase E03).</summary>
+    public IReadOnlyList<RemedyTriedView> RemediesTried { get; init; } = [];
+
     /// <summary>How many times the incident was reopened.</summary>
     public int Cycle { get; init; }
 

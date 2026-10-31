@@ -106,6 +106,46 @@ internal sealed class Telemetry : IObservationQueries, IKnowledgeQueries
     }
 
     /// <summary>
+    /// S10's follow-up cycle: checkout v2.4.1 leaked from 20 s until its rollback to v2.4.0 served from 175 s, but
+    /// order-service v1.8.1 serves from 160 s with lookups past checkout's attempt timeout, so the SLO still burns
+    /// when the follow-up cycle begins at 260 s. The leak's Redis errors stopped with the rollback. Checkout failed on Redis
+    /// before it called order-service, so order-service's slowness shows only from 180 s, once the rollback let checkout
+    /// through: checkout's latency rises with it.
+    /// </summary>
+    public static Telemetry FollowUpAfterRollback()
+    {
+        var telemetry = new Telemetry { _onset = 260 };
+        telemetry.Deployment("checkout-service", "v2.4.1", "v2.4.0", "d1", 0, 20);
+        telemetry.Deployment("order-service", "v1.8.1", "v1.7.0", "d14", 150, 160);
+        telemetry.Deployment("checkout-service", "v2.4.0", "v2.4.1", "d15", 165, 175);
+        for (int second = -120; second <= 270; second += 5)
+        {
+            double burn = second switch
+            {
+                < 60 => 0.1,
+                < 175 => 12,
+                _ => 6
+            };
+            telemetry.Metric("slo_burn_rate", "checkout-service", second, burn);
+            telemetry.Metric("redis_connections", "checkout-service", second, second is >= 20 and < 175 ? Math.Min(186, 4 + (second - 20) * 5) : 4);
+            telemetry.Metric("redis_connections", "reporting-worker", second, 0);
+            telemetry.Metric("latency_p95", "order-service", second, second < 180 ? 0.03 : 0.9);
+            telemetry.Metric("latency_p95", "checkout-service", second, second < 180 ? 0.05 : 1.6);
+            telemetry.Metric("dependency_wait_p95", "checkout-service", second, second < 180 ? 0.03 : 0.6);
+            telemetry.Metric("request_rate", "checkout-service", second, 10);
+        }
+
+        telemetry.Signature("checkout-service", "Checkout cart-<n> failed on Redis: ERR max number of clients reached", 140, 55, 172);
+        telemetry.Signature("checkout-service", "Checkout cart-<n> gave up on order-service after 3 attempts", 20, 180, 260);
+        for (int second = 180; second <= 260; second += 10)
+        {
+            telemetry.Span("checkout-service", "order-service", second, 900);
+        }
+
+        return telemetry;
+    }
+
+    /// <summary>
     /// S6: a poison message fails on every receive from 0 s while the other messages are processed; a benign
     /// queue-consumer v1.4.1 serves from 50 s; the queue's oldest message passed the onset threshold at 10 s.
     /// </summary>

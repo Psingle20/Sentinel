@@ -46,6 +46,25 @@ public sealed class IncidentStateMachineTests
     }
 
     [Fact]
+    public void A_follow_up_after_an_unrecovered_remedy_is_in_the_transition_table()
+    {
+        var states = new List<IncidentState>();
+        Incident incident = AwaitingApproval(out ProposedPlan plan, states);
+
+        Record(states, incident, () => incident.Approve(plan.PlanId, plan.Version, plan.Hash, "responder@example.test", "jws", Later));
+        ExecutionRequested execution = incident.RequestExecution("key", Later).Value;
+        states.Add(incident.State);
+        Record(states, incident, () => incident.ConfirmStart(plan.PlanId, plan.Version, execution.FencingToken, Later));
+        Record(states, incident, () => incident.RecordExecution(plan.PlanId, plan.Version, ExecutionResult.ActionVerified, "serving v2.4.0", Later));
+        incident.ScheduleRecovery(Later).IsSuccess.ShouldBeTrue();
+        states.Add(incident.State);
+        Record(states, incident, () => incident.RecordRecovery(RecoveryResult.Unchanged, [], Later.AddMinutes(1), "slo_burn_rate=6.4", Later.AddMinutes(2), followUp: true));
+
+        states[^2..].ShouldBe([IncidentState.Verifying, IncidentState.Detected]);
+        states.Zip(states.Skip(1)).ShouldAllBe(step => IncidentStateMachine.CanMove(step.First, step.Second));
+    }
+
+    [Fact]
     public void Rejection_and_revocation_escalate_through_allowed_changes()
     {
         var rejectedStates = new List<IncidentState>();

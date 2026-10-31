@@ -183,6 +183,75 @@ public sealed class IncidentTests
         incident.State.ShouldBe(expected);
     }
 
+    [Theory]
+    [InlineData(RecoveryResult.Unchanged)]
+    [InlineData(RecoveryResult.Degraded)]
+    public void A_remedy_that_took_effect_without_recovery_opens_a_follow_up_cycle_from_the_end_of_its_window(RecoveryResult result)
+    {
+        Incident incident = Verifying(out ProposedPlan plan);
+        DateTimeOffset observedThrough = Later.AddMinutes(1);
+
+        incident.RecordRecovery(result, [], observedThrough, "slo_burn_rate=6.4", Later.AddMinutes(2), followUp: true).IsSuccess.ShouldBeTrue();
+
+        incident.State.ShouldBe(IncidentState.Detected);
+        incident.Cycle.ShouldBe(1);
+        incident.FollowUps.ShouldBe(1);
+        incident.SymptomOnset.ShouldBe(observedThrough, "the remaining symptom is known to outlast the remedy from there");
+        incident.Plan.ShouldBeNull("the follow-up cycle plans afresh");
+        TriedRemedy tried = incident.TriedRemedies.ShouldHaveSingleItem();
+        tried.PlanId.ShouldBe(plan.PlanId);
+        tried.Cycle.ShouldBe(0);
+        tried.Result.ShouldBe(result);
+        tried.FollowedUp.ShouldBeTrue();
+
+        StoredEvent[] stream = [.. incident.DequeueDomainEvents().Cast<IIncidentEvent>().Select((@event, index) => new StoredEvent(index + 1, @event))];
+        stream.Select(stored => stored.Event).OfType<IncidentReopened>().ShouldHaveSingleItem().FollowsPlanId.ShouldBe(plan.PlanId);
+        IncidentDetail detail = IncidentProjector.Project(stream);
+        detail.RemediesTried.ShouldHaveSingleItem().FollowedUp.ShouldBeTrue();
+        detail.Timeline.ShouldContain(entry => entry.Summary.StartsWith("Follow-up cycle: Recovery", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(RecoveryResult.Inconclusive)]
+    [InlineData(RecoveryResult.CompensationRequired)]
+    public void A_verdict_that_cannot_be_trusted_or_asks_for_compensation_escalates_even_where_follow_ups_are_allowed(RecoveryResult result)
+    {
+        Incident incident = Verifying(out _);
+
+        incident.RecordRecovery(result, [], Later, "reason", Later.AddMinutes(2), followUp: true);
+
+        incident.State.ShouldBe(IncidentState.Escalated);
+        incident.Cycle.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Only_one_follow_up_is_opened_so_a_second_unrecovered_remedy_escalates()
+    {
+        Incident incident = Verifying(out _);
+        incident.RecordRecovery(RecoveryResult.Unchanged, [], Later, "first", Later.AddMinutes(1), followUp: true);
+        var again = InvestigationId.New();
+        incident.RequestInvestigation(again, "Investigate again.", Start, Later.AddMinutes(1), Later.AddMinutes(1)).IsSuccess.ShouldBeTrue();
+        var leading = HypothesisId.New();
+        incident.RecordInvestigation(Report(
+            again,
+            [Supporting(leading, 0.85, 25, 60, "redis:1", "redis:2")],
+            Hypothesis(leading, "v2.4.1 leaks connections.", Checkout, incident.Changes[0].ObservationIds[0]),
+            Hypothesis(HypothesisId.New(), "Traffic grew.")), Later.AddMinutes(2));
+        incident.RecordDecision(FalsificationCheck.Decide(incident, DecisionId.New(), Later.AddMinutes(2))).IsSuccess.ShouldBeTrue();
+        ProposedPlan second = IncidentScenario.Plan(leading) with { Document = PlanDocument(leading) };
+        incident.ProposePlan(second).IsSuccess.ShouldBeTrue();
+        incident.Approve(second.PlanId, second.Version, second.Hash, "responder@example.test", "jws", Later.AddMinutes(2));
+        incident.RequestExecution("key-2", Later.AddMinutes(2));
+        incident.RecordExecution(second.PlanId, second.Version, ExecutionResult.ActionVerified, "serving", Later.AddMinutes(3));
+        incident.ScheduleRecovery(Later.AddMinutes(3)).IsSuccess.ShouldBeTrue();
+
+        incident.RecordRecovery(RecoveryResult.Unchanged, [], Later.AddMinutes(5), "second", Later.AddMinutes(6), followUp: true);
+
+        incident.State.ShouldBe(IncidentState.Escalated);
+        incident.Cycle.ShouldBe(1);
+        incident.FollowUps.ShouldBe(1);
+    }
+
     [Fact]
     public void Symptoms_clearing_resolves_only_an_incident_left_for_approval_or_responders()
     {
@@ -225,6 +294,16 @@ public sealed class IncidentTests
         InvestigateIncident command = outbox.Of<InvestigateIncident>().Single();
         command.RelatedServiceIds.ShouldBe([ServiceId.From("order-service")]);
         outbox.Messages.ShouldAllBe(entry => entry.Metadata!.CorrelationId == incident.Id.ToString());
+    }
+
+    private static Incident Verifying(out ProposedPlan plan)
+    {
+        Incident incident = AwaitingApproval(out plan);
+        incident.Approve(plan.PlanId, plan.Version, plan.Hash, "responder@example.test", "jws", Later);
+        incident.RequestExecution("key", Later);
+        incident.RecordExecution(plan.PlanId, plan.Version, ExecutionResult.ActionVerified, "serving v2.4.0", Later);
+        incident.ScheduleRecovery(Later).IsSuccess.ShouldBeTrue();
+        return incident;
     }
 
     private static Incident AwaitingApproval(out ProposedPlan plan)

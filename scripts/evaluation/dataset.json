@@ -1,6 +1,6 @@
 {
-  "version": "scenarios-v4",
-  "description": "The reference-system scenario suite: the healthy control, the golden incident, two confounders, two failure counterfactuals, the three queue scenarios, the prompt injection planted in logs, and the poison message and the event route drift in the AWS-emulated environment. Changing the package list, a package version or an exclusion changes the dataset version.",
-  "packages": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "AWS-S1", "AWS-S7"],
+  "version": "scenarios-v5",
+  "description": "The reference-system scenario suite: the healthy control, the golden incident, two confounders, two failure counterfactuals, the three queue scenarios, the prompt injection planted in logs, the compound incident whose first remedy is incomplete, and the poison message and the event route drift in the AWS-emulated environment. Changing the package list, a package version or an exclusion changes the dataset version.",
+  "packages": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "AWS-S1", "AWS-S7"],
   "exclusions": []
 }

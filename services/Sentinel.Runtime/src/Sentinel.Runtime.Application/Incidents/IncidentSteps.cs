@@ -9,10 +9,12 @@ using Sentinel.Contracts.Investigations;
 using Sentinel.Contracts.Messaging;
 using Sentinel.Contracts.Primitives.Identifiers;
 using Sentinel.Contracts.Remediation;
+using Sentinel.Runtime.Domain.Correlation;
 using Sentinel.Runtime.Domain.Incidents;
 using Sentinel.Runtime.Application.Abstractions.Runtime;
 using Sentinel.Runtime.Application.Abstractions.Persistence;
 using Sentinel.Runtime.Application.Abstractions.Providers;
+using Sentinel.Runtime.Application.Detection;
 using Sentinel.Runtime.Application.Incidents.Commands;
 using Sentinel.Runtime.Application.Options;
 using Sentinel.Runtime.Application.Recovery;
@@ -28,7 +30,9 @@ namespace Sentinel.Runtime.Application.Incidents;
 /// </summary>
 public sealed class IncidentSteps(
     IIncidentOwner owner,
+    IIncidentWorkflows workflows,
     ICorrelationStore correlation,
+    ServiceTopologyCache topologies,
     IPolicyEvaluator policy,
     RecoveryAssessor recovery,
     Memory.IncidentSimilarity similarity,
@@ -66,7 +70,8 @@ public sealed class IncidentSteps(
     /// <summary>
     /// Assigns one investigation per configured role, in parallel (Phase 04 specialist fan-out), with
     /// the remembered incidents that resemble this one as hints (Phase 07). The hints are recorded in
-    /// the request events, so a replay sees the same investigation inputs.
+    /// the request events, so a replay sees the same investigation inputs. A follow-up cycle first
+    /// correlates changes again against its own onset, and its objectives name the remedy already tried (Phase E03).
     /// </summary>
     public async Task<IReadOnlyList<InvestigationId>> RequestInvestigationsAsync(IncidentId incidentId, CancellationToken cancellationToken)
     {
@@ -74,6 +79,11 @@ public sealed class IncidentSteps(
         if (incident.Decision is not null || incident.State is not (IncidentState.Detected or IncidentState.Investigating))
         {
             return [];
+        }
+
+        if (incident.FollowingUp is not null)
+        {
+            await RelinkChangesAsync(incident, cancellationToken);
         }
 
         RuntimeOptions settings = options.Value;
@@ -247,6 +257,16 @@ public sealed class IncidentSteps(
                 WithoutPlan: true), cancellationToken)).Snapshot;
         }
 
+        RemediationAction proposed = draft.Actions[0];
+        string summary = Summary(proposed, draft);
+        if (incident.TriedRemedies.FirstOrDefault(tried => tried.TargetServiceId == proposed.TargetServiceId && tried.Summary == summary) is { } repeated)
+        {
+            logger.LogInformation("Incident {IncidentId} would repeat the remedy of cycle {Cycle}; escalating", incidentId, repeated.Cycle);
+            return (await SendAsync(incidentId, new EscalateCommand(
+                string.Create(CultureInfo.InvariantCulture, $"Diagnosed: {incident.LeadingStatement} Sentinel already tried to {summary} in cycle {repeated.Cycle + 1}, which took effect without recovering the incident, and does not repeat a remedy; responders should act on it."),
+                WithoutPlan: true), cancellationToken)).Snapshot;
+        }
+
         RemediationPlan plan = draft with { PlanHash = RemediationPlanHash.Compute(draft) };
         PolicyEvaluation evaluation = await policy.EvaluateAsync(
             new PolicyEvaluationRequest(incident.TenantId, incident.EnvironmentId, incident.IncidentId, plan, incident.DecisionConfidence, incident.Severity.ToContract()),
@@ -269,14 +289,7 @@ public sealed class IncidentSteps(
             PolicyTrace = evaluation.RuleTrace,
             ProposedAt = now,
             ApprovalDeadline = evaluation.Decision == PolicyDecision.ApprovalRequired ? now + settings.Workflow.ApprovalTimeout : null,
-            Summary = action switch
-            {
-                RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",
-                PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch ({plan.ExpectedEffect})",
-                QuarantineMessageAction quarantine => $"quarantine the messages of {quarantine.TargetServiceId}'s {quarantine.Queue} queue received at least {quarantine.MinimumReceives} times",
-                RestoreRouteAction restore => $"restore the {restore.Rule} route's approved pattern for {restore.TargetServiceId}",
-                _ => plan.ExpectedEffect
-            }
+            Summary = summary
         }), cancellationToken)).Snapshot;
     }
 
@@ -326,9 +339,43 @@ public sealed class IncidentSteps(
 
         RecoveryResult result = assessment.Trustworthy ? assessment.Result : RecoveryResult.Inconclusive;
         string? reason = assessment.Trustworthy ? assessment.Reason : $"Telemetry did not cover the window by the deadline: {assessment.Reason}";
-        await SendAsync(incidentId, new RecordRecoveryCommand(result, assessment.Measurements, assessment.ObservedThrough, reason), cancellationToken);
+        CommandReply recorded = await SendAsync(incidentId, new RecordRecoveryCommand(result, assessment.Measurements, assessment.ObservedThrough, reason, options.Value.Workflow.FollowUp), cancellationToken);
+        if (recorded.Snapshot.Cycle > incident.Cycle)
+        {
+            // The follow-up cycle runs in its own workflow; the reconciler and detection start it as well should this fail.
+            logger.LogInformation("Incident {IncidentId} did not recover ({Result}) although the action took effect; cycle {Cycle} follows up", incidentId, result, recorded.Snapshot.Cycle);
+            await workflows.EnsureStartedAsync(recorded.Snapshot, cancellationToken);
+        }
+
         return RecoveryStepResult.Recorded;
     }
+
+    /// <summary>
+    /// Correlates changes again against a follow-up cycle's onset (Phase E03). A change that began serving after the first
+    /// onset could not be linked then, yet it may be what still holds the symptom once the first cause is gone.
+    /// </summary>
+    private async Task RelinkChangesAsync(IncidentSnapshot incident, CancellationToken cancellationToken)
+    {
+        RuntimeOptions settings = options.Value;
+        TimeSpan lookback = settings.DetectionRules().FirstOrDefault(rule => rule.ServiceId == incident.AffectedServiceId && rule.MetricName == incident.TriggerMetric)?.Lookback ?? TimeSpan.FromMinutes(10);
+        IReadOnlyList<LinkedChange> changes = await correlation.GetChangesAsync(incident.TenantId, incident.EnvironmentId, [], incident.SymptomOnset - lookback, cancellationToken);
+        ServiceTopology topology = await topologies.GetAsync(incident.TenantId, incident.EnvironmentId, cancellationToken);
+        IReadOnlyList<LinkedChange> scored = CorrelationEngine.ScoreChanges(incident.AffectedServiceId, incident.SymptomOnset, changes, topology, settings.CorrelationSettings());
+        if (scored.Count > 0)
+        {
+            await SendAsync(incident.IncidentId, new UpdateChangesCommand(scored, LinkNew: true), cancellationToken);
+        }
+    }
+
+    /// <summary>The plan's action in operator terms, as the plan and any later cycle name it.</summary>
+    private static string Summary(RemediationAction action, RemediationPlan plan) => action switch
+    {
+        RollbackAction rollback => $"roll {rollback.TargetServiceId} back from {rollback.FromRevision} to {rollback.ToRevision}",
+        PauseBatchAction pause => $"pause the {pause.TargetServiceId} batch ({plan.ExpectedEffect})",
+        QuarantineMessageAction quarantine => $"quarantine the messages of {quarantine.TargetServiceId}'s {quarantine.Queue} queue received at least {quarantine.MinimumReceives} times",
+        RestoreRouteAction restore => $"restore the {restore.Rule} route's approved pattern for {restore.TargetServiceId}",
+        _ => plan.ExpectedEffect
+    };
 
     private async Task<IncidentSnapshot> RequireAsync(IncidentId incidentId, CancellationToken cancellationToken) =>
         await owner.GetAsync(incidentId, cancellationToken) ?? throw new InvalidOperationException($"Incident {incidentId} does not exist.");
@@ -346,9 +393,16 @@ public sealed class IncidentSteps(
         return new CommandReply(false, await RequireAsync(incidentId, cancellationToken));
     }
 
-    private static string Objective(IncidentSnapshot incident, string role) => role switch
+    private static string Objective(IncidentSnapshot incident, string role)
     {
-        InvestigationRoles.Generalist => $"Determine the most likely cause of {incident.Title}, with symptoms from {incident.SymptomOnset:O}.",
-        _ => $"As the {role} specialist, find the evidence in {role} that explains {incident.Title}, with symptoms from {incident.SymptomOnset:O}, and the hypotheses it supports or contradicts."
-    };
+        string objective = role switch
+        {
+            InvestigationRoles.Generalist => $"Determine the most likely cause of {incident.Title}, with symptoms from {incident.SymptomOnset:O}.",
+            _ => $"As the {role} specialist, find the evidence in {role} that explains {incident.Title}, with symptoms from {incident.SymptomOnset:O}, and the hypotheses it supports or contradicts."
+        };
+
+        return incident.FollowingUp is { } tried
+            ? $"{objective} Already tried in this incident: {tried.Summary}, which took effect at its target, but recovery was {tried.Result}; find what still explains the symptoms."
+            : objective;
+    }
 }

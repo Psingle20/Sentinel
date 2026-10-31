@@ -47,7 +47,8 @@ public sealed class OrderStore : IAsyncDisposable
         activity?.SetTag("db.query.summary", "SELECT orders by cart");
         activity?.SetTag("cart.id", cartId);
 
-        TimeSpan latency = _jitter.Vary(QueryLatency(_revision.Current, _revision.Uptime), 0.1);
+        double draw = (_jitter.NextSigned() + 1) / 2;
+        TimeSpan latency = _jitter.Vary(SlowOrderLookup.Latency(_revision.Current, _revision.Uptime, draw), 0.1);
         await Task.Delay(latency, _time, cancellationToken);
         return latency;
     }

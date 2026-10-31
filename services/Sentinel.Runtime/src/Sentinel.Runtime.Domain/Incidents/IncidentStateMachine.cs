@@ -16,7 +16,7 @@ public static class IncidentStateMachine
         [IncidentState.Investigating] = [IncidentState.Investigating, IncidentState.AwaitingApproval, IncidentState.Escalated],
         [IncidentState.AwaitingApproval] = [IncidentState.Investigating, IncidentState.AwaitingApproval, IncidentState.Remediating, IncidentState.Escalated, IncidentState.Resolved],
         [IncidentState.Remediating] = [IncidentState.Verifying, IncidentState.Escalated],
-        [IncidentState.Verifying] = [IncidentState.Resolved, IncidentState.Escalated],
+        [IncidentState.Verifying] = [IncidentState.Detected, IncidentState.Resolved, IncidentState.Escalated],
         [IncidentState.Escalated] = [IncidentState.Investigating, IncidentState.Resolved],
         [IncidentState.Resolved] = [IncidentState.Detected]
     };

@@ -61,7 +61,7 @@ public static class IncidentCommandProcessor
                 : Result.Failure(IncidentErrors.NotCurrentPlan),
             RecordExecutionCommand executed => incident.RecordExecution(executed.PlanId, executed.PlanVersion, executed.Result, executed.Detail, now),
             ScheduleRecoveryCommand => Unit(incident.ScheduleRecovery(now)),
-            RecordRecoveryCommand recovery => incident.RecordRecovery(recovery.Result, recovery.Measurements, recovery.ObservedThrough, recovery.Reason, now),
+            RecordRecoveryCommand recovery => incident.RecordRecovery(recovery.Result, recovery.Measurements, recovery.ObservedThrough, recovery.Reason, now, recovery.FollowUp),
             ResolveClearedCommand cleared => incident.ResolveCleared(cleared.Reason, now),
             LinkSignalCommand link => incident.LinkSignal(link.ServiceId, link.MetricName, link.Value, link.ObservationIds, link.Score, link.Reasons, now),
             ChangeSeverityCommand severity => incident.ChangeSeverity(severity.Severity, severity.Reason, now),

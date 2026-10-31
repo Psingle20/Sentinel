@@ -1492,6 +1492,8 @@ RecoveryFailed
 Reopen investigation
 ```
 
+As built (Phase E03), the reopening is bounded. Only a verdict of unchanged or degraded after an action verified at its target opens a follow-up cycle, once per incident, with the remedy tried passed to the investigators and never proposed again. An inconclusive verdict, one that finds the system worse than before the action, and a second unrecovered remedy escalate to responders ([demonstration depth](demonstration-depth.md#self-correction)).
+
 ---
 
 # 32. Incident Memory

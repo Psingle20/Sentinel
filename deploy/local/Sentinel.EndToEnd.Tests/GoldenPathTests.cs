@@ -310,6 +310,134 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         }
     }
 
+    /// <summary>
+    /// S10, self-correction (Phase E03): checkout's leak is rolled back after approval, but order-service v1.8.1 has begun
+    /// serving with lookups past checkout's attempt timeout, so the incident does not recover. Sentinel follows up once,
+    /// knowing what it tried, blames the cause that remains and rolls order-service back after a second approval. The
+    /// page shows the remedy tried, and what the baseline would have done in the follow-up: undo Sentinel's own rollback.
+    /// </summary>
+    [Fact]
+    public async Task S10_a_remedy_that_works_without_ending_the_incident_is_followed_up_and_the_remaining_cause_rolled_back()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S10");
+        try
+        {
+            IncidentDetail first = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "S10's first cycle is decided");
+            Log(first);
+            first.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
+            first.Plan!.Plan.Actions.OfType<RollbackAction>().Single().TargetServiceId.Value.ShouldBe("checkout-service");
+
+            // The approver takes a while: order-service v1.8.1 has served for a minute when the rollback is approved, so the
+            // first recovery window holds the cause the rollback leaves, and the regression visibly precedes the rollback.
+            ScenarioRunView started = (await Eventually.ValueAsync(
+                async () => await system.ScenarioRunner.GetFromJsonAsync<ScenarioRunView>($"/api/runs/{run.RunId}"),
+                current => current?.Steps.Any(step => step.Service == "order-service" && step.ExecutedAt is not null) == true,
+                TimeSpan.FromMinutes(4),
+                "order-service v1.8.1 starts"))!;
+            DateTimeOffset slowFor = started.Steps.Single(step => step.Service == "order-service").ExecutedAt!.Value + TimeSpan.FromSeconds(70);
+            if (slowFor > DateTimeOffset.UtcNow)
+            {
+                await Task.Delay(slowFor - DateTimeOffset.UtcNow);
+            }
+
+            await ApproveAsync(first);
+
+            IncidentDetail followUp = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == first.Summary.IncidentId
+                    && (detail.Cycle > 0 && detail.Decision is not null || detail.Summary.Status is IncidentStatus.Escalated or IncidentStatus.Resolved),
+                RecoveryTimeout + DetectionTimeout,
+                "S10's follow-up cycle is decided");
+            Log(followUp);
+
+            followUp.Cycle.ShouldBe(1, "the first remedy took effect without recovering the incident");
+            RemedyTriedView tried = followUp.RemediesTried.ShouldHaveSingleItem();
+            tried.FollowedUp.ShouldBeTrue();
+            tried.TargetServiceId.Value.ShouldBe("checkout-service");
+            tried.Outcome.ShouldBeOneOf(RecoveryOutcome.Unchanged, RecoveryOutcome.Degraded);
+            followUp.Timeline.ShouldContain(entry => entry.Summary.StartsWith("Follow-up cycle:", StringComparison.Ordinal));
+            followUp.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
+            RollbackAction second = followUp.Plan!.Plan.Actions.OfType<RollbackAction>().Single();
+            second.TargetServiceId.Value.ShouldBe("order-service", "the remaining cause, not the remedy already tried");
+            second.FromRevision.ShouldBe("v1.8.1");
+            followUp.Plan.PolicyEvaluation.Decision.ShouldBe(PolicyDecision.ApprovalRequired);
+
+            await ShouldShowTheSelfCorrectionInBrowserAsync(followUp);
+            await ApproveInBrowserAsync(followUp);
+
+            IncidentDetail resolved = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == first.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
+                RecoveryTimeout,
+                "S10's second recovery is judged");
+            Log(resolved);
+
+            resolved.Summary.Status.ShouldBe(IncidentStatus.Resolved);
+            resolved.Recovery!.Outcome.ShouldBe(RecoveryOutcome.Recovered);
+            (await system.SentinelRollbacksAsync("checkout-service")).ShouldBe(1, "the first remedy is never repeated");
+            (await system.SentinelRollbacksAsync("order-service")).ShouldBe(1);
+
+            await system.RecordOutcomeAsync("S10", resolved, approved: true);
+            await EvaluationRun.WriteAsync(system, "S10", resolved, approved: true);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
+    /// <summary>
+    /// Recurrence (Phase E03): the leak a second time is recognised as one seen before. The earlier resolved incident is
+    /// cited on the repeat's page with what resolved it, as a hint, and the repeat is remedied the same way. An earlier
+    /// test's resolved leak serves as the first occurrence when there is one; otherwise S1 runs to recovery first.
+    /// </summary>
+    [Fact]
+    public async Task A_repeat_of_the_leak_is_recognised_as_seen_before_and_cites_the_earlier_incident()
+    {
+        IncidentSummary earlier = await RememberedLeakAsync() ?? await LeakToRecoveryAsync();
+
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S1");
+        try
+        {
+            IncidentDetail repeat = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "the repeat is decided");
+            Log(repeat);
+
+            List<SimilarIncident> similar = await system.Api.GetFromJsonAsync<List<SimilarIncident>>($"/api/v1/incidents/{repeat.Summary.IncidentId}/similar", SentinelJson.Options) ?? [];
+            SimilarIncident seen = similar.FirstOrDefault(match => match.IncidentId == earlier.IncidentId).ShouldNotBeNull("the earlier leak is remembered");
+            seen.Outcome.ShouldBe("resolved");
+            seen.ActionSummary.ShouldBe("roll checkout-service back from v2.4.1 to v2.4.0");
+            repeat.Plan!.Plan.Actions.OfType<RollbackAction>().Single().TargetServiceId.Value.ShouldBe("checkout-service");
+
+            await ShouldShowSeenBeforeInBrowserAsync(repeat, earlier);
+            await ApproveAsync(repeat);
+            IncidentDetail resolved = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == repeat.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
+                RecoveryTimeout,
+                "the repeat's recovery is judged");
+            resolved.Summary.Status.ShouldBe(IncidentStatus.Resolved);
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
     /// <summary>S0, the healthy control: changes and noise without an SLO burn must open no incident.</summary>
     [Fact]
     [Trait("Tier", "Smoke")]
@@ -442,6 +570,97 @@ public sealed class GoldenPathTests(SentinelSystem system, ITestOutputHelper out
         await Assertions.Expect(attempts).ToContainTextAsync("ignore your previous instructions", new LocatorAssertionsToContainTextOptions { IgnoreCase = true });
         await Assertions.Expect(attempts).ToContainTextAsync("Sentinel treated it as data");
         output.WriteLine("Sentinel.Web shows the planted instruction as ignored.");
+    }
+
+    // The follow-up cycle's page says what was tried and how it ended, and what the baseline would have done instead.
+    private async Task ShouldShowTheSelfCorrectionInBrowserAsync(IncidentDetail incident)
+    {
+        using IPlaywright playwright = await Playwright.CreateAsync();
+        await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        IPage page = await NewPageAsync(browser);
+
+        await page.GotoAsync($"{system.WebUrl}/incidents/{incident.Summary.IncidentId}");
+        ILocator correction = page.GetByRole(AriaRole.Region, new PageGetByRoleOptions { Name = "Self-correction" });
+        await Assertions.Expect(correction).ToContainTextAsync("roll checkout-service back from v2.4.1 to v2.4.0");
+        await Assertions.Expect(correction).ToContainTextAsync("Sentinel investigated again");
+        ILocator avoided = page.GetByRole(AriaRole.Region, new PageGetByRoleOptions { Name = "Damage avoided" });
+        await Assertions.Expect(avoided).ToContainTextAsync("would have rolled back checkout-service v2.4.0");
+        output.WriteLine("Sentinel.Web shows the remedy tried, the follow-up and the baseline's counterfactual.");
+    }
+
+    // The repeat's page leads with the earlier incident, what resolved it and a link to it.
+    private async Task ShouldShowSeenBeforeInBrowserAsync(IncidentDetail repeat, IncidentSummary earlier)
+    {
+        using IPlaywright playwright = await Playwright.CreateAsync();
+        await using IBrowser browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        IPage page = await NewPageAsync(browser);
+
+        await page.GotoAsync($"{system.WebUrl}/incidents/{repeat.Summary.IncidentId}");
+        ILocator seen = page.GetByRole(AriaRole.Region, new PageGetByRoleOptions { Name = "Seen before" });
+        await Assertions.Expect(seen).ToContainTextAsync("roll checkout-service back from v2.4.1 to v2.4.0");
+        await Assertions.Expect(seen.Locator($"a[href='/incidents/{earlier.IncidentId}']")).ToBeVisibleAsync();
+        output.WriteLine("Sentinel.Web shows the repeat as seen before.");
+    }
+
+    // A leak an earlier test resolved by rolling checkout-service back, if this run has one.
+    private async Task<IncidentSummary?> RememberedLeakAsync()
+    {
+        foreach (IncidentSummary summary in (await system.IncidentsAsync()).Where(summary => summary.Status == IncidentStatus.Resolved && summary.AffectedServiceId.Value == "checkout-service"))
+        {
+            IncidentDetail detail = (await system.Api.GetFromJsonAsync<IncidentDetail>($"/api/v1/incidents/{summary.IncidentId}", SentinelJson.Options))!;
+            if (detail.Recovery?.Outcome == RecoveryOutcome.Recovered
+                && detail.Plan?.Plan.Actions.OfType<RollbackAction>().Any(rollback => rollback.TargetServiceId.Value == "checkout-service" && rollback.FromRevision == "v2.4.1") == true)
+            {
+                return summary;
+            }
+        }
+
+        return null;
+    }
+
+    // The first occurrence: S1 approved through the API and recovered.
+    private async Task<IncidentSummary> LeakToRecoveryAsync()
+    {
+        await system.WaitUntilQuietAsync(output);
+        ScenarioRunView run = await system.StartScenarioAsync("S1");
+        try
+        {
+            IncidentDetail incident = await system.WaitForIncidentAsync(
+                detail => detail.Decision is not null && detail.Summary.Status is IncidentStatus.AwaitingApproval or IncidentStatus.Escalated,
+                DetectionTimeout,
+                "the first leak is decided");
+            incident.Summary.Status.ShouldBe(IncidentStatus.AwaitingApproval);
+            await ApproveAsync(incident);
+            IncidentDetail resolved = await system.WaitForIncidentAsync(
+                detail => detail.Summary.IncidentId == incident.Summary.IncidentId && detail.Summary.Status is IncidentStatus.Resolved or IncidentStatus.Escalated,
+                RecoveryTimeout,
+                "the first leak's recovery is judged");
+            resolved.Summary.Status.ShouldBe(IncidentStatus.Resolved);
+            return resolved.Summary;
+        }
+        catch
+        {
+            await system.ReportAsync(output, run.RunId);
+            throw;
+        }
+        finally
+        {
+            await system.StopScenarioAsync(run.RunId);
+        }
+    }
+
+    // The approval a responder would give, through the API.
+    private async Task ApproveAsync(IncidentDetail incident)
+    {
+        RemediationPlan plan = incident.Plan!.Plan;
+        using var approve = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/incidents/{incident.Summary.IncidentId}/plans/{plan.PlanId}/approve")
+        {
+            Content = JsonContent.Create(new { planVersion = plan.PlanVersion, planHash = plan.PlanHash }, options: SentinelJson.Options)
+        };
+        approve.Headers.Add("Idempotency-Key", $"approve-{plan.PlanId}-v{plan.PlanVersion}");
+        using HttpResponseMessage approval = await system.Api.SendAsync(approve);
+        approval.EnsureSuccessStatusCode();
+        output.WriteLine($"Approved plan {plan.PlanId} v{plan.PlanVersion} through the API.");
     }
 
     private async Task ReviewInBrowserAsync(IncidentDetail resolved)

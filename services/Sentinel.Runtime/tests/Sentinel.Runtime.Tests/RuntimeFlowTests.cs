@@ -180,6 +180,43 @@ public sealed class RuntimeFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task A_remedy_that_took_effect_without_recovery_starts_a_follow_up_cycle_that_knows_what_was_tried()
+    {
+        (IncidentId incidentId, RemediationPlan plan) = await AwaitingApprovalAsync();
+        await RequestAsync(Approval(incidentId, plan));
+        IncidentSnapshot executing = await StepsAsync(steps => steps.RequestExecutionAsync(incidentId, CancellationToken.None));
+        await RequestAsync(new ConfirmRemediationStartRequest(InMemoryRuntime.Tenant, InMemoryRuntime.Environment, incidentId, plan.PlanId, plan.PlanVersion, executing.FencingToken!.Value));
+        await RequestAsync(Executed(incidentId, plan));
+        IncidentSnapshot scheduled = await StepsAsync(steps => steps.ScheduleRecoveryAsync(incidentId, CancellationToken.None));
+
+        // The rollback took effect, but something else keeps the SLO burning, less than before the action.
+        _runtime.Queries.WindowFrom = scheduled.RecoveryWindowFrom;
+        _runtime.Queries.Before = 20;
+        _runtime.Queries.Value = 6.4;
+        (await StepsAsync(steps => steps.VerifyRecoveryAsync(incidentId, final: false, CancellationToken.None))).ShouldBe(RecoveryStepResult.Recorded);
+
+        IncidentSnapshot followUp = (await _runtime.Owner.GetAsync(incidentId, CancellationToken.None))!;
+        followUp.State.ShouldBe(IncidentState.Detected);
+        followUp.Cycle.ShouldBe(1);
+        followUp.FollowingUp.ShouldNotBeNull().Summary.ShouldBe("roll checkout-service back from v2.4.1 to v2.4.0");
+        followUp.FollowingUp.Result.ShouldBe(RecoveryResult.Unchanged);
+        _runtime.Workflows.Started.ShouldContain((incidentId, 1), "the follow-up cycle's workflow starts at once");
+
+        InvestigationId again = (await StepsAsync(steps => steps.RequestInvestigationsAsync(incidentId, CancellationToken.None))).ShouldHaveSingleItem();
+        _runtime.Outbox.Of<InvestigateIncident>().Last().Objective.ShouldContain("Already tried in this incident: roll checkout-service back from v2.4.1 to v2.4.0");
+
+        // The same diagnosis again would repeat the same remedy, which Sentinel never does.
+        await RequestAsync(new RecordInvestigationReportRequest(incidentId, Report(incidentId, again).ToReport()));
+        await StepsAsync(steps => steps.DecideAsync(incidentId, CancellationToken.None));
+        IncidentSnapshot planned = await StepsAsync(steps => steps.PlanAsync(incidentId, CancellationToken.None));
+        planned.State.ShouldBe(IncidentState.Escalated);
+        planned.PlanId.ShouldBeNull();
+        _runtime.Outbox.Of<RemediationPlanProposed>().ShouldHaveSingleItem("the remedy already tried is not proposed again");
+        IncidentDetail detail = (await RequestAsync(new GetIncidentRequest(incidentId))).Value;
+        detail.RemediesTried.ShouldHaveSingleItem().Summary.ShouldBe("roll checkout-service back from v2.4.1 to v2.4.0");
+    }
+
+    [Fact]
     public async Task An_approval_whose_attestation_does_not_verify_is_not_recorded()
     {
         (IncidentId incidentId, RemediationPlan plan) = await AwaitingApprovalAsync();

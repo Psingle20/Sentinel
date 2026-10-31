@@ -65,6 +65,7 @@ public sealed class IncidentSimilarity(IIncidentMemoryStore memory, IIncidentOwn
                 scored.Candidate.Cause?.Key,
                 scored.Candidate.Cause?.Statement,
                 scored.Candidate.Status.ToString().ToLowerInvariant(),
-                scored.Candidate.RecordedAt))];
+                scored.Candidate.RecordedAt,
+                scored.Candidate.Action?.Summary))];
     }
 }

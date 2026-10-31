@@ -19,4 +19,10 @@ public sealed class WorkflowOptions
     public TimeSpan ReconciliationTimeout { get; set; } = TimeSpan.FromMinutes(30);
 
     public TimeSpan RecoveryRetryInterval { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Whether a remedy that took effect at its target without recovering the incident opens a follow-up cycle (Phase E03)
+    /// instead of escalating; the incident bounds it to one.
+    /// </summary>
+    public bool FollowUp { get; set; } = true;
 }

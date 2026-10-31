@@ -13,7 +13,11 @@ namespace Sentinel.Runtime.Domain.Incidents;
 /// </summary>
 public sealed class Incident : Entity
 {
+    /// <summary>Follow-up cycles an incident may have after an unrecovered remedy (Phase E03); a second unrecovered remedy escalates.</summary>
+    public const int MaxFollowUps = 1;
+
     private readonly List<LinkedChange> _changes = [];
+    private readonly List<TriedRemedy> _tried = [];
     private readonly List<Decision> _decisions = [];
     private readonly List<SignalLinked> _signals = [];
     private readonly Investigation _investigation = new();
@@ -80,6 +84,12 @@ public sealed class Incident : Entity
 
     /// <summary>How many times the incident has been reopened; each cycle has its own workflow run.</summary>
     public int Cycle { get; private set; }
+
+    /// <summary>How many of those cycles followed a remedy that took effect without recovering the incident.</summary>
+    public int FollowUps { get; private set; }
+
+    /// <summary>Remedies earlier cycles executed and verified at their target, with the recovery verdict that followed, oldest first.</summary>
+    public IReadOnlyList<TriedRemedy> TriedRemedies => _tried;
 
     public DateTimeOffset? ResolvedAt { get; private set; }
 
@@ -404,8 +414,13 @@ public sealed class Incident : Entity
         return scheduled;
     }
 
-    public Result RecordRecovery(RecoveryResult result, IReadOnlyList<Measurement> measurements, DateTimeOffset observedThrough, string? reason, DateTimeOffset now) =>
-        AppendAll(_recovery.Record(result, measurements, observedThrough, reason, now, State));
+    /// <summary>
+    /// Records the recovery verdict: recovered resolves the incident. With <paramref name="followUp"/>, a verdict of
+    /// unchanged or degraded reopens it for a follow-up cycle, at most <see cref="MaxFollowUps"/> times, whose onset is
+    /// the end of the observed window (Phase E03); anything else escalates it.
+    /// </summary>
+    public Result RecordRecovery(RecoveryResult result, IReadOnlyList<Measurement> measurements, DateTimeOffset observedThrough, string? reason, DateTimeOffset now, bool followUp = false) =>
+        AppendAll(_recovery.Record(result, measurements, observedThrough, reason, now, State, followUp && FollowUps < MaxFollowUps ? TriggerObservationIds : null));
 
     /// <summary>
     /// Symptoms cleared without Sentinel's action, for example after a human stopped a batch. A
@@ -497,6 +512,13 @@ public sealed class Incident : Entity
                 Severity = changed.Severity;
                 break;
             case IncidentReopened reopened:
+                // The ending cycle's remedy is still held by Remediation and RecoveryVerification, which apply the event next.
+                if (Plan is { } tried && ExecutionOutcome is { Result: ExecutionResult.ActionVerified } && Recovery is { } verdict && verdict.PlanId == tried.PlanId)
+                {
+                    _tried.Add(new TriedRemedy(Cycle, tried.PlanId, tried.TargetServiceId, tried.Summary ?? tried.PlanId.ToString(), verdict.Result, verdict.Measurements, verdict.Reason, verdict.OccurredAt, reopened.FollowsPlanId == tried.PlanId));
+                }
+
+                FollowUps += reopened.FollowsPlanId is null ? 0 : 1;
                 Cycle++;
                 CycleStartedAt = reopened.OccurredAt;
                 SymptomOnset = reopened.SymptomOnset;

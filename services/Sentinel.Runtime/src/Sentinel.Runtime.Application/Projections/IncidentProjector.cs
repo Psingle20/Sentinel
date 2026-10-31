@@ -69,6 +69,7 @@ public static class IncidentProjector
             LinkedSignals = [.. incident.LinkedSignals.Select(signal => new LinkedSignalView(signal.ServiceId, signal.MetricName, signal.Value, signal.Score, signal.Reasons, signal.OccurredAt))],
             Challenges = [.. incident.Reports.SelectMany(reported => reported.Report.Challenges.Select(challenge => challenge.ToView(reported.Report.InvestigationId)))],
             Decisions = [.. incident.Decisions.Select(made => made.ToView())],
+            RemediesTried = [.. incident.TriedRemedies.Select(tried => new RemedyTriedView(tried.Cycle, tried.PlanId, tried.TargetServiceId, tried.Summary, tried.Result.ToContract(), [.. tried.Measurements.Select(measurement => measurement.ToContract())], tried.Reason, tried.JudgedAt, tried.FollowedUp))],
             Cycle = incident.Cycle,
             CausalGraph = CausalGraph(incident)
         };
@@ -272,6 +273,7 @@ public static class IncidentProjector
         DecisionSuperseded superseded => $"Decision superseded: {superseded.Reason}",
         SignalLinked linked => string.Create(CultureInfo.InvariantCulture, $"{linked.ServiceId} {linked.MetricName} at {linked.Value:F1} merged into this incident (score {linked.Score:F2}): {string.Join("; ", linked.Reasons)}"),
         SeverityChanged changed => $"Severity {changed.Severity}: {changed.Reason}",
+        IncidentReopened { FollowsPlanId: not null } followUp => $"Follow-up cycle: {followUp.Reason}",
         IncidentReopened reopened => $"Reopened: {reopened.Reason}",
         InvestigationReported reported => string.Create(CultureInfo.InvariantCulture, $"{reported.Report.Model} investigation {reported.Report.Result}: {reported.Report.Hypotheses.Count} hypotheses, {reported.Report.Evidence.Count - reported.RejectedEvidence.Count} accepted evidence, {reported.RejectedEvidence.Count} rejected.")
             + (reported.Report.SuspectedInjections.Count > 0

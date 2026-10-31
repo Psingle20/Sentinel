@@ -44,6 +44,50 @@ public sealed class SpecialistTests
     }
 
     [Fact]
+    public async Task A_deployment_replaced_before_onset_is_contradicted_and_credited_with_nothing()
+    {
+        // R13: checkout v2.4.3 served from 4 s until v2.4.0 replaced it at 10 s; the leaking v2.4.1 serves from 20 s.
+        var telemetry = Telemetry.ReplacedChangeThenLeak();
+
+        InvestigationRun changes = await Run(telemetry, InvestigationRoles.Changes, 70);
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 70);
+
+        HypothesisFinding replaced = changes.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d6:started")));
+        EvidenceFinding stopped = changes.Completed.Evidence.Single(evidence => evidence.HypothesisIds.Contains(replaced.HypothesisId));
+        stopped.Direction.ShouldBe(EvidenceDirection.Contradicts);
+        stopped.Statement.ShouldContain("stopped serving");
+        stopped.SourceObservationIds.ShouldContain(ObservationId.From("deploy-controller:deployment:d7:completed"));
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == replaced.Key, "no rule attributes a surge or a regression to a change that no longer serves");
+        metrics.Completed.Hypotheses.ShouldContain(hypothesis => hypothesis.Key == HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d1:started")));
+    }
+
+    [Fact]
+    public async Task In_a_follow_up_cycle_the_rolled_back_leak_drops_out_and_the_second_cause_is_blamed()
+    {
+        // S10: the leak was rolled back before the follow-up's onset; order-service v1.8.1 is what still burns the SLO.
+        var telemetry = Telemetry.FollowUpAfterRollback();
+        string leak = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d1:started"));
+        string orders = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d14:started"));
+        string rollback = HypothesisKeys.Change(ObservationId.From("deploy-controller:deployment:d15:started"));
+
+        InvestigationRun changes = await Run(telemetry, InvestigationRoles.Changes, 270);
+        InvestigationRun metrics = await Run(telemetry, InvestigationRoles.Metrics, 270);
+        InvestigationRun traces = await Run(telemetry, InvestigationRoles.Traces, 270);
+        InvestigationRun logs = await Run(telemetry, InvestigationRoles.Logs, 270);
+
+        HypothesisFinding replaced = changes.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == leak);
+        replaced.ContradictingEvidenceIds.ShouldNotBeEmpty();
+        replaced.SupportingEvidenceIds.ShouldBeEmpty("v2.4.1 no longer serves");
+        metrics.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == orders).SupportingEvidenceIds.ShouldNotBeEmpty();
+        metrics.Completed.Hypotheses.Where(hypothesis => hypothesis.Key == rollback).ShouldAllBe(hypothesis => hypothesis.SupportingEvidenceIds.Count == 0, "checkout's latency rose with order-service's, so it is the wait on order-service");
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == leak);
+        metrics.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key != null && hypothesis.Key.StartsWith("redis-saturation", StringComparison.Ordinal), "checkout's connections were back to its pool at onset");
+        traces.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == orders).SupportingEvidenceIds.ShouldNotBeEmpty();
+        logs.Completed.Hypotheses.ShouldNotContain(hypothesis => hypothesis.Key == "redis-saturation", "the leak's Redis errors stopped before the follow-up's onset");
+        logs.Completed.Hypotheses.Single(hypothesis => hypothesis.Key == orders).SupportingEvidenceIds.ShouldNotBeEmpty();
+    }
+
+    [Fact]
     public async Task In_the_leak_the_metrics_and_changes_specialists_propose_the_same_keyed_change()
     {
         var telemetry = Telemetry.ConnectionLeak();

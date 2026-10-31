@@ -36,6 +36,17 @@ public sealed class RevisionBehaviourTests
     }
 
     [Fact]
+    public void The_cold_cache_misses_two_lookups_in_five_and_each_miss_outlasts_checkouts_attempt()
+    {
+        // S10: v1.8.1 is slow from its first request on a miss and fast on a hit, so most checkouts still succeed on a retry.
+        SlowOrderLookup.Latency(OrderRevisions.ColdCache, TimeSpan.Zero, draw: 0.1).ShouldBe(SlowOrderLookup.CacheMissLatency);
+        SlowOrderLookup.Latency(OrderRevisions.ColdCache, TimeSpan.Zero, draw: 0.6).ShouldBe(OrderStore.BaseQueryLatency);
+        (SlowOrderLookup.CacheMissLatency * 0.9).ShouldBeGreaterThan(OrderServiceClient.AttemptTimeout, "a miss times out even with jitter");
+        SlowOrderLookup.Latency(OrderRevisions.Baseline, TimeSpan.Zero, draw: 0.1).ShouldBe(OrderStore.BaseQueryLatency, "only v1.8.1 has the cold cache");
+        SlowOrderLookup.Latency(OrderRevisions.SlowQuery, TimeSpan.FromSeconds(10), draw: 0.1).ShouldBe(OrderStore.QueryLatency(OrderRevisions.SlowQuery, TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
     public async Task A_revision_switch_runs_handlers_once_and_ignores_unknown_revisions()
     {
         var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 28, 9, 0, 0, TimeSpan.Zero));

@@ -88,6 +88,15 @@ public sealed record IncidentSnapshot
 
     public RecoveryResult? Recovery { get; init; }
 
+    /// <summary>How many cycles followed a remedy that took effect without recovering the incident (Phase E03).</summary>
+    public int FollowUps { get; init; }
+
+    /// <summary>Remedies earlier cycles executed and verified at their target, with the verdict that followed: what a follow-up cycle knows was tried.</summary>
+    public IReadOnlyList<TriedRemedy> TriedRemedies { get; init; } = [];
+
+    /// <summary>The remedy whose unrecovered verdict opened the current cycle, when the cycle is a follow-up.</summary>
+    public TriedRemedy? FollowingUp => TriedRemedies is [.., { FollowedUp: true } last] && last.Cycle == Cycle - 1 ? last : null;
+
     /// <summary>The observable features similar-incident retrieval compares (Phase 07).</summary>
     public IReadOnlyList<string> Features { get; init; } = [];
 
@@ -140,6 +149,8 @@ public sealed record IncidentSnapshot
             RecoveryWindowFrom = incident.RecoveryWindow?.WindowFrom,
             RecoveryWindowTo = incident.RecoveryWindow?.WindowTo,
             Recovery = incident.Recovery?.Result,
+            FollowUps = incident.FollowUps,
+            TriedRemedies = incident.TriedRemedies,
             Features = Memory.MemoryFeatures.Observable(incident)
         };
     }

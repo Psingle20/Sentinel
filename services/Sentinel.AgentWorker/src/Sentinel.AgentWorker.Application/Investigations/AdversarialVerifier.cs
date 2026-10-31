@@ -24,9 +24,11 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
     public const string InvestigatorName = "adversarial-verifier";
     /// <summary>
     /// v2 adds <see cref="ChangeStillServing"/> and measures a change's mechanism against how its service stood just before
-    /// it served; executions record the version, so v1 runs replay as v1 did.
+    /// it served; executions record the version, so v1 runs replay as v1 did. v3 (Phase E03) no longer takes the affected
+    /// service's latency rise for its change's mechanism when a dependency's own latency rose with it: that rise is the
+    /// wait on the dependency, as when a rollback unmasks a dependency that slowed behind the cause it removed.
     /// </summary>
-    public const string PromptVersion = "falsifiers-v2";
+    public const string PromptVersion = "falsifiers-v3";
 
     public const string ChangeServing = "change-serving-before-onset";
     public const string ChangeStillServing = "change-still-serving-at-onset";
@@ -56,7 +58,8 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
         {
             if (hypothesis.SuspectedChangeObservationId is { } changeId)
             {
-                ChallengeChange(output, hypothesis, changeId, deployments, connections, latency, onset);
+                IReadOnlyList<ServiceId> dependencies = hypothesis.SuspectedServiceId == command.AffectedServiceId ? command.RelatedServiceIds : [];
+                ChallengeChange(output, hypothesis, changeId, deployments, connections, latency, dependencies, onset);
             }
             else if (hypothesis.Key is { } key && key.StartsWith("redis-saturation:", StringComparison.Ordinal) && hypothesis.SuspectedServiceId is { } culprit)
             {
@@ -89,7 +92,10 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
         return run.WithCompleted(run.Completed with { Challenges = output.Challenges });
     }
 
-    /// <summary>F1 and F2: the change must serve before onset, and its own service must shift after it.</summary>
+    /// <summary>
+    /// F1 and F2: the change must serve before onset, and its own service must shift after it. A latency rise of the
+    /// affected service that one of its <paramref name="dependencies"/> matched no later than it is the dependency's.
+    /// </summary>
     private static void ChallengeChange(
         VerifierFindings output,
         HypothesisFinding hypothesis,
@@ -97,6 +103,7 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
         DeploymentObservation[] deployments,
         Dictionary<ServiceId, MetricObservation[]> connections,
         Dictionary<ServiceId, MetricObservation[]> latency,
+        IReadOnlyList<ServiceId> dependencies,
         DateTimeOffset onset)
     {
         DeploymentObservation? reported = deployments.FirstOrDefault(deployment => deployment.ObservationId == changeId);
@@ -150,6 +157,14 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
             .OfType<Shift>()
             .OrderBy(candidate => candidate.Start.EventTime)
             .FirstOrDefault();
+        if (shift is { Start.MetricName: "latency_p95" } && DependencyLed(shift, dependencies, latency, onset) is { } led)
+        {
+            EvidenceId explained = output.Record(hypothesis.HypothesisId, "contradicts", 0.4, [shift.Start.ObservationId, led.Shift.Start.ObservationId], led.Shift.Start.EventTime, shift.Peak.EventTime, "call_verify_signals", Group(shift.Start.MetricName, reported.ServiceId),
+                $"{reported.ServiceId}'s latency rose from {shift.Start.EventTime:O}, with {led.Dependency}'s own from {led.Shift.Start.EventTime:O}: it waited on {led.Dependency}.");
+            output.Challenge(hypothesis.HypothesisId, MechanismFollowsChange, ChallengeVerdict.Inconclusive, $"{reported.ServiceId}'s latency followed {led.Dependency}'s, so it does not show a mechanism of the change.", explained);
+            return;
+        }
+
         if (shift is not null)
         {
             EvidenceId support = output.Record(hypothesis.HypothesisId, "supports", 0.5, [shift.Start.ObservationId, shift.Peak.ObservationId], shift.Start.EventTime, shift.Peak.EventTime, "call_verify_signals", Group(shift.Start.MetricName, reported.ServiceId),
@@ -169,6 +184,20 @@ public sealed class AdversarialVerifier(IObservationQueries observations, TimePr
         {
             output.Challenge(hypothesis.HypothesisId, MechanismFollowsChange, ChallengeVerdict.Inconclusive, $"{reported.ServiceId} reports neither connections nor latency to test the mechanism.");
         }
+    }
+
+    /// <summary>The dependency whose own latency rose no later than half a minute after <paramref name="shift"/> began, if any.</summary>
+    private static (ServiceId Dependency, Shift Shift)? DependencyLed(Shift shift, IReadOnlyList<ServiceId> dependencies, Dictionary<ServiceId, MetricObservation[]> latency, DateTimeOffset onset)
+    {
+        foreach (ServiceId dependency in dependencies)
+        {
+            if (latency.GetValueOrDefault(dependency) is { } series && Shift.Of(series, onset, 0.2, 3) is { } own && own.Start.EventTime <= shift.Start.EventTime + TimeSpan.FromSeconds(30))
+            {
+                return (dependency, own);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>F3: a named culprit's own signal must shift before onset.</summary>

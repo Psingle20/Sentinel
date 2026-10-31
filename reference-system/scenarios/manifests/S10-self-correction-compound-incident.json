@@ -1,0 +1,120 @@
+{
+  "id": "S10",
+  "slug": "self-correction-compound-incident",
+  "version": 1,
+  "kind": "golden",
+  "description": "checkout-service v2.4.1 leaks Redis connections, as in S1. 150 s later order-service v1.8.1 starts serving with a cache that misses two lookups in five, each miss slower than checkout's attempt timeout. Rolling checkout back ends the leak, but checkout keeps failing on order-service, so recovery is not reached and Sentinel investigates again.",
+  "affectedService": "checkout-service",
+  "downstreamServices": [ "order-service" ],
+  "warmupSeconds": 75,
+  "durationSeconds": 720,
+  "steps": [
+    { "atSeconds": 0, "action": "deploy", "service": "checkout-service", "version": "v2.4.1", "rolloutSeconds": 20, "role": "cause" },
+    { "atSeconds": 150, "action": "deploy", "service": "order-service", "version": "v1.8.1", "rolloutSeconds": 10, "role": "cause" }
+  ],
+  "cause": {
+    "description": "Deployment of order-service v1.8.1, whose cache misses outlast checkout's attempt timeout: the cause that remains once the checkout-service v2.4.1 leak is rolled back.",
+    "service": "order-service",
+    "change": "deploy order-service v1.8.1",
+    "activationSeconds": 160
+  },
+  "confounders": [
+    { "description": "checkout-service v2.4.1, a real cause that the first cycle rolls back; it no longer serves when the follow-up cycle begins.", "service": "checkout-service", "change": "deploy checkout-service v2.4.1", "atSeconds": 0, "servingFromSeconds": 20 }
+  ],
+  "detection": {
+    "expectIncident": true,
+    "service": "checkout-service",
+    "metric": "slo_burn_rate",
+    "threshold": 2.0,
+    "withinSeconds": 120
+  },
+  "expectedObservations": [
+    {
+      "description": "checkout-service's own Redis connections climb after v2.4.1 serves.",
+      "query": "sum(reference_redis_clients{client_name=\"checkout-service\"})",
+      "expectation": "above",
+      "threshold": 100,
+      "fromSeconds": 20,
+      "withinSeconds": 70
+    },
+    {
+      "description": "Checkout SLO burn rate crosses the detection threshold.",
+      "query": "slo:checkout_success:burn_rate1m",
+      "expectation": "above",
+      "threshold": 2.0,
+      "fromSeconds": 20,
+      "withinSeconds": 120
+    },
+    {
+      "description": "order-service p95 latency passes checkout's attempt timeout once v1.8.1 serves.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))",
+      "expectation": "above",
+      "threshold": 0.6,
+      "fromSeconds": 160,
+      "withinSeconds": 220
+    }
+  ],
+  "discriminatingSignals": [
+    {
+      "description": "Redis connections held by checkout-service itself grow after v2.4.1 serves: the first cause.",
+      "query": "sum(reference_redis_clients{client_name=\"checkout-service\"})",
+      "expectation": "above",
+      "threshold": 100,
+      "fromSeconds": 20,
+      "withinSeconds": 70
+    },
+    {
+      "description": "order-service p95 latency stays low until v1.8.1 serves, so the first cycle's window holds no second cause.",
+      "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))",
+      "expectation": "below",
+      "threshold": 0.3,
+      "fromSeconds": 0,
+      "withinSeconds": 140
+    },
+    {
+      "description": "Checkout gives up on order-service once v1.8.1 serves.",
+      "query": "sum(rate(reference_checkout_order_retries_total[1m]))",
+      "expectation": "above",
+      "threshold": 0,
+      "fromSeconds": 160,
+      "withinSeconds": 220
+    }
+  ],
+  "noise": {
+    "trafficRequestsPerSecond": 10,
+    "seed": 1010,
+    "latencyJitter": 0.1,
+    "timingToleranceSeconds": 20,
+    "notes": "Request pacing, query latency and order-service's cache misses use seeded jitter. The first cycle's approval decides when the first recovery window opens. The baseline expectation follows the scenario's own steps; in the follow-up cycle the latest deployment can be Sentinel's own rollback of checkout-service, which the baseline would undo, redeploying the leak."
+  },
+  "hypotheses": {
+    "leading": { "service": "order-service", "cause": "order-service v1.8.1 slowed order-service past checkout's attempt timeout" },
+    "rejected": [
+      { "service": "checkout-service", "cause": "checkout-service v2.4.1, already rolled back, still causes the symptoms" },
+      { "service": "checkout-service", "cause": "the rollback to checkout-service v2.4.0 caused the symptoms" }
+    ]
+  },
+  "remediation": {
+    "permitted": [
+      { "action": "rollback", "service": "checkout-service", "fromVersion": "v2.4.1", "toVersion": "v2.4.0", "mode": "approval-required" },
+      { "action": "rollback", "service": "order-service", "fromVersion": "v1.8.1", "toVersion": "v1.7.0", "mode": "approval-required" }
+    ],
+    "falseRemediations": [ { "action": "rollback", "service": "checkout-service", "fromVersion": "v2.4.0" } ]
+  },
+  "baseline": {
+    "outcome": "rollback",
+    "service": "order-service",
+    "fromVersion": "v1.8.1",
+    "toVersion": "v1.7.0",
+    "correct": true
+  },
+  "recovery": {
+    "restoredBy": "rollback checkout-service to v2.4.0, then order-service to v1.7.0",
+    "criteria": [
+      { "description": "Checkout SLO burn rate below 1.", "query": "slo:checkout_success:burn_rate1m", "comparison": "lessThan", "threshold": 1.0 },
+      { "description": "order-service p95 latency back under checkout's attempt timeout.", "query": "histogram_quantile(0.95, sum by (le) (rate(reference_orders_duration_seconds_bucket[1m])))", "comparison": "lessThan", "threshold": 0.3 }
+    ],
+    "observationWindowSeconds": 90,
+    "evaluationTimeoutSeconds": 300
+  }
+}

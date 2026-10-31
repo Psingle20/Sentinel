@@ -11,7 +11,7 @@ namespace Sentinel.AgentWorker.Infrastructure.Models;
 /// The model test double (ADR-015), the default until the Muse Spark details are configured. It
 /// speaks the same tool protocol as a real model: it first requests the tools its role was given,
 /// then analyses only what those tools returned with fixed, generic rules — change proximity,
-/// connection surges, latency regressions, contradicting signals, log signatures and slow calls.
+/// replaced changes, connection surges, latency regressions, contradicting signals, log signatures and slow calls.
 /// It never reads scenario ground truth. It proves the pipeline, not reasoning quality.
 /// </summary>
 public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> options) : IModelProvider
@@ -22,7 +22,7 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
 
     public string Model => "deterministic-analyst";
 
-    public string? ModelVersion => "2";
+    public string? ModelVersion => "3";
 
     /// <summary>The double answers from the conversation alone, so a replay of it is deterministic.</summary>
     public bool Deterministic => true;
@@ -197,9 +197,12 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             var output = new Findings();
             Series? burn = SeriesOf(conversation, "slo_burn_rate").FirstOrDefault(series => series.Service == conversation.AffectedService);
             DateTimeOffset onset = conversation.SymptomOnset ?? Onset(burn) ?? DateTimeOffset.UtcNow;
-            Change[] changes = Changes(conversation);
+            Change[] all = Changes(conversation);
 
+            // Every rule after R13 sees only the changes still serving at onset.
+            Change[] changes = [.. all.Where(change => ReplacedBy(change, all, onset) is null)];
             ProximityOfChanges(conversation, output, changes, onset);
+            ReplacedChanges(conversation, output, all, onset);
             Series[] connections = SeriesOf(conversation, "redis_connections");
             Surge[] surges = ConnectionSurges(conversation, output, connections, changes, onset);
             ContradictFlatConnections(output, connections, surges, changes);
@@ -289,6 +292,50 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             }
         }
 
+        /// <summary>
+        /// R13 (Phase E03): a deployment that a later change to the same service replaced before onset no longer serves, so it
+        /// cannot explain the symptoms. It is contradicted, and no other rule attributes anything to it: this is how a follow-up
+        /// cycle looks past a cause that was already rolled back, and how an earlier scenario's deployment drops out.
+        /// </summary>
+        private static void ReplacedChanges(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
+        {
+            if (conversation.Role is not ("changes" or "generalist"))
+            {
+                return;
+            }
+
+            foreach (Change change in changes)
+            {
+                if (ReplacedBy(change, changes, onset) is not { ServingFrom: { } replacedAt } replacement)
+                {
+                    continue;
+                }
+
+                string hypothesis = output.Hypothesis(
+                    change.Key,
+                    $"The {change.Service} {change.Version} deployment caused the symptoms.",
+                    [$"deploy {change.Service} {change.Version}", "regression in " + change.Service, $"{conversation.AffectedService} SLO burn"],
+                    change.Service,
+                    change.StartedId);
+                output.Evidence(
+                    hypothesis,
+                    $"{change.Service} {change.Version} stopped serving at {replacedAt:O}, when {replacement.Version} replaced it, before symptoms began at {onset:O}.",
+                    "contradicts",
+                    0.8,
+                    [change.StartedId, .. replacement.ObservationIds],
+                    replacement.StartedAt,
+                    replacedAt,
+                    "call_deployments",
+                    $"deployment:{change.DeploymentId}");
+            }
+        }
+
+        /// <summary>The first deployment or rollback of the same service to serve after <paramref name="change"/> did and before onset; null while it still serves.</summary>
+        private static Change? ReplacedBy(Change change, Change[] changes, DateTimeOffset onset) =>
+            change.Kind is "deploy" or "rollback"
+                ? changes.Where(later => later.Service == change.Service && later.Kind is "deploy" or "rollback" && later.ServingFrom is { } serving && serving > (change.ServingFrom ?? change.StartedAt) && serving <= onset).MinBy(later => later.ServingFrom)
+                : null;
+
         /// <summary>R2: a client whose Redis connections surged before onset saturated Redis; a change it was serving explains the surge.</summary>
         private static Surge[] ConnectionSurges(Conversation conversation, Findings output, Series[] connections, Change[] changes, DateTimeOffset onset)
         {
@@ -346,17 +393,27 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
             }
         }
 
-        /// <summary>R4: a dependency's latency that regressed before onset; a change serving before the regression explains it.</summary>
+        /// <summary>
+        /// R4: a dependency's latency that regressed before onset; a change serving before the regression explains it. The
+        /// affected service's own latency rise counts for one of its changes only when no dependency's rose by then: one
+        /// that rose with a dependency's is the wait on that dependency, as when a rollback unmasks a slow dependency.
+        /// </summary>
         private static Regression[] LatencyRegressions(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
         {
             Regression[] regressions = [.. SeriesOf(conversation, "latency_p95").Select(series => Regression.Of(series, onset)).OfType<Regression>()];
             Series? wait = SeriesOf(conversation, "dependency_wait_p95").FirstOrDefault(series => series.Service == conversation.AffectedService);
             Regression? waitRegression = wait is null ? null : Regression.Of(wait, onset);
             var reported = new List<Regression>();
+            DateTimeOffset? dependencyFrom = regressions.Where(regression => regression.Series.Service != conversation.AffectedService).Select(regression => (DateTimeOffset?)regression.Start.At).Min();
             foreach (Regression regression in regressions)
             {
-                Change? cause = changes.FirstOrDefault(change => change.Service == regression.Series.Service && change.Kind is "deploy" or "rollback" && change.ServingFrom is { } serving && serving <= regression.Start.At);
                 bool dependency = regression.Series.Service != conversation.AffectedService;
+                if (!dependency && dependencyFrom is { } from && from <= regression.Start.At + OngoingAfter)
+                {
+                    continue;
+                }
+
+                Change? cause = changes.FirstOrDefault(change => change.Service == regression.Series.Service && change.Kind is "deploy" or "rollback" && change.ServingFrom is { } serving && serving <= regression.Start.At);
                 if (cause is null && !dependency)
                 {
                     // The affected service's own latency is a symptom unless one of its changes preceded it.
@@ -491,7 +548,7 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                 $"request-rate:{conversation.AffectedService}");
         }
 
-        /// <summary>R7: log signatures — Redis refusing clients supports saturation; giving up on a dependency supports that dependency's regression.</summary>
+        /// <summary>R7: log signatures still appearing at onset — Redis refusing clients supports saturation; giving up on a dependency supports that dependency's regression.</summary>
         private static void LogSignatures(Conversation conversation, Findings output, Change[] changes, DateTimeOffset onset)
         {
             foreach ((string callId, JsonNode result) in conversation.ToolResults.Where(entry => entry.Value.Tool == "log_signatures" && entry.Value.Result is not null).Select(entry => (entry.Key, entry.Value.Result!)))
@@ -504,6 +561,12 @@ public sealed class DeterministicModelProvider(IOptions<TestDoubleOptions> optio
                     int count = int.TryParse(signature["count"]?.GetValue<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : 1;
                     DateTimeOffset first = Time(signature["firstSeen"]) ?? onset;
                     DateTimeOffset last = Time(signature["lastSeen"]) ?? first;
+                    if (last < onset - OngoingAfter)
+                    {
+                        // Lines that had stopped before symptoms began, such as those of a cause already remedied, cannot explain them.
+                        continue;
+                    }
+
                     if (message.Contains("max number of clients", StringComparison.OrdinalIgnoreCase))
                     {
                         string hypothesis = output.Hypothesis("redis-saturation", "Redis ran out of client connections, so services could not reach it.", ["Redis maxclients reached", $"{service} fails on Redis", "SLO burn"], null, null);
