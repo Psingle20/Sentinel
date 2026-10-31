@@ -1,6 +1,6 @@
 # Phase E07 – Visual synthetic monitor
 
-Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 3, under [ADR-024](../decisions/ADR-024-model-roles.md) (Proposed, 2026-10-31). This document is the delivery view; the design holds the `VisualObservation` shape, the measurement rules and the provenance rule for frames.
+Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 3, under [ADR-024](../decisions/ADR-024-model-roles.md) (accepted 2026-10-31). This document is the delivery view; the design holds the `VisualObservation` shape, the measurement rules and the provenance rule for frames.
 
 ## Outcome
 

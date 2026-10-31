@@ -1,6 +1,6 @@
 # Phase E06 – Incident artifacts
 
-Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 2, under [ADR-024](../decisions/ADR-024-model-roles.md) (Proposed, 2026-10-31). This document is the delivery view; the design holds the artifact lifecycle, the `ArtifactFinding` shape and the rules.
+Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 2, under [ADR-024](../decisions/ADR-024-model-roles.md) (accepted 2026-10-31). This document is the delivery view; the design holds the artifact lifecycle, the `ArtifactFinding` shape and the rules.
 
 ## Outcome
 

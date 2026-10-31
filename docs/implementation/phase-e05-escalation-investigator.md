@@ -1,6 +1,6 @@
 # Phase E05 – Escalation investigator
 
-Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 1, under [ADR-024](../decisions/ADR-024-model-roles.md) (Proposed, 2026-10-31). This document is the delivery view; the design holds the role's inputs, output, rules and evaluation measures.
+Enhancement phase. Design source: [Model roles beyond the specialists](../architecture/model-roles.md), role 1, under [ADR-024](../decisions/ADR-024-model-roles.md) (accepted 2026-10-31). This document is the delivery view; the design holds the role's inputs, output, rules and evaluation measures.
 
 ## Outcome
 
