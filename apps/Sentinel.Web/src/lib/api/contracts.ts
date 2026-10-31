@@ -332,6 +332,15 @@ export type IncidentDetail = {
 
 // Phase 07: memory, replay and postmortems.
 
+// Phase 07's run record as the Gateway exports it: the incident's projection with its version manifest. Judge mode
+// (Phase E04) plays it as a captured story.
+export type IncidentRunRecord = {
+  schemaVersion: number;
+  incident: IncidentDetail;
+  exportedAt: string;
+  versions?: VersionManifest;
+};
+
 export type SimilarIncident = {
   incidentId: string;
   similarity: number;

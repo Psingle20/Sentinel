@@ -1,22 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test as base, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
-// Every page this suite opens is used only once React has hydrated it: a form filled before hydration races the wiring of
-// its server action.
-const test = base.extend({
-  page: async ({ page }, provide) => {
-    const goto = page.goto.bind(page);
-    page.goto = async (url, options) => {
-      const response = await goto(url, options);
-      await page.locator("html[data-hydrated='true']").waitFor({ state: "attached" });
-      return response;
-    };
-    await provide(page);
-  },
-});
+import { expect, mockApi, test, wcagTags } from "../support/hydrated-test";
 
-const wcagTags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const mockApi = "http://127.0.0.1:3199";
 const incidentId = "0192f0c4-0000-7000-8000-000000000001";
 const incidentTitle = "checkout-service slo_burn_rate at 14.8";
 

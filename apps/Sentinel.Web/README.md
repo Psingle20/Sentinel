@@ -17,7 +17,7 @@ src/
 │   ├── primitives/      shadcn/ui recipes owned by Sentinel
 │   ├── domain/          status badges, severity, evidence direction, approval, recovery, confidence
 │   └── patterns/        app shell, page header, data states
-├── features/            feature modules, added with the walking skeleton
+├── features/            feature modules: incidents, judge mode, admin, analytics
 └── lib/
 stories/                 Storybook catalogue, one file per component family
 tests/
@@ -43,7 +43,18 @@ Run from this directory with Node.js 24 LTS (`.nvmrc`). Install dependencies onc
 | Accessibility and visual tests | `npm run test:visual` |
 | Update visual baselines | `npm run test:visual:update` |
 
-The Playwright web servers build the app and serve the built Storybook themselves. The end-to-end tests run at 1280 px and again, for the journeys tagged `@layout`, at the 768 px tablet width; the incident journey runs once in the light theme.
+The Playwright web servers build the app and serve the built Storybook themselves. The end-to-end tests run at 1280 px and again, for the journeys tagged `@layout`, at the 768 px tablet width; the incident journey runs once in the light theme. The journeys run in one worker, because every journey file shares the one stateful mock API.
+
+## Judge mode
+
+Judge mode (Phase E04) tells one incident as a guided story from context to proven recovery. Open it from an incident's header, **Judge mode**, or go to `/incidents/<incident id>/judge`:
+
+- Without a query it is `Live`: it reads the incident queries, follows the newest stage and refreshes on the live stream.
+- With `?source=captured` it is `Captured`: it plays the incident's run record, the same document `GET /api/v1/incidents/<id>/run-record` exports and the end-to-end suite writes. **Play** steps through the stages at an accelerated pace and keeps the recorded times.
+
+Every stage is derived from records the Gateway already serves (`src/features/judge/stages.ts`), and every fact names the record it comes from. The view is read-only: approval stays in the incident workspace's own dialog.
+
+The journeys play three recorded runs of the real system, `S1`, `S9` and `S10`, from `tests/support/fixtures/captures`. Each fixture is a run record and its agent executions trimmed to what the Gateway serves; every identity in them is synthetic. To refresh one after a scenario changes, take the newest `artifacts/reports/evaluation/runs/<scenario>.json`, keep `runRecord` without its memory record and `agentExecutions` without tool arguments and results, and keep `findings` only on the shadow baseline's execution.
 
 ## Design-system rules enforced in code
 

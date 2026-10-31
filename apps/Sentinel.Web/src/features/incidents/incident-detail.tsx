@@ -50,6 +50,12 @@ export function IncidentHeaderBadges({ incident }: { incident: IncidentDetail })
       >
         Postmortem and replay
       </Link>
+      <Link
+        href={`/incidents/${encodeURIComponent(incident.summary.incidentId)}/judge`}
+        className="text-body text-text-muted underline-offset-4 hover:text-text-primary hover:underline focus-visible:text-text-primary"
+      >
+        Judge mode
+      </Link>
     </div>
   );
 }

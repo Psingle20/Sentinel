@@ -15,11 +15,16 @@
 //   POST /__followup                  open a follow-up cycle after a rollback that took effect without recovery, as in S10
 //   POST /__investigating             put the incident back to its six specialists investigating, none reported yet
 //   POST /__report { role }           record that specialist's report and publish it live
+//   POST /__runrecord { schemaVersion } export the incident's run record with that schema version
 //   POST /__ambiguous                 abstain between the two leading explanations after the escalation's one query, as in S11
+//
+// Captured runs (Phase E04): every file under fixtures/captures is a recorded run of the real system, trimmed to what
+// the Gateway serves. Its incident, agent executions and run record answer under its own incident ID, unchanged by
+// any control above.
 //
 // Usage: node tests/support/mock-api.mjs <port>
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const port = Number(process.argv[2] ?? 3199);
@@ -27,6 +32,12 @@ const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, 
 const incidentFixture = fixture("incident-awaiting-approval.json");
 const historyFixture = fixture("incident-history.json");
 const controlPlaneFixture = fixture("control-plane.json");
+const captures = new Map(
+  readdirSync(new URL("./fixtures/captures/", import.meta.url))
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => fixture(`captures/${name}`))
+    .map((capture) => [capture.runRecord.incident.summary.incidentId, capture]),
+);
 // The Gateway's catalog of approved analytics events and the values each property may take.
 const analyticsCatalog = {
   "incident.viewed": { status: incidentStatuses(), severity: ["critical", "high", "medium", "low"] },
@@ -66,6 +77,7 @@ function initialState() {
     audit: [],
     analytics: [],
     failures: new Map(),
+    runRecordSchema: 2,
   };
 }
 
@@ -337,7 +349,27 @@ function failure(group) {
   return state.failures.get(group);
 }
 
+// A captured run answers the reads the Gateway serves for a stored incident: its detail, executions and run record.
+function handleCapture(request, response, capture, rest) {
+  if (request.method !== "GET") {
+    return problem(response, 405, "Capture.ReadOnly", "A captured run cannot change.");
+  }
+
+  const routes = {
+    "": capture.runRecord.incident,
+    "/agent-executions": capture.agentExecutions,
+    "/run-record": capture.runRecord,
+    "/similar": [],
+  };
+  return rest in routes ? send(response, 200, routes[rest]) : problem(response, 404, "Not found", undefined);
+}
+
 async function handleIncident(request, response, url) {
+  const captured = /^\/api\/v1\/incidents\/([^/]+)(.*)$/.exec(url.pathname);
+  if (captured && captures.has(captured[1])) {
+    return handleCapture(request, response, captures.get(captured[1]), captured[2]);
+  }
+
   const { incident } = state;
   const id = incident.summary.incidentId;
   const planId = incident.plan?.plan.planId;
@@ -364,6 +396,16 @@ async function handleIncident(request, response, url) {
     const older = (incident.timeline ?? []).filter((entry) => before === null || entry.streamVersion < Number(before)).sort((left, right) => right.streamVersion - left.streamVersion);
     const items = older.slice(0, limit);
     return send(response, 200, { items, total: (incident.timeline ?? []).length, next: older.length > limit ? String(items.at(-1).streamVersion) : undefined });
+  }
+
+  // The run record as the Gateway exports it (Phase 07): the incident's projection with its version manifest.
+  if (request.method === "GET" && rest === "/run-record") {
+    return send(response, 200, {
+      schemaVersion: state.runRecordSchema,
+      incident,
+      exportedAt: incident.summary.updatedAt,
+      versions: { schemaVersion: 1, decisionAlgorithm: incident.decision?.algorithmVersion, models: [] },
+    });
   }
 
   if (request.method === "GET" && rest === "/agent-executions") {
@@ -692,6 +734,12 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && url.pathname === "/__ambiguous") {
     abstainAmbiguous();
+    return send(response, 204);
+  }
+
+  if (request.method === "POST" && url.pathname === "/__runrecord") {
+    const body = await readBody(request);
+    state.runRecordSchema = body.schemaVersion ?? 2;
     return send(response, 204);
   }
 

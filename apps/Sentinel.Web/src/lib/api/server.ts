@@ -13,6 +13,7 @@ import type {
   DomainReplayResult,
   ExecutorControls,
   IncidentDetail,
+  IncidentRunRecord,
   IncidentSummary,
   PolicyVersionInfo,
   Postmortem,
@@ -137,6 +138,10 @@ async function orNull<T>(request: Promise<T>): Promise<T | null> {
     }
     throw error;
   }
+}
+
+export function getRunRecord(incidentId: string): Promise<IncidentRunRecord | null> {
+  return orNull(send<IncidentRunRecord>(incidentPath(incidentId, "/run-record")));
 }
 
 export function getAgentExecutions(incidentId: string): Promise<AgentExecution[]> {

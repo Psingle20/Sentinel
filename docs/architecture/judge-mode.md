@@ -61,7 +61,7 @@ Recorded-versus-replayed comparison is deferred (see below); the domain replay e
 
 ## Guided narrative
 
-The narrative is derived from the incident's records, not from a stored slide sequence. A stage appears only when its source exists, and its status is one of `pending`, `active`, `complete`, `failed` or `inconclusive`, taken from the records it reads. The stage rail allows direct navigation once a stage exists. In `Live` mode it follows the newest stage until the viewer inspects an earlier one.
+The narrative is derived from the incident's records, not from a stored slide sequence. A stage appears only when its source exists, and its status is one of `active`, `complete`, `failed` or `inconclusive`, taken from the records it reads. Because a stage appears only with its source, none is ever pending. The stage rail allows direct navigation once a stage exists. In `Live` mode it follows the newest stage until the viewer inspects an earlier one.
 
 Deterministic, versioned templates turn typed facts into each stage's one-paragraph summary, so playback is reproducible and needs no model call. A model-drafted explanation is deferred (see below).
 
@@ -140,5 +140,8 @@ flowchart LR
 ## Open questions
 
 - Is "Judge mode" the product name, or an internal one for a view that customers would call an incident proof or review view?
-- Do demonstrations load captured runs from stored incidents, from run records bundled with the web app, or both?
-- Does Phase E03's live investigation panel become the Investigation stage as it is, or does the stage summarize it?
+
+Answered by slice 1:
+
+- Captured runs load from stored incidents, through the run record the Gateway exports. The web app bundles run records only as its test fixtures; a bundled demonstration set would need the disclosure decision export needs.
+- The Investigation stage summarizes Phase E03's live investigation panel: it reads the same per-role progress and adds each execution's model, prompt version, tool calls and tokens, and the escalation's query when there is one.

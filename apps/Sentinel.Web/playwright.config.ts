@@ -23,8 +23,10 @@ export default defineConfig({
   },
   projects: [
     {
+      // One worker: every journey file shares the one stateful mock API, so a reset in one would undo another's step.
       name: "app",
       testMatch: "e2e/**/*.spec.ts",
+      workers: 1,
       use: { baseURL: appUrl },
     },
     {
@@ -34,6 +36,7 @@ export default defineConfig({
       testMatch: "e2e/**/*.spec.ts",
       grep: /@layout/,
       dependencies: ["app"],
+      workers: 1,
       use: { baseURL: appUrl, viewport: { width: 768, height: 1024 } },
     },
     {
