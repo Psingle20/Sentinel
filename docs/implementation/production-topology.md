@@ -135,6 +135,7 @@ The slice is complete only when it runs across real process boundaries, survives
 | E01 – AWS reference environment | Reference environment, outside Sentinel service count; Ingestion and Executor gain adapters, Runtime and AgentWorker gain queue rules and one tool | Sentinel diagnoses a non-deployment cause and executes a non-rollback remedy through the same contracts, against a second environment |
 | E02 – Frontend design-system depth | Web only; no service or contract changes | Every responder and administrator screen composes the design system, in both themes and at tablet width |
 | E03 – Demonstration depth | AgentWorker scans untrusted results; Runtime records them and runs one follow-up cycle; Web shows them; the reference system injects the new faults | Sentinel's judgement is visible live: a planted instruction ignored, an incomplete fix corrected, a repeat recognised, the damage avoided shown |
+| E04 – Judge mode | Web only; no service or contract changes | One incident is shown as a guided, source-linked story in captured and live modes from the records the Gateway already serves |
 
 ## Completeness controls
 

@@ -33,6 +33,7 @@ This ledger records what each [implementation phase](README.md) has delivered an
 | [E01 – AWS reference environment](#phase-e01--aws-reference-environment) | In progress | Stage 0: Floci pinned (ADR-021). Stage 0b: the queue scenarios `S6`, `S7` and `S8`, each diagnosed end to end where the baseline rolls back an innocent deployment. Stage 1: the AWS environment in Aspire, with the consumer on ECS and SQS, and `AWS-S0`. Stage 2: `AWS-S1` end to end through Ingestion's ECS, topology and SQS adapters and Executor's SQS quarantine, gate check 8 within its budget, and the queue scenarios in the evaluation report. Stage 3 in part: provider conformance for the AWS adapters, fidelity labels in run records and the report, the quarantine journey in the web app. Stage 4: `AWS-S7`, event route drift, end to end, and the admission checks that keep `AWS-S4` out | Stage 3: a web journey against the real system for the AWS scenarios and replay of a captured AWS run. Stage 4: `AWS-S4` waits for a local AWS tool that enforces IAM, `AWS-S12` for Phase 10's multi-tenant operation. Stage 5 is deferred by the owner |
 | [E02 – Frontend design-system depth](#phase-e02--frontend-design-system-depth) | Complete | Form and feedback primitives with the feature code on them, the full token model under the lint rule, motion tokens, one status vocabulary, theme selection, the tablet width, interaction stories | None; Linux screenshot baselines are deferred by the owner until CI exists |
 | [E03 – Demonstration depth](#phase-e03--demonstration-depth) | In progress | `S9`, manipulation resistance, end to end; `S10`, self-correction: a remedy that took effect without recovery opens one follow-up cycle, which rolls back the cause that remains, end to end; the incident page shows a repeat as seen before, the baseline's counterfactual, the remedies tried and the investigation as it happens | `S9` and `S10` in the evaluation report. The audience fault page and guarded autonomy were set aside |
+| [E04 – Judge mode](#phase-e04--judge-mode) | Not started | Nothing; the design is scoped to a view over existing records | Slice 1: the captured `S9` story in Sentinel.Web |
 
 ## Recorded runs
 
@@ -370,6 +371,16 @@ Delivered:
 Open:
 
 - `S9` and `S10` in the evaluation report, with the next full end-to-end regression.
+
+## Phase E04 – Judge mode
+
+Status: **Not started**. The fourth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e04-judge-mode.md)). Its design source is the [Judge mode design](../architecture/judge-mode.md), Proposed on 2026-10-31 and scoped the same day to a Sentinel.Web view over the incident detail, the agent executions and the run record the Gateway already serves; no service, contract, projection or storage changes.
+
+Open:
+
+- Slice 1: the captured `S9` story from run records, with `S1` and `S10` as further fixtures.
+- Slice 2: the live story over the existing stream, with the workspace's own approval dialog for an authorized operator.
+- Slice 3: every ending in the design's failure table, and the tablet pass.
 
 ## Decisions this ledger surfaces
 

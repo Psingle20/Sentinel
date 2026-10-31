@@ -5,7 +5,7 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | Architecture section | Primary phase | Cross-cutting follow-up |
 | --- | --- | --- |
 | 1 Executive Summary | [00](phase-00-foundations.md) | All phases |
-| 2 Core Product Vision | [00](phase-00-foundations.md) | [08](phase-08-product-experience.md) |
+| 2 Core Product Vision | [00](phase-00-foundations.md) | [08](phase-08-product-experience.md), guided incident story in [E04](phase-e04-judge-mode.md) |
 | 3 Architectural Principles | [00](phase-00-foundations.md) | All phases |
 | 4 High-Level Architecture | [00](phase-00-foundations.md) | [09](phase-09-production-hardening.md), [10](phase-10-scale-evolution.md) |
 | 5 Control Plane vs Data Plane | [08](phase-08-product-experience.md) | [03](phase-03-incident-runtime.md), [10](phase-10-scale-evolution.md) |
@@ -18,7 +18,7 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 12 Durable Workflow Architecture | [03](phase-03-incident-runtime.md) | [06](phase-06-safe-remediation.md), [09](phase-09-production-hardening.md); engine per [ADR-005](../decisions/ADR-005-durable-workflow-engine.md) |
 | 13 Saga / Compensation Model | [06](phase-06-safe-remediation.md) | [09](phase-09-production-hardening.md) |
 | 14 Evidence Blackboard Architecture | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md) |
-| 15 Evidence Model | [04](phase-04-ai-investigation.md) | [07](phase-07-memory-replay-evaluation.md) |
+| 15 Evidence Model | [04](phase-04-ai-investigation.md) | [07](phase-07-memory-replay-evaluation.md), source-linked presentation in [E04](phase-e04-judge-mode.md) |
 | 16 Causal Graph | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md), [08](phase-08-product-experience.md) |
 | 17 Hypothesis Engine | [04](phase-04-ai-investigation.md) | [05](phase-05-verification-consensus.md) |
 | 18 Adversarial Verification | [05](phase-05-verification-consensus.md) | [07](phase-07-memory-replay-evaluation.md) |
@@ -33,8 +33,8 @@ This matrix maps every numbered section of the [Sentinel architecture](../archit
 | 27 Remediation Planning | [06](phase-06-safe-remediation.md) | [07](phase-07-memory-replay-evaluation.md) |
 | 28 Policy-as-Code and Safety | [06](phase-06-safe-remediation.md) | [09](phase-09-production-hardening.md) |
 | 29 Capability-Based Security | [06](phase-06-safe-remediation.md) | [09](phase-09-production-hardening.md) |
-| 30 Human Approval | [06](phase-06-safe-remediation.md) | [08](phase-08-product-experience.md) |
-| 31 Recovery Verification | [06](phase-06-safe-remediation.md) | [07](phase-07-memory-replay-evaluation.md); Runtime-owned per [ADR-006](../decisions/ADR-006-remediation-control-path.md) |
+| 30 Human Approval | [06](phase-06-safe-remediation.md) | [08](phase-08-product-experience.md), the workspace's own approval path preserved in [E04](phase-e04-judge-mode.md) |
+| 31 Recovery Verification | [06](phase-06-safe-remediation.md) | [07](phase-07-memory-replay-evaluation.md), recovery shown as the story's proof in [E04](phase-e04-judge-mode.md); Runtime-owned per [ADR-006](../decisions/ADR-006-remediation-control-path.md) |
 | 32 Incident Memory | [07](phase-07-memory-replay-evaluation.md) | [10](phase-10-scale-evolution.md) |
 | 33 Replay Architecture | [07](phase-07-memory-replay-evaluation.md) | [09](phase-09-production-hardening.md) |
 | 34 Simulation / Digital Twin | [07](phase-07-memory-replay-evaluation.md) | [10](phase-10-scale-evolution.md); a second reference environment in [E01](phase-e01-aws-reference-environment.md) |
