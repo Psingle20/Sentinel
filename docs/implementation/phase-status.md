@@ -387,7 +387,7 @@ Open:
 
 ## Phase E05 – Escalation investigator
 
-Status: **Not started**. The fifth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e05-escalation-investigator.md)). Its design source is role 1 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md), both Proposed on 2026-10-31.
+Status: **Not started**. The fifth enhancement phase ([plan](README.md#enhancement-phases), [phase document](phase-e05-escalation-investigator.md)). Its design source is role 1 of [model roles beyond the specialists](../architecture/model-roles.md) under [ADR-024](../decisions/ADR-024-model-roles.md), accepted on 2026-10-31.
 
 Open:
 
@@ -419,5 +419,4 @@ Open:
 
 - Service-to-service authentication between the five services: [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) is Proposed and awaits a decision.
 - Approver identity: [ADR-023](../decisions/ADR-023-approver-identity.md) is Proposed and awaits a decision, although approvals are signed from Phase 01A and JWT identity exists.
-- Model roles beyond the specialists: [ADR-024](../decisions/ADR-024-model-roles.md) is Proposed and awaits a decision; it becomes Accepted when Phase E05's role is scored by the harness with no wrong diagnosis introduced.
 - `packages/Sentinel.Testing` is a shared test-support package that [ADR-007](../decisions/ADR-007-cross-service-code-and-provider-access.md) does not list.

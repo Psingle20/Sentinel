@@ -1,6 +1,6 @@
 # ADR-024: Model roles beyond the specialists
 
-- Status: Proposed
+- Status: Accepted on 2026-10-31
 - Date: 2026-10-31
 
 ## Context
@@ -53,7 +53,7 @@ Adopt option 3 as described in the [model roles design](../architecture/model-ro
 - Phase E06: artifact attachment through the Gateway, redaction of image and document text, the artifact investigator, corroboration, and the corroboration-rate measure.
 - Phase E07: the `VisualObservation` kind, the Ingestion provider, the reference checkout journey and its fixtures, the detection rule and the scenario.
 - Threat model: the two ruled-out uses and the three new input kinds.
-- Change this ADR to Accepted when Phase E05's role is scored by the harness with zero wrong diagnoses introduced on the scenario packages.
+- Keep the escalation role behind its routing until Phase E05's harness group shows zero wrong diagnoses introduced on the scenario packages; the decision is accepted, and that evidence enables the role.
 
 ## Revisit criteria
 

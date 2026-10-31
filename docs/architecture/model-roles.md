@@ -1,7 +1,6 @@
 # Model roles beyond the specialists
 
-- Status: Proposed, 2026-10-31
-- Decision: [ADR-024](../decisions/ADR-024-model-roles.md)
+- Status: Accepted through [ADR-024](../decisions/ADR-024-model-roles.md) on 2026-10-31
 - Delivery: [Phase E05 – Escalation investigator](../implementation/phase-e05-escalation-investigator.md), [Phase E06 – Incident artifacts](../implementation/phase-e06-incident-artifacts.md), [Phase E07 – Visual synthetic monitor](../implementation/phase-e07-visual-synthetic-monitor.md); the [phase status ledger](../implementation/phase-status.md) records progress
 - Related: [architecture §19](architecture.md#19-multi-agent-architecture), [§49](architecture.md#49-prompt-injection-and-tool-safety), [§50](architecture.md#50-meta-native-reference-deployment), [ADR-014](../decisions/ADR-014-provider-abstraction.md), [ADR-015](../decisions/ADR-015-model-abstraction.md), [ADR-018](../decisions/ADR-018-observation-publication-scope.md), [Judge mode](judge-mode.md)
 
