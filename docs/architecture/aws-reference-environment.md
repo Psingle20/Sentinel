@@ -1,6 +1,6 @@
 # AWS reference environment
 
-- Status: Accepted through [ADR-021](../decisions/ADR-021-local-aws.md); Stages 0 to 2 delivered, Stages 3 and 4 in part ([ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment))
+- Status: Accepted through [ADR-021](../decisions/ADR-021-local-aws.md); Stages 0 to 3 delivered, Stage 4 in part, Stage 5 deferred ([ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment))
 - Scope: Local and CI reference environment only
 - Last reviewed: 2026-10-30, refined the same day after review (two tracks, hybrid telemetry, product-side work, identity mapping, widened spike), then aligned with the repository's naming conventions and linked to its delivery phase
 - Delivery: [Phase E01 – AWS reference environment](../implementation/phase-e01-aws-reference-environment.md) carries the delivery stages below as an enhancement phase and the [phase status ledger](../implementation/phase-status.md#phase-e01--aws-reference-environment) records progress; this document stays the design source

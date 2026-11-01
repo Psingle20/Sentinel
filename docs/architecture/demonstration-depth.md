@@ -1,6 +1,6 @@
 # Demonstration depth
 
-Status: Proposed, 2026-10-31. Delivered by [Phase E03](../implementation/phase-e03-demonstration-depth.md).
+Status: Delivered by [Phase E03](../implementation/phase-e03-demonstration-depth.md) on 2026-10-31, narrowed the same day to manipulation resistance, self-correction, recurrence, the damage avoided and the live investigation view.
 
 ## Purpose
 

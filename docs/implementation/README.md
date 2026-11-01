@@ -68,7 +68,7 @@ Set on 2026-10-31; the ledger records each phase's state.
 2. **Done: [E05](phase-e05-escalation-investigator.md) slices 1 and 2.** Consensus says why it abstained, an ambiguous decision asks the escalation role for one discriminating query, and `S11` is diagnosed with it and abstains without it, end to end.
 3. **Done: [E04](phase-e04-judge-mode.md).** The captured and live stories over the records the Gateway already serves, every failure ending and the end-to-end `S9` story.
 4. **Deferred until production:** [ADR-022](../decisions/ADR-022-service-to-service-authentication.md) and [ADR-023](../decisions/ADR-023-approver-identity.md). The local deployment has no identity provider, so both are decided with the production deployment environment; they close the threat model's open findings then.
-5. **Not scheduled:** [E06](phase-e06-incident-artifacts.md) and [E07](phase-e07-visual-synthetic-monitor.md) are accepted designs waiting for a reason. E06 waits for a user who starts incidents from screenshots and for the multimodal-input assumption to be confirmed; E07 waits for a hosted environment and the segmentation assumption. Neither is started before E05 and E04 slice 1 are complete.
+5. **Deferred on 2026-11-01:** [E06](phase-e06-incident-artifacts.md) and [E07](phase-e07-visual-synthetic-monitor.md) stay accepted designs and are not built now. E06 needs text inside images redacted before a model sees them, which needs an OCR engine, and the multimodal-input assumption confirmed; E07 needs a segmentation model, a checkout page a browser can drive and, preferably, a hosted environment.
 
 ## Universal definition of done
 

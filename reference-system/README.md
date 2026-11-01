@@ -1,6 +1,10 @@
 # Reference system
 
-The controlled distributed system Sentinel observes and remediates (Phase 01, [ADR-011](../docs/decisions/ADR-011-reference-system-location.md)). It is not one of Sentinel's services: Sentinel reaches it only through its telemetry backends and the deploy controller's API, and nothing under `services/` references this directory.
+The controlled distributed system Sentinel observes and remediates (Phase 01, [ADR-011](../docs/decisions/ADR-011-reference-system-location.md)). It is not one of Sentinel's services: Sentinel reaches it only through its telemetry backends and the deploy controller's API, and nothing under `services/` references this directory. Nothing here references a `Sentinel.*` package either.
+
+Two composition levels apply here ([ADR-011 amendment](../docs/decisions/ADR-011-reference-system-location.md#internal-composition-amendment-2026-10-29), [composition guide](../docs/architecture/application-composition-and-cqrs.md#scope-the-reference-system)): the deploy controller and the scenario runner follow the full guide, with layered projects, dependency modules and the processor seam; the workload services under `services/` follow only the file and naming rules, so each injected fault stays in one clearly named file.
+
+![Sentinel reference system architecture](../docs/architecture/assets/reference-system-architecture.png)
 
 ```text
 traffic (scenario-runner) -> checkout-service -> order-service

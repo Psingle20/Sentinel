@@ -1,6 +1,6 @@
 # Judge mode
 
-- Status: Proposed, 2026-10-31; revised the same day to a first slice built on records Sentinel already serves
+- Status: Delivered by Phase E04 on 2026-11-01; proposed on 2026-10-31 and revised the same day to a first slice built on records Sentinel already serves
 - Delivery: [Phase E04 – Judge mode](../implementation/phase-e04-judge-mode.md); the [phase status ledger](../implementation/phase-status.md#phase-e04--judge-mode) records progress
 - Related: [Demonstration depth](demonstration-depth.md) (Phase E03), [frontend design system](frontend-design-system.md), [ADR-001](../decisions/ADR-001-production-first-service-topology.md), [ADR-006](../decisions/ADR-006-remediation-control-path.md), [ADR-019](../decisions/ADR-019-incident-memory-replay-and-retention.md)
 

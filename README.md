@@ -4,7 +4,7 @@
 
 Sentinel is an AI-native incident investigation and recovery platform for distributed systems. It correlates telemetry into incidents, sends specialist investigators after the evidence, challenges every hypothesis before it can lead, proposes remediation that policy must permit and a person must approve, and only calls an incident resolved when telemetry shows recovery.
 
-Sentinel is built against a controlled reference system with three failure scenarios. In the golden scenario a deployment leaks Redis connections: Sentinel must blame the deployment, reject the competing explanations, propose a rollback, wait for approval, execute it through a constrained adapter and verify recovery. In two confounder scenarios the most recent deployment is innocent, and a deterministic deploy-blame baseline runs beside Sentinel on every investigation. Sentinel has to beat the baseline, not just solve the golden case.
+Sentinel is built against a controlled reference system that fails on purpose. In the golden scenario a deployment leaks Redis connections: Sentinel must blame the deployment, reject the competing explanations, propose a rollback, wait for approval, execute it through a constrained adapter and verify recovery. In the confounder scenarios the most recent deployment is innocent; others plant an instruction to AI agents in the logs, leave a second cause behind the first remedy, set two equally plausible causes side by side, or run the failing service on AWS. A deterministic deploy-blame baseline runs beside Sentinel on every investigation, and Sentinel has to beat it, not just solve the golden case.
 
 Non-goals for the first milestone are broad vendor coverage, unrestricted autonomous production access, a general-purpose ITSM tool, arbitrary command execution by a model, and custom infrastructure such as databases or message brokers.
 
@@ -16,7 +16,7 @@ Non-goals for the first milestone are broad vendor coverage, unrestricted autono
 
 Sentinel runs end to end on a developer machine. There is no hosted deployment and no CI pipeline yet: the deployment definition is Phase 09's open exit criterion and the pipeline is Phase 00's.
 
-Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. Every scenario package, `S0` to `S10` and the AWS scenarios `AWS-S1` and `AWS-S7`, runs end to end with the deterministic test double, and the evaluation harness scores Sentinel right on the cause in every one with no false remediation, where the deploy-blame baseline would have remediated falsely in more than half. A repeat of the leak is recognised as seen before, and `S10`'s first remedy is followed up when it does not end the incident. With Meta's models investigating, each role on its suggested profile, `S1`, `S2` and `S3` are diagnosed correctly as well: `S1` is rolled back after approval and recovers, `S2` escalates without a rollback, and `S3`'s rollback of the right service awaits approval. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
+Status by phase, with the evidence for each claim and the exit criteria still open, lives only in the [phase status ledger](docs/implementation/phase-status.md); this README does not repeat it. In outline, Phases 01, 02, 03, 04, 05, 06 and 07 are complete, Phases 00, 01A, 08 and 09 are in progress, and Phase 10 waits for measured need. Of the [enhancement phases](docs/implementation/README.md#enhancement-phases), E02, E03 and E04 are complete, E01 and E05 are in progress, and E06 and E07 are deferred. Every scenario package, `S0` to `S11` and the AWS scenarios `AWS-S1` and `AWS-S7`, runs end to end with the deterministic test double, and the evaluation harness scores Sentinel right on the cause in every one with no false remediation, where the deploy-blame baseline would have remediated falsely in more than half. A repeat of the leak is recognised as seen before, `S10`'s first remedy is followed up when it does not end the incident, and when two explanations stand too close to decide between, Sentinel asks one discriminating question before it decides. Judge mode tells any incident as a guided story in which every claim opens its source. With Meta's models investigating, each role on its suggested profile, `S1`, `S2` and `S3` are diagnosed correctly as well: `S1` is rolled back after approval and recovers, `S2` escalates without a rollback, and `S3`'s rollback of the right service awaits approval. What remains open is mostly decisions: the production deployment environment, service-to-service authentication and approver identity.
 
 Models run through Sentinel's own model interface. The default provider is a deterministic test double, so every local run and test is reproducible; the Meta model adapter is used only when it is configured with credentials (see [Getting started](#getting-started)).
 
@@ -29,6 +29,8 @@ Sentinel is designed as an autonomic loop split into a **control plane**, which 
 - **Human-controlled autonomy.** Agents never hold credentials or execute anything. Every action is a typed plan that passes policy, approval when required, a single-use capability and recovery verification.
 - **Event-sourced truth.** Each incident is an append-only event stream; every view, timeline, postmortem and replay is derived from it.
 - **Failure-aware by default.** Outbox and inbox delivery, idempotent commands, fencing tokens, bounded queries and explicit partial-data handling are part of the design, not afterthoughts.
+
+![Sentinel system architecture: the read-only telemetry plane, incident orchestration in Runtime and AgentWorker, the privileged execution plane behind human approval, and the supporting infrastructure](docs/architecture/assets/sentinel-system-architecture.png)
 
 The full design is in the [architecture document](docs/architecture/architecture.md) and the [architecture overview](docs/architecture/overview.md). In the diagrams below, solid boxes are implemented and dashed boxes are planned.
 
@@ -315,13 +317,15 @@ flowchart TB
     verifier --> falsifiers["Falsifiers<br/>change served before onset, mechanism follows change,<br/>culprit shift precedes onset, load rose before onset"]
     falsifiers --> consensus["consensus-v4<br/>source reliability, independence families,<br/>contradiction weight, mechanisms, dissent, completeness"]
     consensus --> diagnosed["Diagnosed: plan remediation"]
+    consensus --> ambiguous["Two explanations too close:<br/>one discriminating query, once per cycle"]
+    ambiguous --> verifier
     consensus --> abstained["Abstained: escalate with what is missing"]
 
     baseline["Deploy-blame baseline<br/>runs in shadow, recorded, never sent"] -.-> evaluation["Evaluation against ground truth"]
     diagnosed -.-> evaluation
 ```
 
-A falsified hypothesis cannot lead, copies of one signal count once, partial data weighs less, and Sentinel abstains below the confidence threshold instead of guessing. Every decision records its algorithm version, the settings it used and a hash of its inputs, so it can be replayed exactly. Every agent execution records its model, prompt version, tool calls and the provider responses it received, so it can be replayed without calling a live provider.
+A falsified hypothesis cannot lead, copies of one signal count once, partial data weighs less, and Sentinel abstains below the confidence threshold instead of guessing. When two explanations survive every check and stand too close, consensus asks the escalation investigator for the one read-only query that separates them, AgentWorker runs it, and the verifier challenges the revised evidence before consensus decides again ([Phase E05](docs/implementation/phase-e05-escalation-investigator.md)). Every decision records its algorithm version, the settings it used and a hash of its inputs, so it can be replayed exactly. Every agent execution records its model, prompt version, tool calls and the provider responses it received, so it can be replayed without calling a live provider.
 
 ### Incident lifecycle
 
@@ -383,6 +387,12 @@ flowchart TB
     class containers,managed,temporalprod,secrets,global,cella,cellb planned
 ```
 
+### The reference system
+
+Sentinel is exercised against a controlled distributed system of its own ([reference system](reference-system/README.md), [ADR-011](docs/decisions/ADR-011-reference-system-location.md)). A scenario runner drives seeded traffic and timed faults, a deploy controller switches and rolls back revisions, and Prometheus, Loki and Jaeger collect what happens. Sentinel reads that telemetry read-only and acts only through the deploy controller's token-protected API, after approval.
+
+![Sentinel reference system: scenario runner and deploy controller, the checkout, order and reporting workload around shared Redis, its observability stack, and the read-only telemetry and approved-action boundaries to Sentinel](docs/architecture/assets/reference-system-architecture.png)
+
 ### Cross-cutting concerns
 
 - **Reliability.** Transactional outbox and inbox with dead-letter handling, idempotency keys, fencing tokens on execution, bounded and prioritized ingestion with backoff, a query bulkhead, and explicit completeness metadata so partial data is never mistaken for an absence of evidence.
@@ -412,7 +422,7 @@ All decisions are indexed in [docs/decisions](docs/decisions/README.md). Still o
 - `apps/Sentinel.Web`: the Next.js frontend and its design system.
 - `services/`: `Sentinel.Gateway`, `Sentinel.Ingestion`, `Sentinel.Runtime`, `Sentinel.AgentWorker` and `Sentinel.Executor`, each split into Api, Application, Domain and Infrastructure projects ([composition guide](docs/architecture/application-composition-and-cqrs.md)); tests sit beside each service.
 - `packages/`: the only shared code ([ADR-007](docs/decisions/ADR-007-cross-service-code-and-provider-access.md)): `CleanArchitecture.BuildingBlocks` for results, messaging and persistence, `Sentinel.Contracts` for versioned messages, queries and views, and `Sentinel.ServiceDefaults` for hosting defaults. There is no shared domain package.
-- `reference-system/`: the system Sentinel is tested against ([ADR-011](docs/decisions/ADR-011-reference-system-location.md)): checkout, order and reporting services, the deploy controller, the observability stack configuration, scenarios `S0` to `S3`, runbooks and the deploy-blame baseline.
+- `reference-system/`: the system Sentinel is tested against ([ADR-011](docs/decisions/ADR-011-reference-system-location.md)): checkout, order and reporting services, the queue consumer, the deploy controller, the observability stack configuration, the scenario manifests and their evaluation packages (`S0` to `S11`, `AWS-S0`, `AWS-S1` and `AWS-S7`), runbooks and the deploy-blame baseline.
 - `deploy/local/`: the .NET Aspire AppHost that runs everything locally and the end-to-end suites.
 - `docs/`: architecture, decisions, implementation phases, business and API contracts.
 - `artifacts/`: generated diagrams and reports, with their sources.
@@ -433,7 +443,7 @@ From this directory:
 
 1. Run `setup` once to restore .NET packages and install the web app's dependencies.
 2. Run `run` to start all five services, the web app and the reference system. The Aspire dashboard opens with every resource's logs, traces, metrics and health.
-3. Start a scenario from the `scenario-runner` resource's commands in the dashboard (`Run S1` is the golden scenario), then follow the incident in Sentinel.Web.
+3. Start a scenario from the `scenario-runner` resource's commands in the dashboard (`Run S1` is the golden scenario), then follow the incident in Sentinel.Web. **Judge mode**, in the incident's header, tells the same incident as a guided story, live or from its run record.
 
 Local sign-in uses synthetic development identities such as `responder@example.test`, which exist only in the development configuration. Tokens between the reference system and Sentinel are generated Aspire parameters kept in the AppHost's user secrets; none is stored in the repository.
 
@@ -443,7 +453,7 @@ To investigate with Meta models instead of the test double, put the API key in A
 | --- | --- | --- | --- |
 | `meta` | `muse-spark-1.3` | medium | metrics, logs, knowledge |
 | `meta-deep` | `muse-spark-1.3` | high | traces, topology, changes |
-| `meta-wonder` | `muse-wonder-1.0` | high | None by default. It costs about three to five times as much, so route `changes`, where a misleading deployment is decided, to it for demonstrations. |
+| `meta-wonder` | `muse-wonder-1.0` | high | `escalation`, which runs only when two explanations stand too close to decide between and makes one call, about $0.04. It costs about three to five times as much as Muse Spark, so route `changes`, where a misleading deployment is decided, to it only for demonstrations. |
 | `meta-contributor` | `muse-spark-1.3-contributor` | medium | None by default. Meta may train on prompts and outputs in Contributor mode, so use it only with synthetic data. |
 
 Findings are requested with the findings JSON Schema alongside the tools, so the API shapes the answer, and reasoning gets its own share of the output limit because it counts against it. Every model call is costed at its profile's price and recorded with the execution. `Model:Budget` caps the estimated spend of priced models, by default at $100 in total and $15 a day, and `muse-wonder-1.0` at $5 a day of its own. At a cap, investigations abstain and say why. An incident's six specialists run side by side (`AgentWorker:InvestigationConcurrency`, default 6).
@@ -482,7 +492,7 @@ Keep this table synchronized with `PROJECT.json` and the scripts.
 ## Documentation
 
 - [Documentation index](docs/README.md)
-- [Architecture](docs/architecture/README.md): the [full architecture](docs/architecture/architecture.md), the [overview](docs/architecture/overview.md), the [product architecture diagram](docs/architecture/assets/sentinel-product-architecture.png) and the [frontend design system](docs/architecture/frontend-design-system.md)
+- [Architecture](docs/architecture/README.md): the [full architecture](docs/architecture/architecture.md), the [overview](docs/architecture/overview.md), the [system architecture](docs/architecture/assets/sentinel-system-architecture.png) and [reference system](docs/architecture/assets/reference-system-architecture.png) diagrams, and the [frontend design system](docs/architecture/frontend-design-system.md)
 - [Phase-wise implementation plan](docs/implementation/README.md) and the [phase status ledger](docs/implementation/phase-status.md); [enhancement phases](docs/implementation/README.md#enhancement-phases) extend the plan, starting with the [AWS reference environment](docs/implementation/phase-e01-aws-reference-environment.md)
 - [Architecture decisions](docs/decisions/README.md)
 - [Business and API contracts](docs/business-contracts/README.md)
