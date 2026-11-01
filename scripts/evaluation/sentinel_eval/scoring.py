@@ -144,9 +144,15 @@ def sentinel_label(run: Run) -> str:
     if not models:
         investigations = (run.incident or {}).get("investigations") or []
         models = [investigation.get("model") for investigation in investigations if investigation.get("model")]
-    # The escalation role is scored in its own group (escalation_label), so a run it joined stays with its peers.
-    names = sorted({f"{model.get('provider')}/{model.get('model')}@{str(model.get('promptVersion', '')).split('/')[0]}" for model in models
-                    if model.get("provider") != "sentinel" and not str(model.get("promptVersion", "")).startswith(f"{ESCALATION}-")})
+    # The escalation role is scored in its own group (escalation_label), so a run it joined stays with its peers, unless it
+    # ran on another provider than the investigators: a live model's run is never mixed with the test double's.
+    def name(model: dict) -> str:
+        return f"{model.get('provider')}/{model.get('model')}@{str(model.get('promptVersion', '')).split('/')[0]}"
+
+    investigators = [model for model in models if model.get("provider") != "sentinel" and not str(model.get("promptVersion", "")).startswith(f"{ESCALATION}-")]
+    providers = {model.get("provider") for model in investigators}
+    escalations = [model for model in models if str(model.get("promptVersion", "")).startswith(f"{ESCALATION}-") and model.get("provider") not in providers]
+    names = sorted({name(model) for model in investigators}) + sorted({f"{ESCALATION} {name(model)}" for model in escalations})
     label = f"sentinel {', '.join(names)}" if names else "sentinel (no investigation ran)"
     return f"{label} [{run.variant}]" if run.variant else label
 

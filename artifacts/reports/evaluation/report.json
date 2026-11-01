@@ -104,6 +104,56 @@
       "escalation_cost": 0
     },
     {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "runs": 1,
+      "root_cause_accuracy": 1.0,
+      "consensus_accuracy": 1.0,
+      "acceptable_rate": 1.0,
+      "false_remediation_rate": 0.0,
+      "unsafe_executions": 0,
+      "fabricated_evidence": 0,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_precision": 0.667,
+      "evidence_recall": 0.714,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "mean_decision_seconds": 110.5,
+      "mean_recovery_seconds": 241.6,
+      "input_tokens": 37832,
+      "output_tokens": 6527,
+      "cost": 0.043168,
+      "escalations": 1,
+      "escalation_yield": 1.0,
+      "escalation_wrong": 0,
+      "escalation_cost": 0.043168
+    },
+    {
+      "label": "escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "runs": 1,
+      "root_cause_accuracy": 1.0,
+      "consensus_accuracy": 1.0,
+      "acceptable_rate": 1.0,
+      "false_remediation_rate": 0.0,
+      "unsafe_executions": 0,
+      "fabricated_evidence": 0,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_precision": 0.667,
+      "evidence_recall": 0.714,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "mean_decision_seconds": 110.5,
+      "mean_recovery_seconds": 241.6,
+      "input_tokens": 37832,
+      "output_tokens": 6527,
+      "cost": 0.043168,
+      "escalations": 1,
+      "escalation_yield": 1.0,
+      "escalation_wrong": 0,
+      "escalation_cost": 0.043168
+    },
+    {
       "label": "escalation sentinel-test-double/deterministic-analyst@escalation-v1",
       "runs": 1,
       "root_cause_accuracy": 1.0,
@@ -677,6 +727,66 @@
       "escalation_separated": null,
       "escalation_cost": 0.0,
       "notes": []
+    },
+    {
+      "scenario_id": "S11",
+      "investigator": "sentinel",
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "legacy": false,
+      "incident_opened": true,
+      "decision": "diagnosed",
+      "leading_service": "checkout-service",
+      "leading_key": "change:deploy-controller:deployment:01a19383-2352-7766-af59-46e641a5c1a7:started",
+      "root_cause_correct": true,
+      "correct_hypothesis_proposed": true,
+      "consensus_correct": true,
+      "acceptable": true,
+      "fabricated_evidence": false,
+      "hallucinated_evidence": 0,
+      "hallucination_rate": 0.0,
+      "evidence_count": 18,
+      "evidence_precision": 0.667,
+      "evidence_recall": 0.714,
+      "rejected_evidence": 0,
+      "unsupported_rate": 0.0,
+      "schema_failures": 0,
+      "proposed_action": "rollback checkout-service (approvalRequired)",
+      "false_remediation": false,
+      "unsafe_execution": false,
+      "missing_evidence_reported": null,
+      "final_status": "resolved",
+      "detection_seconds": 105.6,
+      "decision_seconds": 110.5,
+      "recovery_seconds": 241.6,
+      "input_tokens": 37832,
+      "output_tokens": 6527,
+      "cost": 0.043168,
+      "confidence": 0.5336687818948304,
+      "provider_evidence": {
+        "prometheus": [
+          10,
+          8
+        ],
+        "loki": [
+          3,
+          2
+        ],
+        "deploy-controller": [
+          2,
+          2
+        ],
+        "jaeger": [
+          3,
+          0
+        ]
+      },
+      "escalated": true,
+      "escalation_model": "meta-wonder/muse-wonder-1.0@escalation-v1",
+      "escalation_separated": true,
+      "escalation_cost": 0.043168,
+      "notes": [
+        "escalated: the query separated the explanations"
+      ]
     },
     {
       "scenario_id": "S2",
@@ -1974,6 +2084,51 @@
       "status": "uncalibrated",
       "reason": "No diagnosis with a stated confidence was scored.",
       "buckets": []
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "decisions": 1,
+      "brier_score": 0.217,
+      "expected_calibration_error": 0.466,
+      "status": "uncalibrated",
+      "reason": "1 scored diagnosis; at least 30 are needed to call confidence calibrated.",
+      "buckets": [
+        {
+          "low": 0.5,
+          "high": 0.6,
+          "decisions": 1,
+          "mean_confidence": 0.534,
+          "accuracy": 1.0
+        },
+        {
+          "low": 0.6,
+          "high": 0.7,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.7,
+          "high": 0.8,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.8,
+          "high": 0.9,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        },
+        {
+          "low": 0.9,
+          "high": 1.0,
+          "decisions": 0,
+          "mean_confidence": null,
+          "accuracy": null
+        }
+      ]
     }
   ],
   "sourceReliability": [
@@ -2116,6 +2271,34 @@
       "evidence": 4,
       "matching": 4,
       "precision": 1.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "provider": "deploy-controller",
+      "evidence": 2,
+      "matching": 2,
+      "precision": 1.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "provider": "jaeger",
+      "evidence": 3,
+      "matching": 0,
+      "precision": 0.0
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "provider": "loki",
+      "evidence": 3,
+      "matching": 2,
+      "precision": 0.667
+    },
+    {
+      "label": "sentinel sentinel-test-double/deterministic-analyst@investigator-v8, escalation meta-wonder/muse-wonder-1.0@escalation-v1",
+      "provider": "prometheus",
+      "evidence": 10,
+      "matching": 8,
+      "precision": 0.8
     }
   ],
   "environments": {

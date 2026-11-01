@@ -446,6 +446,15 @@ class EscalationTests(unittest.TestCase):
         self.assertFalse(result.passed)
         self.assertIn("wrong diagnosis(es) after an escalation", " ".join(result.reasons))
 
+    def test_a_live_escalation_beside_test_double_investigators_is_its_own_group(self):
+        test_double = run("S1", escalated(incident(leader_service="checkout-service", key=f"change:{DEPLOY}")))
+        live = run("S1", escalated(incident(leader_service="checkout-service", key=f"change:{DEPLOY}")))
+        live.incident["investigations"][-1]["model"] = {"provider": "meta-wonder", "model": "muse-wonder-1.0", "promptVersion": "escalation-v1"}
+
+        self.assertEqual(sentinel_label(test_double), sentinel_label(run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))))
+        self.assertEqual(sentinel_label(live), f"{sentinel_label(test_double)}, escalation meta-wonder/muse-wonder-1.0@escalation-v1")
+        self.assertEqual(len(latest_runs([test_double, live], sentinel_label)), 2)
+
     def test_a_run_without_escalation_is_scored_as_its_own_variant(self):
         enabled = run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}"))
         disabled = run("S1", incident(leader_service="checkout-service", key=f"change:{DEPLOY}", outcome="abstained", plan=None))
