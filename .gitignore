@@ -69,3 +69,9 @@ personal-docs/
 ## Local agent settings
 .claude/settings.local.json
 .codex/*.local.*
+
+## Review working files: a review's brief and each reviewer's raw output. The ranked review.md and findings.json are kept,
+## because the threat model tracks their findings; a review that never produced them is kept out entirely.
+artifacts/reports/reviews/*/brief.md
+artifacts/reports/reviews/*/reviewers/
+artifacts/reports/reviews/2026-10-29-refactor-readiness/

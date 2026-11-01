@@ -31,6 +31,7 @@ This project inherits the workspace and centralized project policies. Refine thi
 ## Documentation and artifacts
 
 - Maintain curated explanations in `docs/`.
+- Use `architecture-designer` for architecture output selection. PNG, image, infographic, poster, presentation graphic, or a supplied visual reference means branded static output; Mermaid means maintained editable documentation; Archify requires explicit Archify or interactive/explorable HTML wording.
 - Store Archify output under `artifacts/archify/` and Graphify output under `artifacts/graphify/`.
 - Treat generated artifacts as derived output; retain their source specifications and regeneration instructions.
 - Keep operational procedures in `docs/runbooks/` and business, API, event, and compatibility contracts in `docs/business-contracts/`.
