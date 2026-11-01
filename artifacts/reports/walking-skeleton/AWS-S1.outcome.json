@@ -1,7 +1,7 @@
 {
   "scenarioId": "AWS-S1",
   "kind": "confounder",
-  "recordedAt": "2026-10-31T14:50:58.5498486+00:00",
+  "recordedAt": "2026-10-31T20:08:36.1542051+00:00",
   "investigator": "sentinel-test-double/deterministic-analyst",
   "expectedCause": "a poison order message fails on every receive",
   "expectedRemediation": "quarantine-message queue-consumer (approval-required)",

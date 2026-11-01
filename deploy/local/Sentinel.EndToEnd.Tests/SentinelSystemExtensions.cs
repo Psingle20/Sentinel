@@ -17,6 +17,63 @@ namespace Sentinel.EndToEnd.Tests;
 /// <summary>Sentinel-side helpers for the end-to-end suites.</summary>
 public static class SentinelSystemExtensions
 {
+    /// <summary>
+    /// Phase 07's first exit criterion: an incident replays through the gateway, at level 1 from its
+    /// stream and at level 2 from every agent execution's captured inputs, without reaching a provider or
+    /// executing anything.
+    /// </summary>
+    public static async Task ShouldReplayWithoutProvidersOrActionsAsync(this SentinelSystem system, ITestOutputHelper output, IncidentDetail resolved)
+    {
+        Guid incidentId = resolved.Summary.IncidentId.Value;
+        int rollbacks = await system.SentinelRollbacksAsync(resolved.Summary.AffectedServiceId.Value);
+        DomainReplayResult domain = await system.PostAsync<DomainReplayResult>($"/api/v1/incidents/{incidentId}/replays/domain", null);
+        output.WriteLine($"Domain replay: {domain.EventCount} events to v{domain.StreamVersion}, state {domain.StateHash[..12]}, {domain.Decisions.Count} decision(s)");
+        domain.Level.ShouldBe(ReplayLevel.Domain);
+        domain.StateStable.ShouldBeTrue("two rebuilds of the stream give the same state");
+        domain.ProjectionMatches.ShouldBeTrue(string.Join("; ", domain.ProjectionDifferences));
+        domain.Decisions.ShouldNotBeEmpty();
+        domain.Decisions.ShouldAllBe(decision => decision.Matches && decision.SettingsRecorded);
+
+        using JsonDocument executions = (await system.Api.GetFromJsonAsync<JsonDocument>($"/api/v1/incidents/{incidentId}/agent-executions"))!;
+        Guid[] executionIds = [.. executions.RootElement.EnumerateArray().Select(execution => execution.GetProperty("agentExecutionId").GetGuid())];
+        executionIds.ShouldNotBeEmpty();
+        bool deterministicModel = SentinelSystem.ModelProvider == "test-double";
+        foreach (Guid executionId in executionIds)
+        {
+            InvestigationReplayResult replay = await system.PostAsync<InvestigationReplayResult>(
+                $"/api/v1/agent-executions/{executionId}/replays", new InvestigationReplayRequest { Level = ReplayLevel.Investigation });
+            output.WriteLine($"Investigation replay of {executionId}: {replay.ToolCallsReplayed} tool call(s), deterministic {replay.Deterministic}, findings match {replay.FindingsMatch}");
+            replay.Level.ShouldBe(ReplayLevel.Investigation);
+            replay.UncapturedQueries.ShouldBe(0, "every provider answer comes from the captured inputs");
+            replay.InputsReproduced.ShouldBeTrue(string.Join("; ", replay.ToolCallMismatches));
+            replay.UnsupportedCitations.ShouldBeEmpty();
+            if (deterministicModel)
+            {
+                replay.Deterministic.ShouldBeTrue(replay.Explanation);
+                replay.FindingsMatch.ShouldBe(true, string.Join("; ", replay.Differences));
+            }
+        }
+
+        DomainReplayResult after = await system.PostAsync<DomainReplayResult>($"/api/v1/incidents/{incidentId}/replays/domain", null);
+        after.StreamVersion.ShouldBe(domain.StreamVersion, "replays append nothing to the incident");
+        after.StateHash.ShouldBe(domain.StateHash);
+        (await system.SentinelRollbacksAsync(resolved.Summary.AffectedServiceId.Value)).ShouldBe(rollbacks, "replays execute no action");
+    }
+
+    /// <summary>A POST through the Gateway with its own idempotency key, failing with the answer when it is refused.</summary>
+    public static async Task<T> PostAsync<T>(this SentinelSystem system, string path, object? body)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = body is null ? null : JsonContent.Create(body, options: SentinelJson.Options)
+        };
+        request.Headers.Add("Idempotency-Key", $"replay-{Guid.NewGuid():N}");
+        using HttpResponseMessage response = await system.Api.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        response.IsSuccessStatusCode.ShouldBeTrue($"POST {path} answered {(int)response.StatusCode}: {content}");
+        return JsonSerializer.Deserialize<T>(content, SentinelJson.Options)!;
+    }
+
     public static async Task<IReadOnlyList<IncidentSummary>> IncidentsAsync(this SentinelSystem system) =>
         await system.Api.GetFromJsonAsync<List<IncidentSummary>>("/api/v1/incidents", SentinelJson.Options) ?? [];
 
